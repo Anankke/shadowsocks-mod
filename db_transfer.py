@@ -13,6 +13,8 @@ import importloader
 switchrule = None
 db_instance = None
 
+port_uid_table = []
+
 class DbTransfer(object):
 	def __init__(self):
 		import threading
@@ -21,16 +23,35 @@ class DbTransfer(object):
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
+		
+		global port_uid_table
 		query_head = 'UPDATE user'
 		query_sub_when = ''
 		query_sub_when2 = ''
 		query_sub_in = None
 		last_time = time.time()
+		
+		alive_user_count = 0
+		bandwidth_thistime = 0
+		
+		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
+								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		
 		for id in dt_transfer.keys():
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
 				continue
 			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
 			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
+			
+			
+			cur = conn.cursor()
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + port_uid_table[id] + "', '" + dt_transfer[id][0] +"', '" + dt_transfer[id][1]+"', '" + get_config().NODE_ID + "', '" + get_config().TRANSFER_MUL + "', '" + Round((dt_transfer[id][0]+dt_transfer[id][1]),2) + "', unix_timestamp()); ")
+			cur.close()
+			
+			alive_user_count = alive_user_count + 1
+		
+			bandwidth_thistime = bandwidth_thistime + dt_transfer[id][0] + dt_transfer[id][1]
+			
 			if query_sub_in is not None:
 				query_sub_in += ',%s' % id
 			else:
@@ -42,13 +63,32 @@ class DbTransfer(object):
 					' END, t = ' + str(int(last_time)) + \
 					' WHERE port IN (%s)' % query_sub_in
 		#print query_sql
-		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		
 		cur = conn.cursor()
 		cur.execute(query_sql)
 		cur.close()
+		
+		cur = conn.cursor()
+		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + bandwidth_thistime + "' WHERE `id` = " +  get_config().NODE_ID + " ; ")
+		cur.close()
+		
+		cur = conn.cursor()
+		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `Node_ID`, `online_user`, `log_time`) VALUES (NULL, '" + get_config().NODE_ID + "', '" + alive_user_count + "', unix_timestamp()); ")
+		cur.close()
+		
+		
+		import os
+		cur = conn.cursor()
+		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + get_config().NODE_ID + "', '" + self.uptime() + "', '" + os.getloadavg() + "', unix_timestamp()); ")
+		cur.close()
+		
+		
 		conn.commit()
 		conn.close()
+		
+	def uptime():
+		with open('/proc/uptime', 'r') as f:
+			return float(f.readline().split()[0])
 
 	def push_db_all_user(self):
 		#更新用户流量到数据库
@@ -115,6 +155,8 @@ class DbTransfer(object):
 		#停止超流量的服务
 		#启动没超流量的服务
 		#需要动态载入switchrule，以便实时修改规则
+		
+		global port_uid_table
 		try:
 			switchrule = importloader.load('switchrule')
 		except Exception as e:
@@ -130,8 +172,11 @@ class DbTransfer(object):
 			port = row['port']
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
+			
+			
+			port_uid_table[row['port']] = row['id']
 
-			read_config_keys = ['method', 'obfs', 'protocol', 'forbidden_ip', 'forbidden_port']
+			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port']
 			for name in read_config_keys:
 				if name in row and row[name]:
 					cfg[name] = row[name]
@@ -182,6 +227,7 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
+				del port_uid_table[row['port']]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
