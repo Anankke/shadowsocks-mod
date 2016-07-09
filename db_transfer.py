@@ -85,11 +85,15 @@ class DbTransfer(object):
 			switchrule = importloader.load('switchrule')
 			keys = switchrule.getKeys()
 		except Exception as e:
-			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ]
+			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param']
+		if get_config().NODE_GROUP == 0 :
+			node_group_sql = ""
+		else:
+			node_group_sql = "AND `node_group`="+get_config().NODE_GROUP
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys) + " FROM user")
+		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ get_config().NODE_CLASS+" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
 		rows = []
 		for r in cur.fetchall():
 			d = {}
