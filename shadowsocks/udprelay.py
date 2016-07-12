@@ -720,8 +720,11 @@ class TCPRelayHandler(object):
                     connecttype, remote_addr, remote_port, header_length = header_result
 						
                     if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0:
-						self._server._connected_iplist.append(common.to_str(addr[0]))
+                        self._server._connected_iplist.append(common.to_str(addr[0]))
 					
+                    if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0:
+                        del self._server.wrong_iplist[common.to_str(addr[0])]
+						
                     self._remote_address = (common.to_str(remote_addr), remote_port)
                     self._stage = STAGE_DNS
                     self._dns_resolver.resolve(remote_addr,

@@ -234,7 +234,7 @@ class DbTransfer(object):
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
 					
-			if int(get_config().NODE_SPEEDLIMIT) > 0.0 or cfg['node_speedlimit'] > 0.0 :
+			if float(get_config().NODE_SPEEDLIMIT) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
 				cfg['node_speedlimit'] = max(float(get_config().NODE_SPEEDLIMIT),float(cfg['node_speedlimit']))
 
 			if port not in cur_servers:

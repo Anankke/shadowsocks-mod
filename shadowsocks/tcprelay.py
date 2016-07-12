@@ -484,7 +484,10 @@ class TCPRelayHandler(object):
             connecttype, remote_addr, remote_port, header_length = header_result
 			
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0:
-				self._server.connected_iplist.append(self._client_address[0])
+                self._server.connected_iplist.append(self._client_address[0])
+
+            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0:
+                del self._server.wrong_iplist[self._client_address[0]]
 			
             common.connect_log('%s connecting %s:%d from %s:%d' %
                         ((connecttype == 0) and 'TCP' or 'UDP',
