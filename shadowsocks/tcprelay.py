@@ -974,7 +974,7 @@ class TCPRelay(object):
             self._disconnect_ipset = None
 		
         self.latency = 0
-        self.bandwidth = int(config['node_speedlimit']) * 1024 * 1024 / 8
+        self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
 		
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self.obfs_data = obfs.obfs(config['obfs']).init_data()

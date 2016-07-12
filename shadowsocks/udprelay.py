@@ -937,9 +937,6 @@ class UDPRelay(object):
 		
         self.connected_iplist = []
         self.wrong_iplist = {}
-		
-        self.latency = 0
-        self.bandwidth = int(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self._protocol = obfs.obfs(config['protocol'])
@@ -961,7 +958,7 @@ class UDPRelay(object):
         self._data_to_write_to_server_socket = []
 		
         self.latency = 0
-        self.bandwidth = int(config['node_speedlimit']) * 1024 * 1024 / 8
+        self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self._timeouts = []  # a list for all the handlers
         # we trim the timeouts once a while
