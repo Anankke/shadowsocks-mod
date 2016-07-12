@@ -4,6 +4,7 @@
 import logging
 import time
 import sys
+import socket
 from server_pool import ServerPool
 import traceback
 from shadowsocks import common, shell
@@ -13,7 +14,7 @@ import importloader
 switchrule = None
 db_instance = None
 
-port_uid_table = []
+port_uid_table = {}
 
 class DbTransfer(object):
 	def __init__(self):
@@ -45,7 +46,7 @@ class DbTransfer(object):
 			
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + port_uid_table[id] + "', '" + dt_transfer[id][0] +"', '" + dt_transfer[id][1]+"', '" + get_config().NODE_ID + "', '" + get_config().TRANSFER_MUL + "', '" + Round((dt_transfer[id][0]+dt_transfer[id][1]),2) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(get_config().TRANSFER_MUL) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
 			alive_user_count = alive_user_count + 1
@@ -56,39 +57,76 @@ class DbTransfer(object):
 				query_sub_in += ',%s' % id
 			else:
 				query_sub_in = '%s' % id
-		if query_sub_when == '':
-			return
-		query_sql = query_head + ' SET u = CASE port' + query_sub_when + \
-					' END, d = CASE port' + query_sub_when2 + \
-					' END, t = ' + str(int(last_time)) + \
-					' WHERE port IN (%s)' % query_sub_in
-		#print query_sql
+		if query_sub_when != '':
+			query_sql = query_head + ' SET u = CASE port' + query_sub_when + \
+						' END, d = CASE port' + query_sub_when2 + \
+						' END, t = ' + str(int(last_time)) + \
+						' WHERE port IN (%s)' % query_sub_in
+			#print query_sql
+			
+			cur = conn.cursor()
+			cur.execute(query_sql)
+			cur.close()
 		
 		cur = conn.cursor()
-		cur.execute(query_sql)
+		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + str(bandwidth_thistime) + "' WHERE `id` = " +  str(get_config().NODE_ID) + " ; ")
 		cur.close()
 		
 		cur = conn.cursor()
-		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + bandwidth_thistime + "' WHERE `id` = " +  get_config().NODE_ID + " ; ")
+		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `Node_ID`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
 		cur.close()
 		
+
 		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `Node_ID`, `online_user`, `log_time`) VALUES (NULL, '" + get_config().NODE_ID + "', '" + alive_user_count + "', unix_timestamp()); ")
+		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
 		cur.close()
 		
-		
-		import os
-		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + get_config().NODE_ID + "', '" + self.uptime() + "', '" + os.getloadavg() + "', unix_timestamp()); ")
-		cur.close()
-		
+		online_iplist = ServerPool.get_instance().get_servers_iplist()
+		for id in online_iplist.keys():
+			for ip in online_iplist[id]:
+				cur = conn.cursor()
+				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
+				cur.close()
+				
+		deny_str = ""
+		wrong_iplist = ServerPool.get_instance().get_servers_wrong()
+		server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
+		for id in wrong_iplist.keys():
+			for ip in wrong_iplist[id]:
+				if str(ip) == str(ip):
+					continue
+				if get_config().CLOUDSAFE == 1:
+					cur = conn.cursor()
+					cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
+					cur.close()
+				deny_str = deny_str + "\nALL: " + str(ip)
+			if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
+				deny_file=open('/etc/hosts.deny','a')
+				deny_file.write(deny_str)
+				deny_file.close()
 		
 		conn.commit()
 		conn.close()
 		
-	def uptime():
+	def uptime(self):
 		with open('/proc/uptime', 'r') as f:
 			return float(f.readline().split()[0])
+	
+	def load(self):
+		import os
+		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
+			
+	def trafficShow(self,Traffic):
+		if Traffic<1024 :
+			return str(round((Traffic),2))+"B";
+		
+		if Traffic<1024*1024 :
+			return str(round((Traffic/1024),2))+"KB";
+		
+		if Traffic<1024*1024*1024 :
+			return str(round((Traffic/1024/1024),2))+"MB";
+		
+		return str(round((Traffic/1024/1024/1024),2))+"GB";
 
 	def push_db_all_user(self):
 		#更新用户流量到数据库
@@ -125,15 +163,23 @@ class DbTransfer(object):
 			switchrule = importloader.load('switchrule')
 			keys = switchrule.getKeys()
 		except Exception as e:
-			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param']
+			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
 		if get_config().NODE_GROUP == 0 :
 			node_group_sql = ""
 		else:
-			node_group_sql = "AND `node_group`="+get_config().NODE_GROUP
+			node_group_sql = "AND `node_group`=" + str(get_config().NODE_GROUP)
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ get_config().NODE_CLASS+" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
+		cur.execute("SELECT * FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND `node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0")
+		if cur.fetchone() == None :
+			rows = []
+			cur.close()
+			return rows
+		cur.close()
+		
+		cur = conn.cursor()
+		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(get_config().NODE_CLASS) +" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
 		rows = []
 		for r in cur.fetchall():
 			d = {}
@@ -176,21 +222,27 @@ class DbTransfer(object):
 			
 			port_uid_table[row['port']] = row['id']
 
-			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port']
+			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
 			for name in read_config_keys:
 				if name in row and row[name]:
 					cfg[name] = row[name]
-
+					
+					
+			
 			merge_config_keys = ['password'] + read_config_keys
 			for name in cfg.keys():
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
+					
+			if int(get_config().NODE_SPEEDLIMIT) > 0.0 or cfg['node_speedlimit'] > 0.0 :
+				cfg['node_speedlimit'] = max(float(get_config().NODE_SPEEDLIMIT),float(cfg['node_speedlimit']))
 
 			if port not in cur_servers:
 				cur_servers[port] = passwd
 			else:
 				logging.error('more than one user use the same port [%s]' % (port,))
 				continue
+				
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				if not allow:
@@ -322,6 +374,11 @@ class MuJsonTransfer(DbTransfer):
 						row['forbidden_port'] = common.PortRange(row['forbidden_port'])
 				except Exception as e:
 					logging.error(e)
-
+				try:
+					if 'disconnect_ip' in row:
+						row['disconnect_ip'] = common.IPNetwork(row['disconnect_ip'])
+				except Exception as e:
+					logging.error(e)
+				
 		return rows
 

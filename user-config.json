@@ -1,0 +1,19 @@
+{
+    "server": "0.0.0.0",
+    "server_ipv6": "::",
+    "server_port": 8388,
+    "local_address": "127.0.0.1",
+    "local_port": 1080,
+    "password": "m",
+    "timeout": 120,
+    "udp_timeout": 60,
+    "method": "aes-256-cfb",
+    "protocol": "origin",
+    "protocol_param": "",
+    "obfs": "plain",
+    "obfs_param": "",
+    "dns_ipv6": false,
+    "connect_verbose_info": 0,
+    "redirect": "",
+    "fast_open": false
+}

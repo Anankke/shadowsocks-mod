@@ -7,7 +7,7 @@ def getKeys():
 	elif get_config().API_INTERFACE == 'sspanelv3ssr':
 		key_list += ['method', 'obfs', 'protocol']
 	elif get_config().API_INTERFACE == 'glzjinmod':
-		key_list += ['method', 'obfs','obfs_param','protocol','protocol_param','id']
+		key_list += ['method', 'obfs','obfs_param','protocol','protocol_param','id','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
 	return key_list
 	#return key_list + ['plan'] # append the column name 'plan'
 

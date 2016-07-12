@@ -2,14 +2,16 @@
 TRANSFER_MUL = 1.0
 NODE_ID = 1
 
-NODE_CLASS=0
-NODE_GROUP=0
+NODE_CLASS = 0
+NODE_GROUP = 0
 
 #Node speed limit,Mbps,0.0 means not limit
 NODE_SPEEDLIMIT = 0.0
 
 #hour,set 0 to disable
 SPEEDTEST = 6
+
+#set 0 to disable
 CLOUDSAFE = 1
 ANTISSATTACK = 0
 AUTOEXEC = 1
@@ -23,9 +25,9 @@ MUDB_FILE = 'mudb.json'
 # Mysql
 MYSQL_HOST = '127.0.0.1'
 MYSQL_PORT = 3306
-MYSQL_USER = 'ss'
-MYSQL_PASS = 'ss'
-MYSQL_DB = 'shadowsocks'
+MYSQL_USER = ''
+MYSQL_PASS = ''
+MYSQL_DB = ''
 MYSQL_UPDATE_TIME = 60
 
 # API

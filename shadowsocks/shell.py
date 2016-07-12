@@ -246,6 +246,10 @@ def get_config(is_local):
     config['connect_verbose_info'] = config.get('connect_verbose_info', 0)
     config['local_address'] = to_str(config.get('local_address', '127.0.0.1'))
     config['local_port'] = config.get('local_port', 1080)
+    config['forbidden_ip'] = config.get('forbidden_ip', '127.0.0.0/8,::1/128')
+    config['forbidden_port'] = config.get('forbidden_port', '')
+    config['disconnect_ip'] = config.get('disconnect_ip', '127.0.0.0/8,::1/128')
+	
     if is_local:
         if config.get('server', None) is None:
             logging.error('server addr not specified')
@@ -255,17 +259,6 @@ def get_config(is_local):
             config['server'] = to_str(config['server'])
     else:
         config['server'] = to_str(config.get('server', '0.0.0.0'))
-        try:
-            config['forbidden_ip'] = \
-                IPNetwork(config.get('forbidden_ip', '127.0.0.0/8,::1/128'))
-        except Exception as e:
-            logging.error(e)
-            sys.exit(2)
-        try:
-            config['forbidden_port'] = PortRange(config.get('forbidden_port', ''))
-        except Exception as e:
-            logging.error(e)
-            sys.exit(2)
         try:
             config['ignore_bind'] = \
                 IPNetwork(config.get('ignore_bind', '127.0.0.0/8,::1/128'))

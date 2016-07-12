@@ -240,4 +240,71 @@ class ServerPool(object):
 		for port in servers.keys():
 			ret[port] = self.get_server_transfer(port)
 		return ret
+		
+	def get_server_iplist(self, port):
+		port = int(port)
+		ret = []
+		if port in self.tcp_servers_pool:
+			ret = self.tcp_servers_pool[port].connected_iplist
+			self.tcp_servers_pool[port].connected_iplist_clean()
+		if port in self.udp_servers_pool:
+			templist = self.udp_servers_pool[port].connected_iplist
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.udp_servers_pool[port].connected_iplist_clean()
+		if port in self.tcp_ipv6_servers_pool:
+			templist = self.tcp_ipv6_servers_pool[port].connected_iplist
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.tcp_ipv6_servers_pool[port].connected_iplist_clean()
+		if port in self.udp_ipv6_servers_pool:
+			templist = self.udp_ipv6_servers_pool[port].connected_iplist
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.udp_ipv6_servers_pool[port].connected_iplist_clean()
+		return ret
+		
 
+	def get_servers_iplist(self):
+		servers = self.tcp_servers_pool.copy()
+		servers.update(self.tcp_ipv6_servers_pool)
+		servers.update(self.udp_servers_pool)
+		servers.update(self.udp_ipv6_servers_pool)
+		ret = {}
+		for port in servers.keys():
+			templist = self.get_server_iplist(port)
+			if templist != [] :
+				ret[port] = templist[:]
+		return ret
+		
+		
+		
+	def get_server_wrong(self, port):
+		port = int(port)
+		ret = []
+		if port in self.tcp_servers_pool:
+			ret = self.tcp_servers_pool[port].wrong_iplist
+			self.tcp_servers_pool[port].wrong_iplist_clean()
+		if port in self.udp_servers_pool:
+			templist = self.udp_servers_pool[port].wrong_iplist
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.udp_servers_pool[port].wrong_iplist_clean()
+		return ret
+		
+
+	def get_servers_wrong(self):
+		servers = self.tcp_servers_pool.copy()
+		servers.update(self.tcp_ipv6_servers_pool)
+		servers.update(self.udp_servers_pool)
+		servers.update(self.udp_ipv6_servers_pool)
+		ret = {}
+		for port in servers.keys():
+			templist = self.get_server_wrong(port)
+			if templist != [] :
+				ret[port] = templist[:]
+		return ret

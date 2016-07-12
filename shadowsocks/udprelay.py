@@ -72,7 +72,7 @@ import binascii
 import traceback
 
 from shadowsocks import encrypt, obfs, eventloop, lru_cache, common, shell
-from shadowsocks.common import pre_parse_header, parse_header, pack_addr
+from shadowsocks.common import pre_parse_header, parse_header, pack_addr, IPNetwork, PortRange
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
 TIMEOUTS_CLEAN_SIZE = 512
@@ -282,7 +282,10 @@ class TCPRelayHandler(object):
         self._config = config
         self._dns_resolver = dns_resolver
         self._local_id = local_id
-
+		
+        self._bytesSent = 0
+        self._timeCreated = time.time()
+		
         self._is_local = is_local
         self._stage = STAGE_INIT
         self._password = config['password']
@@ -295,6 +298,7 @@ class TCPRelayHandler(object):
         self._request_id = 0
         self._client_address = AddressMap()
         self._remote_address = None
+        
         self._sendingqueue = SendingQueue()
         self._recvqueue = RecvQueue()
         if 'forbidden_ip' in config:
@@ -305,6 +309,10 @@ class TCPRelayHandler(object):
             self._forbidden_portset = config['forbidden_port']
         else:
             self._forbidden_portset = None
+        if 'disconnect_ip' in config:
+            self._disconnect_ipset = config['disconnect_ip']
+        else:
+            self._disconnect_ipset = None
         #fd_to_handlers[local_sock.fileno()] = self
         #local_sock.setblocking(False)
         #loop.add(local_sock, eventloop.POLL_IN | eventloop.POLL_ERR)
@@ -323,6 +331,8 @@ class TCPRelayHandler(object):
     @property
     def remote_address(self):
         return self._remote_address
+		
+	
 
     def add_local_address(self, addr):
         self._client_address.add(addr)
@@ -374,6 +384,14 @@ class TCPRelayHandler(object):
         if not data or not sock:
             return False
 
+        if float(self._config['node_speedlimit']) > 0:
+			now = time.time()
+			connectionDuration = now - self._timeCreated
+			self._bytesSent += len(data)
+			requiredDuration = self._bytesSent / self._server.bandwidth
+			time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
+			
+			
         uncomplete = False
         retry = 0
         if sock == self._local_sock:
@@ -411,6 +429,8 @@ class TCPRelayHandler(object):
                     shell.print_exception(e)
                     self.destroy()
                     return False
+					
+		
         if uncomplete:
             if sock == self._local_sock:
                 self._update_stream(STREAM_DOWN, WAIT_STATUS_WRITING)
@@ -436,10 +456,15 @@ class TCPRelayHandler(object):
         if len(addrs) == 0:
             raise Exception("getaddrinfo failed for %s:%d" % (ip, port))
         af, socktype, proto, canonname, sa = addrs[0]
-        if self._forbidden_iplist:
+        if self._server._forbidden_iplist:
             if common.to_str(sa[0]) in self._forbidden_iplist:
                 raise Exception('IP %s is in forbidden list, reject' %
                                 common.to_str(sa[0]))
+        if self._server._disconnect_ipset:
+            if common.to_str(addr[0]) in self._disconnect_ipset:
+                raise Exception('IP %s is in disconnect list, reject' %
+                                common.to_str(addr[0]))						
+		
         remote_sock = socket.socket(af, socktype, proto)
         self._remote_sock = remote_sock
 
@@ -693,6 +718,10 @@ class TCPRelayHandler(object):
                     if header_result is None:
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
+						
+                    if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0:
+						self._server._connected_iplist.append(common.to_str(addr[0]))
+					
                     self._remote_address = (common.to_str(remote_addr), remote_port)
                     self._stage = STAGE_DNS
                     self._dns_resolver.resolve(remote_addr,
@@ -780,6 +809,9 @@ class TCPRelayHandler(object):
                 self.handle_stream_sync_status(addr, cmd, request_id, pack_id, max_send_id, data)
 
     def handle_event(self, sock, event):
+        self._bytesSent = 0
+        self._timeCreated = time.time()
+		
         # handle all events in this handler and dispatch them to methods
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
@@ -897,6 +929,14 @@ class UDPRelay(object):
         self._closed = False
         self.server_transfer_ul = 0
         self.server_transfer_dl = 0
+		
+		
+		
+        self.connected_iplist = []
+        self.wrong_iplist = {}
+		
+        self.latency = 0
+        self.bandwidth = int(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self._protocol = obfs.obfs(config['protocol'])
@@ -916,6 +956,9 @@ class UDPRelay(object):
         self._fd_to_handlers = {}
         self._reqid_to_hd = {}
         self._data_to_write_to_server_socket = []
+		
+        self.latency = 0
+        self.bandwidth = int(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self._timeouts = []  # a list for all the handlers
         # we trim the timeouts once a while
@@ -923,13 +966,17 @@ class UDPRelay(object):
         self._handler_to_timeouts = {}  # key: handler value: index in timeouts
 
         if 'forbidden_ip' in config:
-            self._forbidden_iplist = config['forbidden_ip']
+            self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
         else:
             self._forbidden_iplist = None
         if 'forbidden_port' in config:
-            self._forbidden_portset = config['forbidden_port']
+            self._forbidden_portset = PortRange(config['forbidden_port'])
         else:
             self._forbidden_portset = None
+        if 'disconnect_ip' in config:
+            self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
+        else:
+            self._disconnect_ipset = None
 
         addrs = socket.getaddrinfo(self._listen_addr, self._listen_port, 0,
                                    socket.SOCK_DGRAM, socket.SOL_UDP)
@@ -1008,6 +1055,8 @@ class UDPRelay(object):
     def _handel_protocol_error(self, client_address, ogn_data):
         #raise Exception('can not parse header')
         logging.warn("Protocol ERROR, UDP ogn data %s from %s:%d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1]))
+        if client_address[0] not in wrong_iplist and client_address[0] != 0:
+            wrong_iplist[client_address[0]] = time.time()
 
     def _handle_server(self):
         server = self._server_socket
@@ -1090,7 +1139,8 @@ class UDPRelay(object):
                     logging.debug('Port %d is in forbidden list, reject' %
                                     sa[1])
                     # drop
-                    return
+                    return            
+			
             client = socket.socket(af, socktype, proto)
             client.setblocking(False)
             is_dns = False
@@ -1396,6 +1446,15 @@ class UDPRelay(object):
             if before_sweep_size != len(self._sockets):
                 logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
             self._sweep_timeout()
+			
+		
+    def connected_iplist_clean(self):
+        self.connected_iplist = []
+		
+    def wrong_iplist_clean(self):
+        for key in self.wrong_iplist: 
+            if self.wrong_iplist[key] < time.time()-300:
+                del self.wrong_iplist[key]
 
     def close(self, next_tick=False):
         logging.debug('UDP close')

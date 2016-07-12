@@ -19,6 +19,7 @@ import time
 import sys
 import threading
 import os
+import thread
 
 if __name__ == '__main__':
 	import inspect
@@ -26,6 +27,9 @@ if __name__ == '__main__':
 
 import server_pool
 import db_transfer
+import speedtest_thread
+import auto_thread
+import auto_block
 from shadowsocks import shell
 from configloader import load_config, get_config
 
@@ -46,17 +50,20 @@ def main():
 		db_transfer.DbTransfer.thread_db()
 	else:
 		if get_config().API_INTERFACE == 'mudbjson':
-			thread = MainThread(db_transfer.MuJsonTransfer)
+			threadMain = MainThread(db_transfer.MuJsonTransfer)
 		else:
-			thread = MainThread(db_transfer.DbTransfer)
-		thread.start()
+			threadMain = MainThread(db_transfer.DbTransfer)
+		threadMain.start()
+		thread.start_new_thread(speedtest_thread.speedtest_thread,())
+		thread.start_new_thread(auto_thread.auto_thread,())
+		thread.start_new_thread(auto_block.auto_block_thread,())
 		try:
-			while thread.is_alive():
+			while threadMain.is_alive():
 				time.sleep(10)
 		except (KeyboardInterrupt, IOError, OSError) as e:
 			import traceback
 			traceback.print_exc()
-			thread.stop()
+			threadMain.stop()
 
 if __name__ == '__main__':
 	main()
