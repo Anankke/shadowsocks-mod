@@ -219,10 +219,10 @@ class DbTransfer(object):
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
 			
-			
 			port_uid_table[row['port']] = row['id']
 
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
+			
 			for name in read_config_keys:
 				if name in row and row[name]:
 					cfg[name] = row[name]
@@ -234,8 +234,14 @@ class DbTransfer(object):
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
 					
-			if float(get_config().NODE_SPEEDLIMIT) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
-				cfg['node_speedlimit'] = max(float(get_config().NODE_SPEEDLIMIT),float(cfg['node_speedlimit']))
+			if 'node_speedlimit' in cfg:
+				print str(cfg['node_speedlimit'])
+				if float(get_config().NODE_SPEEDLIMIT) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
+					cfg['node_speedlimit'] = max(float(get_config().NODE_SPEEDLIMIT),float(cfg['node_speedlimit']))
+			else:
+				cfg['node_speedlimit'] = 0.00
+			
+			
 
 			if port not in cur_servers:
 				cur_servers[port] = passwd
