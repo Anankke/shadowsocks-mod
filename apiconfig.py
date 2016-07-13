@@ -2,11 +2,6 @@
 TRANSFER_MUL = 1.0
 NODE_ID = 1
 
-NODE_CLASS=0
-NODE_GROUP=0
-
-#Node speed limit,Mbps,0.0 means not limit
-NODE_SPEEDLIMIT = 0.0
 
 #hour,set 0 to disable
 SPEEDTEST = 6
