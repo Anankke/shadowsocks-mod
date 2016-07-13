@@ -172,12 +172,17 @@ class DbTransfer(object):
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		cur = conn.cursor()
+		
 		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
-		if cur.fetchone() == None :
+		nodeinfo = cur.fetchone()
+		
+		if nodeinfo == None :
 			rows = []
 			cur.close()
+			conn.commit()
+			conn.close()
 			return rows
-		nodeinfo = cur.fetchone()
+		
 		cur.close()
 		
 		node_speedlimit = float(nodeinfo[2])
