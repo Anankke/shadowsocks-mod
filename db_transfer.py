@@ -49,7 +49,7 @@ class DbTransfer(object):
 			
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1])) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
 			alive_user_count = alive_user_count + 1
@@ -108,15 +108,7 @@ class DbTransfer(object):
 				deny_file.write(deny_str)
 				deny_file.close()
 		
-		conn.commit() '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
-			
-	def trafficShow(self,Traffic):
-		if Traffic<1024 :
-			return str(round((Traffic),2))+"B";
-		
-		if Traffic<1024*1024 :
-			return str(round((Traffic/1024),2))+"KB";
-		
+		conn.commit()
 		conn.close()
 		
 	def uptime(self):
@@ -125,7 +117,15 @@ class DbTransfer(object):
 	
 	def load(self):
 		import os
-		return os.popen("cat /proc/loadavg | awk
+		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
+			
+	def trafficShow(self,Traffic):
+		if Traffic<1024 :
+			return str(round((Traffic),2))+"B";
+		
+		if Traffic<1024*1024 :
+			return str(round((Traffic/1024),2))+"KB";
+		
 		if Traffic<1024*1024*1024 :
 			return str(round((Traffic/1024/1024),2))+"MB";
 		
@@ -181,8 +181,8 @@ class DbTransfer(object):
 		cur.close()
 		
 		node_speedlimit = float(nodeinfo[2])
-		print nodeinfo[3]
 		traffic_rate = float(nodeinfo[3])
+		print traffic_rate
 		
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
