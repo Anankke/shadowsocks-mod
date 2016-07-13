@@ -286,7 +286,10 @@ class ServerPool(object):
 		port = int(port)
 		ret = []
 		if port in self.tcp_servers_pool:
-			ret = self.tcp_servers_pool[port].wrong_iplist.copy()
+			templist = self.tcp_servers_pool[port].wrong_iplist.copy()
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
 			self.tcp_servers_pool[port].wrong_iplist_clean()
 		if port in self.udp_servers_pool:
 			templist = self.udp_servers_pool[port].wrong_iplist.copy()
