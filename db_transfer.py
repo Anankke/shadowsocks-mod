@@ -108,16 +108,7 @@ class DbTransfer(object):
 				deny_file.write(deny_str)
 				deny_file.close()
 		
-		conn.commit()
-		conn.close()
-		
-	def uptime(self):
-		with open('/proc/uptime', 'r') as f:
-			return float(f.readline().split()[0])
-	
-	def load(self):
-		import os
-		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
+		conn.commit() '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
 			
 	def trafficShow(self,Traffic):
 		if Traffic<1024 :
@@ -126,6 +117,15 @@ class DbTransfer(object):
 		if Traffic<1024*1024 :
 			return str(round((Traffic/1024),2))+"KB";
 		
+		conn.close()
+		
+	def uptime(self):
+		with open('/proc/uptime', 'r') as f:
+			return float(f.readline().split()[0])
+	
+	def load(self):
+		import os
+		return os.popen("cat /proc/loadavg | awk
 		if Traffic<1024*1024*1024 :
 			return str(round((Traffic/1024/1024),2))+"MB";
 		
@@ -181,6 +181,7 @@ class DbTransfer(object):
 		cur.close()
 		
 		node_speedlimit = float(nodeinfo[2])
+		print nodeinfo[3]
 		traffic_rate = float(nodeinfo[3])
 		
 		if nodeinfo[0] == 0 :
