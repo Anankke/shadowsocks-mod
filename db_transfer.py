@@ -14,6 +14,8 @@ import importloader
 switchrule = None
 db_instance = None
 
+node_speedlimit = 0.00
+
 port_uid_table = {}
 
 class DbTransfer(object):
@@ -158,28 +160,34 @@ class DbTransfer(object):
 
 	def pull_db_all_user(self):
 		import cymysql
+		global node_speedlimit
 		#数据库所有用户信息
 		try:
 			switchrule = importloader.load('switchrule')
 			keys = switchrule.getKeys()
 		except Exception as e:
 			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
-		if get_config().NODE_GROUP == 0 :
-			node_group_sql = ""
-		else:
-			node_group_sql = "AND `node_group`=" + str(get_config().NODE_GROUP)
+		
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		cur = conn.cursor()
-		cur.execute("SELECT * FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND `node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0")
+		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND `node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0")
 		if cur.fetchone() == None :
 			rows = []
 			cur.close()
 			return rows
+		nodeinfo = cur.fetchone()
 		cur.close()
 		
+		node_speedlimit = nodeinfo[2]
+		
+		if nodeinfo[0] == 0 :
+			node_group_sql = ""
+		else:
+			node_group_sql = "AND `node_group`=" + str(nodeinfo[0])
+		
 		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(get_config().NODE_CLASS) +" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
+		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(nodeinfo[1]) +" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
 		rows = []
 		for r in cur.fetchall():
 			d = {}
@@ -203,6 +211,7 @@ class DbTransfer(object):
 		#需要动态载入switchrule，以便实时修改规则
 		
 		global port_uid_table
+		global node_speedlimit
 		try:
 			switchrule = importloader.load('switchrule')
 		except Exception as e:
@@ -236,8 +245,8 @@ class DbTransfer(object):
 					
 			if 'node_speedlimit' in cfg:
 				print str(cfg['node_speedlimit'])
-				if float(get_config().NODE_SPEEDLIMIT) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
-					cfg['node_speedlimit'] = max(float(get_config().NODE_SPEEDLIMIT),float(cfg['node_speedlimit']))
+				if float(node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
+					cfg['node_speedlimit'] = max(float(node_speedlimit),float(cfg['node_speedlimit']))
 			else:
 				cfg['node_speedlimit'] = 0.00
 			
