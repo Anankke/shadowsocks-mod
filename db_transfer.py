@@ -93,7 +93,7 @@ class DbTransfer(object):
 		server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
 		for id in wrong_iplist.keys():
 			for ip in wrong_iplist[id]:
-				if str(ip) == str(ip):
+				if str(ip) == str(server_ip):
 					continue
 				if get_config().CLOUDSAFE == 1:
 					cur = conn.cursor()

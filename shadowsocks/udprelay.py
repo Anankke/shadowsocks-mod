@@ -348,6 +348,8 @@ class TCPRelayHandler(object):
     def _update_stream(self, stream, status):
         # update a stream to a new waiting status
 
+		
+		
         # check if status is changed
         # only update if dirty
         dirty = False
@@ -385,11 +387,11 @@ class TCPRelayHandler(object):
             return False
 
         if float(self._config['node_speedlimit']) > 0:
-			now = time.time()
-			connectionDuration = now - self._timeCreated
-			self._bytesSent += len(data)
-			requiredDuration = self._bytesSent / self._server.bandwidth
-			time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
+            now = time.time()
+            connectionDuration = now - self._timeCreated
+            self._bytesSent += len(data)
+            requiredDuration = self._bytesSent / self._server.bandwidth
+            time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
 			
 			
         uncomplete = False
