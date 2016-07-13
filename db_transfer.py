@@ -15,6 +15,7 @@ switchrule = None
 db_instance = None
 
 node_speedlimit = 0.00
+traffic_rate = 0.0
 
 port_uid_table = {}
 
@@ -48,7 +49,7 @@ class DbTransfer(object):
 			
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(get_config().TRANSFER_MUL) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
 			alive_user_count = alive_user_count + 1
@@ -144,23 +145,23 @@ class DbTransfer(object):
 					continue
 				elif last_transfer[id][0] <= curr_transfer[id][0] and \
 				last_transfer[id][1] <= curr_transfer[id][1]:
-					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * get_config().TRANSFER_MUL),
-										int((curr_transfer[id][1] - last_transfer[id][1]) * get_config().TRANSFER_MUL)]
+					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * traffic_rate),
+										int((curr_transfer[id][1] - last_transfer[id][1]) * traffic_rate)]
 				else:
-					dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
-										int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
+					dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
+										int(curr_transfer[id][1] * traffic_rate)]
 			else:
 				if curr_transfer[id][0] == 0 and curr_transfer[id][1] == 0:
 					continue
-				dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
-									int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
+				dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
+									int(curr_transfer[id][1] * traffic_rate)]
 
 		self.update_all_user(dt_transfer)
 		self.last_get_transfer = curr_transfer
 
 	def pull_db_all_user(self):
 		import cymysql
-		global node_speedlimit
+		global node_speedlimit,traffic_rate
 		#数据库所有用户信息
 		try:
 			switchrule = importloader.load('switchrule')
@@ -171,7 +172,7 @@ class DbTransfer(object):
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		cur = conn.cursor()
-		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND `node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0")
+		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND `node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0")
 		if cur.fetchone() == None :
 			rows = []
 			cur.close()
@@ -179,7 +180,8 @@ class DbTransfer(object):
 		nodeinfo = cur.fetchone()
 		cur.close()
 		
-		node_speedlimit = nodeinfo[2]
+		node_speedlimit = float(nodeinfo[2])
+		traffic_rate = float(nodeinfo[3])
 		
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""

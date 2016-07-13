@@ -1,5 +1,4 @@
 ﻿# Config
-TRANSFER_MUL = 1.0
 NODE_ID = 1
 
 
