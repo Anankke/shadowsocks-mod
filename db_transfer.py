@@ -49,7 +49,7 @@ class DbTransfer(object):
 			
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / traffic_rate) +"', '" + str(dt_transfer[id][1] / traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
 			alive_user_count = alive_user_count + 1
