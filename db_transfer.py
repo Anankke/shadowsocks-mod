@@ -40,6 +40,7 @@ class DbTransfer(object):
 		
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		conn.autocommit(True)
 		
 		for id in dt_transfer.keys():
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
@@ -107,8 +108,6 @@ class DbTransfer(object):
 				deny_file=open('/etc/hosts.deny','a')
 				deny_file.write(deny_str)
 				deny_file.close()
-		
-		conn.commit()
 		conn.close()
 		
 	def uptime(self):
@@ -171,6 +170,8 @@ class DbTransfer(object):
 		
 		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		conn.autocommit(True)
+		
 		cur = conn.cursor()
 		
 		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")

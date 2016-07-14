@@ -105,10 +105,10 @@ def speedtest_thread():
 		
 		conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 								passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
+		conn.autocommit(True)
 		cur = conn.cursor()
 		cur.execute("INSERT INTO `speedtest` (`id`, `nodeid`, `datetime`, `telecomping`, `telecomeupload`, `telecomedownload`, `unicomping`, `unicomupload`, `unicomdownload`, `cmccping`, `cmccupload`, `cmccdownload`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', unix_timestamp(), '" + CTPing + "', '" + CTUpSpeed + "', '" + CTDLSpeed + "', '" + CUPing + "', '" + CUUpSpeed + "', '" + CUDLSpeed + "', '" + CMPing + "', '" + CMUpSpeed + "', '" + CMDLSpeed + "')")
 		cur.close()
-		conn.commit()
 		conn.close()
 		
 		logging.info("Speedtest finished")

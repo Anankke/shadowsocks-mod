@@ -42,7 +42,7 @@ def auto_block_thread():
 		
 		conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 									passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
-		
+		conn.autocommit(True)
 		
 		
 		deny_file = open('/etc/hosts.deny')
@@ -118,7 +118,6 @@ def auto_block_thread():
 		rows = cur.fetchall()
 		cur.close()
 		
-		conn.commit()
 		conn.close()
 		
 		deny_file = open('/etc/hosts.deny')

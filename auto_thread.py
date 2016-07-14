@@ -16,11 +16,11 @@ def run_command(command,id):
 	value = commands.getoutput(command)
 	conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 								passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
+	conn.autocommit(True)
 	cur = conn.cursor()
 	cur.execute("INSERT INTO `auto` (`id`, `value`, `sign`, `datetime`,`type`) VALUES (NULL, 'NodeID:" + str(configloader.get_config().NODE_ID) + " Result:\n" + str(value) + "', 'NOT', unix_timestamp(),'2')")
 	rows = cur.fetchall()
 	cur.close()
-	conn.commit()
 	conn.close()
 
 def auto_thread():
@@ -36,6 +36,7 @@ def auto_thread():
 		time.sleep(60)
 		conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 									passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
+		conn.autocommit(True)
 		cur = conn.cursor()
 		cur.execute("SELECT * FROM `auto` where `datetime`>unix_timestamp()-60 AND `type`=1")
 		rows = cur.fetchall()
