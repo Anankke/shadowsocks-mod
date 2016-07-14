@@ -36,7 +36,7 @@ def speedtest_thread():
 				urls.append('%s/random%sx%s.jpg' %
 							(os.path.dirname(CTNode['url']), size, size))
 		dlspeed = speedtest_cli.downloadSpeed(urls, True)
-		CTDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CTDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		sizesizes = [int(.25 * 1000 * 1000), int(.5 * 1000 * 1000)]
 		sizes = []
@@ -44,7 +44,7 @@ def speedtest_thread():
 			for i in range(0, 25):
 				sizes.append(size)
 		ulspeed = speedtest_cli.uploadSpeed(CTNode['url'], sizes, True)
-		CTUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CTUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		
 		
@@ -64,7 +64,7 @@ def speedtest_thread():
 				urls.append('%s/random%sx%s.jpg' %
 							(os.path.dirname(CUNode['url']), size, size))
 		dlspeed = speedtest_cli.downloadSpeed(urls, True)
-		CUDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CUDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		sizesizes = [int(.25 * 1000 * 1000), int(.5 * 1000 * 1000)]
 		sizes = []
@@ -72,7 +72,7 @@ def speedtest_thread():
 			for i in range(0, 25):
 				sizes.append(size)
 		ulspeed = speedtest_cli.uploadSpeed(CUNode['url'], sizes, True)
-		CUUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CUUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		
 		
@@ -91,7 +91,7 @@ def speedtest_thread():
 				urls.append('%s/random%sx%s.jpg' %
 							(os.path.dirname(CMNode['url']), size, size))
 		dlspeed = speedtest_cli.downloadSpeed(urls, True)
-		CMDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CMDLSpeed = str(round((dlspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		sizesizes = [int(.25 * 1000 * 1000), int(.5 * 1000 * 1000)]
 		sizes = []
@@ -99,7 +99,7 @@ def speedtest_thread():
 			for i in range(0, 25):
 				sizes.append(size)
 		ulspeed = speedtest_cli.uploadSpeed(CMNode['url'], sizes, True)
-		CMUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbps"
+		CMUpSpeed = str(round((ulspeed / 1000 / 1000) * 8,2)) + " Mbit/s"
 		
 		
 		
@@ -107,7 +107,7 @@ def speedtest_thread():
 								passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
 		conn.autocommit(True)
 		cur = conn.cursor()
-		cur.execute("INSERT INTO `speedtest` (`id`, `nodeid`, `datetime`, `telecomping`, `telecomeupload`, `telecomedownload`, `unicomping`, `unicomupload`, `unicomdownload`, `cmccping`, `cmccupload`, `cmccdownload`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', unix_timestamp(), '" + CTPing + "', '" + CTUpSpeed + "', '" + CTDLSpeed + "', '" + CUPing + "', '" + CUUpSpeed + "', '" + CUDLSpeed + "', '" + CMPing + "', '" + CMUpSpeed + "', '" + CMDLSpeed + "')")
+		cur.execute("INSERT INTO `speedtest` (`id`, `nodeid`, `datetime`, `telecomping`, `telecomeupload`, `telecomedownload`, `unicomping`, `unicomupload`, `unicomdownload`, `cmccping`, `cmccupload`, `cmccdownload`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', unix_timestamp(), '" + CTPing + "', '" + CTDLSpeed + "', '" + CTUpSpeed + "', '" + CUPing + "', '" + CUDLSpeed + "', '" + CUUpSpeed + "', '" + CMPing + "', '" + CMDLSpeed + "', '" + CMUpSpeed + "')")
 		cur.close()
 		conn.close()
 		
