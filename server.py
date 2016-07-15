@@ -19,7 +19,6 @@ import time
 import sys
 import threading
 import os
-import thread
 
 if __name__ == '__main__':
 	import inspect
@@ -54,9 +53,16 @@ def main():
 		else:
 			threadMain = MainThread(db_transfer.DbTransfer)
 		threadMain.start()
-		thread.start_new_thread(speedtest_thread.speedtest_thread,())
-		thread.start_new_thread(auto_thread.auto_thread,())
-		thread.start_new_thread(auto_block.auto_block_thread,())
+		
+		threadSpeedtest = threading.Thread(group = None, target = speedtest_thread.speedtest_thread, name = "speedtest", args = (), kwargs = {}) 
+		threadSpeedtest.start()
+		
+		threadAutoexec = threading.Thread(group = None, target = auto_thread.auto_thread, name = "autoexec", args = (), kwargs = {})  
+		threadAutoexec.start()
+		
+		threadAutoblock = threading.Thread(group = None, target = auto_block.auto_block_thread, name = "autoblock", args = (), kwargs = {})  
+		threadAutoblock.start()
+		
 		try:
 			while threadMain.is_alive():
 				time.sleep(10)

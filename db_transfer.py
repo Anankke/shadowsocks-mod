@@ -108,19 +108,30 @@ class DbTransfer(object):
 						cur = conn.cursor()
 						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
 						cur.close()
+						if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
+							run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
 					deny_str = deny_str + "\nALL: " + str(ip)
 				if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
+					commands.getoutput(command)
 					deny_file.write(deny_str)
 					deny_file.close()
 			conn.close()
 		
 	def uptime(self):
-		return float(datetime.datetime.now() - datetime.datetime.fromtimestamp(psutil.boot_time()))
+		return float(time.time() - psutil.boot_time())
+		
+	def run_background(self):
+		self.logger.debug("run %s"%self.cmd)
+		self._process = subprocess.Popen(self.cmd, shell=True, 
+				stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 	
 	def load(self):
-		av1, av2, av3 = os.getloadavg()
-		return "%.2f %.2f %.2f" % (av1, av2, av3)
+		if platform.system() != 'Linux':
+			return "0.00 0.00 0.00"
+		else:
+			av1, av2, av3 = os.getloadavg()
+			return "%.2f %.2f %.2f" % (av1, av2, av3)
 			
 	def trafficShow(self,Traffic):
 		if Traffic<1024 :
