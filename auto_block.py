@@ -96,18 +96,20 @@ def auto_block_thread():
 		
 		for row in rows:
 			node = row[1]
-			ip = row[2]
+			ip = get_ip(row[2])
 			
-			if str(node) == str(configloader.get_config().NODE_ID):
-				if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1 and ip not in denyed_ip_list:
-					deny_str_at = deny_str_at + "\nALL: " + str(ip)
-					run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
-					
+			if ip != None:
+			
+				if str(node) == str(configloader.get_config().NODE_ID):
+					if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1 and ip not in denyed_ip_list:
+						deny_str_at = deny_str_at + "\nALL: " + str(ip)
+						run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
+						
+						logging.info("Remote Block ip:" + str(ip))
+				else:
+					deny_str = deny_str + "\nALL: " + str(ip)
 					logging.info("Remote Block ip:" + str(ip))
-			else:
-				deny_str = deny_str + "\nALL: " + str(ip)
-				logging.info("Remote Block ip:" + str(ip))
-				run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
+					run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
 			
 		
 		deny_file=open('/etc/hosts.deny','a')
