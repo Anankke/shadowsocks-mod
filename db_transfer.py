@@ -12,7 +12,6 @@ from shadowsocks import common, shell
 from configloader import load_config, get_config
 import importloader
 import platform
-import psutil
 import datetime
 
 switchrule = None
@@ -119,12 +118,12 @@ class DbTransfer(object):
 			conn.close()
 		
 	def uptime(self):
-		return float(time.time() - psutil.boot_time())
-		
-	def run_background(self):
-		self.logger.debug("run %s"%self.cmd)
-		self._process = subprocess.Popen(self.cmd, shell=True, 
-				stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+		with open('/proc/uptime', 'r') as f:
+			return float(f.readline().split()[0])
+	
+	def load(self):
+		import os
+		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
 	
 	def load(self):
 		if platform.system() != 'Linux':
