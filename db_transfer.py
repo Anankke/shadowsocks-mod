@@ -4,12 +4,16 @@
 import logging
 import time
 import sys
+import os
 import socket
 from server_pool import ServerPool
 import traceback
 from shadowsocks import common, shell
 from configloader import load_config, get_config
 import importloader
+import platform
+import psutil
+import datetime
 
 switchrule = None
 db_instance = None
@@ -93,30 +97,30 @@ class DbTransfer(object):
 				cur.close()
 				
 		deny_str = ""
-		wrong_iplist = ServerPool.get_instance().get_servers_wrong()
-		server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
-		for id in wrong_iplist.keys():
-			for ip in wrong_iplist[id]:
-				if str(ip) == str(server_ip):
-					continue
-				if get_config().CLOUDSAFE == 1:
-					cur = conn.cursor()
-					cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
-					cur.close()
-				deny_str = deny_str + "\nALL: " + str(ip)
-			if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
-				deny_file=open('/etc/hosts.deny','a')
-				deny_file.write(deny_str)
-				deny_file.close()
-		conn.close()
+		if platform.system() == 'Linux':
+			wrong_iplist = ServerPool.get_instance().get_servers_wrong()
+			server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
+			for id in wrong_iplist.keys():
+				for ip in wrong_iplist[id]:
+					if str(ip) == str(server_ip):
+						continue
+					if get_config().CLOUDSAFE == 1:
+						cur = conn.cursor()
+						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
+						cur.close()
+					deny_str = deny_str + "\nALL: " + str(ip)
+				if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
+					deny_file=open('/etc/hosts.deny','a')
+					deny_file.write(deny_str)
+					deny_file.close()
+			conn.close()
 		
 	def uptime(self):
-		with open('/proc/uptime', 'r') as f:
-			return float(f.readline().split()[0])
+		return float(datetime.datetime.now() - datetime.datetime.fromtimestamp(psutil.boot_time()))
 	
 	def load(self):
-		import os
-		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
+		av1, av2, av3 = os.getloadavg()
+		return "%.2f %.2f %.2f" % (av1, av2, av3)
 			
 	def trafficShow(self,Traffic):
 		if Traffic<1024 :

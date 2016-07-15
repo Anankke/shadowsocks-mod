@@ -13,6 +13,7 @@ import cymysql
 import commands
 import socket
 import re
+import platform
 
 
 def file_len(fname):
@@ -28,7 +29,7 @@ def get_ip(text):
 	return None
 
 def auto_block_thread():
-	if configloader.get_config().CLOUDSAFE == 0:
+	if configloader.get_config().CLOUDSAFE == 0 or platform.system() != 'Linux':
 		return
 	
 	start_line = file_len("/etc/hosts.deny")

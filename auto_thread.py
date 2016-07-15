@@ -11,6 +11,7 @@ import gnupg
 import thread
 import cymysql
 import commands
+import platform
 
 def run_command(command,id):
 	value = commands.getoutput(command)
@@ -24,7 +25,7 @@ def run_command(command,id):
 	conn.close()
 
 def auto_thread():
-	if configloader.get_config().AUTOEXEC == 0:
+	if configloader.get_config().AUTOEXEC == 0 or platform.system() != 'Linux' :
 		return
 	
 	gpg = gnupg.GPG("/tmp/ssshell")
