@@ -13,7 +13,7 @@ from configloader import load_config, get_config
 import importloader
 import platform
 import datetime
-import subprocess
+
 
 switchrule = None
 db_instance = None
@@ -109,7 +109,7 @@ class DbTransfer(object):
 						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
 						cur.close()
 						if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
-							subprocess.Popen('route add -host %s gw 127.0.0.1' % str(ip))
+							os.system('route add -host %s gw 127.0.0.1' % str(ip))
 					deny_str = deny_str + "\nALL: " + str(ip)
 				if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')

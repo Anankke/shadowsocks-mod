@@ -486,7 +486,7 @@ class TCPRelayHandler(object):
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0:
                 self._server.connected_iplist.append(self._client_address[0])
 
-            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0:
+            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
 			
             common.connect_log('%s connecting %s:%d from %s:%d' %
@@ -885,7 +885,7 @@ class TCPRelayHandler(object):
     def _log_error(self, e):
         logging.error('%s when handling connection from %s:%d' %
                       (e, self._client_address[0], self._client_address[1]))
-        if self._client_address[0] not in self._server.wrong_iplist and self._client_address[0] != 0:
+        if self._client_address[0] not in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
             self._server.wrong_iplist[self._client_address[0]] = time.time()
 
     def stage(self):
@@ -958,7 +958,8 @@ class TCPRelay(object):
         self.server_connections = 0
         self.connected_iplist = []
         self.wrong_iplist = {}
-		
+        self.is_reading_wrong_iplist = False
+        
         if 'forbidden_ip' in config:
             self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
         else:
@@ -1169,14 +1170,21 @@ class TCPRelay(object):
             for handler in list(self._fd_to_handlers.values()):
                 handler.destroy()
         self._sweep_timeout()
-		
+        
     def connected_iplist_clean(self):
         self.connected_iplist = []
-		
+        
     def wrong_iplist_clean(self):
+        self.is_reading_wrong_iplist = True
+        
+        temp_new_list = {}
         for key in self.wrong_iplist: 
-            if self.wrong_iplist[key] < time.time()-300:
-                del self.wrong_iplist[key]
+            if self.wrong_iplist[key] > time.time()-300:
+                temp_new_list[key] = self.wrong_iplist[key]
+        
+        self.wrong_iplist = temp_new_list.copy()
+        
+        self.is_reading_wrong_iplist = False
         
 
     def close(self, next_tick=False):

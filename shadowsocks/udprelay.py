@@ -724,7 +724,7 @@ class TCPRelayHandler(object):
                     if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0:
                         self._server._connected_iplist.append(common.to_str(addr[0]))
 					
-                    if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0:
+                    if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_reading_wrong_iplist == False:
                         del self._server.wrong_iplist[common.to_str(addr[0])]
 						
                     self._remote_address = (common.to_str(remote_addr), remote_port)
@@ -939,6 +939,7 @@ class UDPRelay(object):
 		
         self.connected_iplist = []
         self.wrong_iplist = {}
+        self.is_reading_wrong_iplist = False
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self._protocol = obfs.obfs(config['protocol'])
@@ -1057,7 +1058,7 @@ class UDPRelay(object):
     def _handel_protocol_error(self, client_address, ogn_data):
         #raise Exception('can not parse header')
         logging.warn("Protocol ERROR, UDP ogn data %s from %s:%d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1]))
-        if client_address[0] not in wrong_iplist and client_address[0] != 0:
+        if client_address[0] not in wrong_iplist and client_address[0] != 0 and is_reading_wrong_iplist == False:
             wrong_iplist[client_address[0]] = time.time()
 
     def _handle_server(self):
@@ -1454,9 +1455,16 @@ class UDPRelay(object):
         self.connected_iplist = []
 		
     def wrong_iplist_clean(self):
+        self.is_reading_wrong_iplist = True
+        
+        temp_new_list = {}
         for key in self.wrong_iplist: 
-            if self.wrong_iplist[key] < time.time()-300:
-                del self.wrong_iplist[key]
+            if self.wrong_iplist[key] > time.time()-300:
+                temp_new_list[key] = self.wrong_iplist[key]
+        
+        self.wrong_iplist = temp_new_list.copy()
+        
+        self.is_reading_wrong_iplist = True
 
     def close(self, next_tick=False):
         logging.debug('UDP close')
