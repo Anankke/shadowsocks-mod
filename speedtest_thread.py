@@ -12,12 +12,14 @@ import cymysql
 
 
 def speedtest_thread():
+	hour = configloader.get_config().SPEEDTEST
+	if hour == 0:
+		return
+
+	time.sleep(600)
+	
 	while True :
-		hour = configloader.get_config().SPEEDTEST
-		if hour == 0:
-			break
 		
-		time.sleep(600)
 		
 		config = speedtest_cli.getConfig()
 		
@@ -114,6 +116,6 @@ def speedtest_thread():
 		logging.info("Speedtest finished")
 		
 		
-		
+		time.sleep(hour * 3600)
 		
 
