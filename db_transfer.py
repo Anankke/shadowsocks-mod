@@ -22,7 +22,7 @@ node_speedlimit = 0.00
 traffic_rate = 0.0
 
 port_uid_table = {}
-self.user_pass = {}
+user_pass = {}
 
 class DbTransfer(object):
 	def __init__(self):
