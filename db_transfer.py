@@ -129,14 +129,7 @@ class DbTransfer(object):
 	def load(self):
 		import os
 		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
-	
-	def load(self):
-		if platform.system() != 'Linux':
-			return "0.00 0.00 0.00"
-		else:
-			av1, av2, av3 = os.getloadavg()
-			return "%.2f %.2f %.2f" % (av1, av2, av3)
-			
+		
 	def trafficShow(self,Traffic):
 		if Traffic<1024 :
 			return str(round((Traffic),2))+"B";
