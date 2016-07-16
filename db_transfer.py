@@ -52,7 +52,7 @@ class DbTransfer(object):
 			alive_user_count = alive_user_count + 1
 			bandwidth_thistime = bandwidth_thistime + transfer[0] + transfer[1]
 			
-			update_trs = 1024 * max(2048 - self.user_pass.get(id, 0) * 64, 16)
+			update_trs = 1024 * max(2048 - user_pass.get(id, 0) * 64, 16)
 			if transfer[0] + transfer[1] < update_trs:
 				continue
 			
