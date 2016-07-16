@@ -162,17 +162,17 @@ class DbTransfer(object):
 					continue
 				if last_transfer[id][0] <= curr_transfer[id][0] and \
 						last_transfer[id][1] <= curr_transfer[id][1]:
-					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * get_config().TRANSFER_MUL),
-										int((curr_transfer[id][1] - last_transfer[id][1]) * get_config().TRANSFER_MUL)]
+					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * traffic_rate),
+										int((curr_transfer[id][1] - last_transfer[id][1]) * traffic_rate)]
 				else:
-					dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
-										int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
+					dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
+										int(curr_transfer[id][1] * traffic_rate)]
 			else:
 				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
 					user_pass[id] = user_pass.get(id, 0) + 1
 					continue
-				dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
-									int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
+				dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
+									int(curr_transfer[id][1] * traffic_rate)]
 			if id in user_pass:
 				del user_pass[id]
 		self.update_all_user(dt_transfer)
