@@ -17,7 +17,7 @@ def speedtest_thread():
 		if hour == 0:
 			break
 		
-		time.sleep(3600*hour)
+		time.sleep(600)
 		
 		config = speedtest_cli.getConfig()
 		
@@ -112,6 +112,8 @@ def speedtest_thread():
 		conn.close()
 		
 		logging.info("Speedtest finished")
+		
+		
 		
 		
 
