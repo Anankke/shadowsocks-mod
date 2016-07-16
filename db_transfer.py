@@ -22,6 +22,7 @@ node_speedlimit = 0.00
 traffic_rate = 0.0
 
 port_uid_table = {}
+self.user_pass = {}
 
 class DbTransfer(object):
 	def __init__(self):
@@ -47,8 +48,14 @@ class DbTransfer(object):
 		conn.autocommit(True)
 		
 		for id in dt_transfer.keys():
-			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
+			transfer = dt_transfer[id]
+			alive_user_count = alive_user_count + 1
+			bandwidth_thistime = bandwidth_thistime + transfer[0] + transfer[1]
+			
+			update_trs = 1024 * max(2048 - self.user_pass.get(id, 0) * 64, 16)
+			if transfer[0] + transfer[1] < update_trs:
 				continue
+			
 			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
 			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
 			
@@ -57,9 +64,6 @@ class DbTransfer(object):
 			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / traffic_rate) +"', '" + str(dt_transfer[id][1] / traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
-			alive_user_count = alive_user_count + 1
-		
-			bandwidth_thistime = bandwidth_thistime + dt_transfer[id][0] + dt_transfer[id][1]
 			
 			if query_sub_in is not None:
 				query_sub_in += ',%s' % id
@@ -153,23 +157,24 @@ class DbTransfer(object):
 		dt_transfer = {}
 		for id in curr_transfer.keys():
 			if id in last_transfer:
-				if last_transfer[id][0] == curr_transfer[id][0] and last_transfer[id][1] == curr_transfer[id][1]:
+				if curr_transfer[id][0] + curr_transfer[id][1] - last_transfer[id][0] - last_transfer[id][1] <= 0:
+					self.user_pass[id] = self.user_pass.get(id, 0) + 1
 					continue
-				elif curr_transfer[id][0] == 0 and curr_transfer[id][1] == 0:
-					continue
-				elif last_transfer[id][0] <= curr_transfer[id][0] and \
-				last_transfer[id][1] <= curr_transfer[id][1]:
-					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * traffic_rate),
-										int((curr_transfer[id][1] - last_transfer[id][1]) * traffic_rate)]
+				if last_transfer[id][0] <= curr_transfer[id][0] and \
+						last_transfer[id][1] <= curr_transfer[id][1]:
+					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * get_config().TRANSFER_MUL),
+										int((curr_transfer[id][1] - last_transfer[id][1]) * get_config().TRANSFER_MUL)]
 				else:
-					dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
-										int(curr_transfer[id][1] * traffic_rate)]
+					dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
+										int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
 			else:
-				if curr_transfer[id][0] == 0 and curr_transfer[id][1] == 0:
+				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
+					self.user_pass[id] = self.user_pass.get(id, 0) + 1
 					continue
-				dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
-									int(curr_transfer[id][1] * traffic_rate)]
-
+				dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
+									int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
+			if id in self.user_pass:
+				del self.user_pass[id]
 		self.update_all_user(dt_transfer)
 		self.last_get_transfer = curr_transfer
 
