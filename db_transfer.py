@@ -158,7 +158,7 @@ class DbTransfer(object):
 		for id in curr_transfer.keys():
 			if id in last_transfer:
 				if curr_transfer[id][0] + curr_transfer[id][1] - last_transfer[id][0] - last_transfer[id][1] <= 0:
-					self.user_pass[id] = self.user_pass.get(id, 0) + 1
+					user_pass[id] = user_pass.get(id, 0) + 1
 					continue
 				if last_transfer[id][0] <= curr_transfer[id][0] and \
 						last_transfer[id][1] <= curr_transfer[id][1]:
@@ -169,12 +169,12 @@ class DbTransfer(object):
 										int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
 			else:
 				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
-					self.user_pass[id] = self.user_pass.get(id, 0) + 1
+					user_pass[id] = user_pass.get(id, 0) + 1
 					continue
 				dt_transfer[id] = [int(curr_transfer[id][0] * get_config().TRANSFER_MUL),
 									int(curr_transfer[id][1] * get_config().TRANSFER_MUL)]
-			if id in self.user_pass:
-				del self.user_pass[id]
+			if id in user_pass:
+				del user_pass[id]
 		self.update_all_user(dt_transfer)
 		self.last_get_transfer = curr_transfer
 
