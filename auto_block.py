@@ -14,6 +14,8 @@ import commands
 import socket
 import re
 import platform
+import subprocess
+
 
 
 def file_len(fname):
@@ -27,11 +29,6 @@ def get_ip(text):
 	for ip in reip.findall(text):
 		return ip
 	return None
-	
-def run_background(self):
-	self.logger.debug("run %s"%self.cmd)
-	self._process = subprocess.Popen(self.cmd, shell=True, 
-			stdout=subprocess.PIPE, stderr=subprocess.PIPE)
 
 def auto_block_thread():
 	if configloader.get_config().CLOUDSAFE == 0 or platform.system() != 'Linux':
@@ -103,13 +100,13 @@ def auto_block_thread():
 				if str(node) == str(configloader.get_config().NODE_ID):
 					if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1 and ip not in denyed_ip_list:
 						deny_str_at = deny_str_at + "\nALL: " + str(ip)
-						run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
+						subprocess.Popen('route add -host %s gw 127.0.0.1' % str(ip))
 						
 						logging.info("Remote Block ip:" + str(ip))
 				else:
 					deny_str = deny_str + "\nALL: " + str(ip)
 					logging.info("Remote Block ip:" + str(ip))
-					run_background('iptables -A INPUT -s %s -j DROP' % str(ip))
+					subprocess.Popen('route add -host %s gw 127.0.0.1' % str(ip))
 			
 		
 		deny_file=open('/etc/hosts.deny','a')
@@ -142,6 +139,7 @@ def auto_block_thread():
 				ip = str(row[1])
 				if line.find(ip) != -1:
 					del deny_lines[i]
+					subprocess.Popen('route del -host %s gw 127.0.0.1' % str(ip))
 					logging.info("Unblock ip:" + str(ip))
 			i = i + 1
 		
