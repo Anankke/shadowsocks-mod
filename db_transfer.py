@@ -59,7 +59,8 @@ class DbTransfer(object):
 			cur.close()
 			
 			alive_user_count = alive_user_count + 1
-			bandwidth_thistime = bandwidth_thistime + transfer[0] + transfer[1]
+		
+			bandwidth_thistime = bandwidth_thistime + dt_transfer[id][0] + dt_transfer[id][1]
 			
 			if query_sub_in is not None:
 				query_sub_in += ',%s' % id
