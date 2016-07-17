@@ -161,7 +161,7 @@ def auto_block_thread():
 		fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 		for line in deny_lines:
 			deny_file.write(line)
-		deng_file.write("\n")
+		deny_file.write("\n")
 		deny_file.close()
 			
 		start_line = file_len("/etc/hosts.deny")
