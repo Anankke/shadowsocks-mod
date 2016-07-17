@@ -39,7 +39,6 @@ class DbTransfer(object):
 		query_sub_when = ''
 		query_sub_when2 = ''
 		query_sub_in = None
-		last_time = time.time()
 		
 		alive_user_count = 0
 		bandwidth_thistime = 0
@@ -73,7 +72,7 @@ class DbTransfer(object):
 		if query_sub_when != '':
 			query_sql = query_head + ' SET u = CASE port' + query_sub_when + \
 						' END, d = CASE port' + query_sub_when2 + \
-						' END, t = ' + str(int(last_time)) + \
+						' END, t = unix_timestamp() ' + \
 						' WHERE port IN (%s)' % query_sub_in
 			#print query_sql
 			
