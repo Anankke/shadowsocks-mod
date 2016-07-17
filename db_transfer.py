@@ -13,6 +13,7 @@ from configloader import load_config, get_config
 import importloader
 import platform
 import datetime
+import fcntl
 
 
 switchrule = None
@@ -108,6 +109,13 @@ class DbTransfer(object):
 				for ip in wrong_iplist[id]:
 					if str(ip) == str(server_ip):
 						continue
+					cur = conn.cursor()
+					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
+					rows = cur.fetchone()
+					cur.close()
+					
+					if rows != None:
+						continue
 					if get_config().CLOUDSAFE == 1:
 						cur = conn.cursor()
 						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
@@ -117,8 +125,8 @@ class DbTransfer(object):
 					deny_str = deny_str + "\nALL: " + str(ip)
 				if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
-					commands.getoutput(command)
-					deny_file.write(deny_str)
+					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
+					deny_file.write(deny_str + "\n")
 					deny_file.close()
 			conn.close()
 		
