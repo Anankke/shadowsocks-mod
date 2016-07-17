@@ -24,7 +24,6 @@ traffic_rate = 0.0
 
 port_uid_table = {}
 
-
 class DbTransfer(object):
 	def __init__(self):
 		import threading
