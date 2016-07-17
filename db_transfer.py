@@ -98,7 +98,7 @@ class DbTransfer(object):
 				cur.close()
 				
 		deny_str = ""
-		if platform.system() == 'Linux':
+		if platform.system() == 'Linux' and get_config().ANTISSATTACK == 1 :
 			wrong_iplist = ServerPool.get_instance().get_servers_wrong()
 			server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
 			for id in wrong_iplist.keys():
@@ -116,15 +116,15 @@ class DbTransfer(object):
 						cur = conn.cursor()
 						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
 						cur.close()
-						if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
+						if get_config().CLOUDSAFE == 0:
 							os.system('route add -host %s gw 127.0.0.1' % str(ip))
 					deny_str = deny_str + "\nALL: " + str(ip)
-				if get_config().ANTISSATTACK == 1 and get_config().CLOUDSAFE == 0:
+				if get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
 					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 					deny_file.write(deny_str + "\n")
 					deny_file.close()
-			conn.close()
+		conn.close()
 		
 	def uptime(self):
 		with open('/proc/uptime', 'r') as f:
