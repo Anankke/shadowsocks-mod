@@ -74,7 +74,7 @@ class DbTransfer(object):
 						' END, d = CASE port' + query_sub_when2 + \
 						' END, t = unix_timestamp() ' + \
 						' WHERE port IN (%s)' % query_sub_in
-			#print query_sql
+			print query_sql
 			
 			cur = conn.cursor()
 			cur.execute(query_sql)
