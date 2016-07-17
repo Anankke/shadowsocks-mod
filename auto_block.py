@@ -50,7 +50,7 @@ def auto_block_thread():
 		
 		
 		deny_file = open('/etc/hosts.deny')
-		fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+		fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 		deny_lines = deny_file.readlines()
 		deny_file.close()
 		
@@ -71,7 +71,7 @@ def auto_block_thread():
 						i = i + 1
 					
 					deny_file = file("/etc/hosts.deny", "w+")
-					fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 					for line in deny_lines:
 						deny_file.write(line)
 					deny_file.write("\n")
@@ -121,13 +121,13 @@ def auto_block_thread():
 			
 		
 		deny_file=open('/etc/hosts.deny','a')
-		fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+		fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 		deny_file.write(deny_str + "\n")
 		deny_file.close()
 		
 		if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1:
 			deny_file=open('/etc/hosts.deny','a')
-			fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+			fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 			deny_file.write(deny_str_at + "\n")
 			deny_file.close()
 			
@@ -142,7 +142,7 @@ def auto_block_thread():
 		conn.close()
 		
 		deny_file = open('/etc/hosts.deny')
-		fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+		fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 		deny_lines = deny_file.readlines()
 		deny_file.close()
 		
@@ -158,7 +158,7 @@ def auto_block_thread():
 			i = i + 1
 		
 		deny_file = file("/etc/hosts.deny", "w+")
-		fcntl.flock(deny_file.no(),fcntl.LOCK_EX)
+		fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 		for line in deny_lines:
 			deny_file.write(line)
 		deng_file.write("\n")
