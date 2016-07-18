@@ -76,7 +76,6 @@ class DbTransfer(object):
 						' END, d = CASE port' + query_sub_when2 + \
 						' END, t = unix_timestamp() ' + \
 						' WHERE port IN (%s)' % query_sub_in
-			print query_sql
 			
 			cur = conn.cursor()
 			cur.execute(query_sql)
@@ -87,7 +86,7 @@ class DbTransfer(object):
 		cur.close()
 		
 		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `Node_ID`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
+		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
 		cur.close()
 		
 
@@ -213,7 +212,6 @@ class DbTransfer(object):
 		
 		node_speedlimit = float(nodeinfo[2])
 		traffic_rate = float(nodeinfo[3])
-		print traffic_rate
 		
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
@@ -278,7 +276,6 @@ class DbTransfer(object):
 					cfg[name] = cfg[name].encode('utf-8')
 					
 			if 'node_speedlimit' in cfg:
-				print str(cfg['node_speedlimit'])
 				if float(node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
 					cfg['node_speedlimit'] = max(float(node_speedlimit),float(cfg['node_speedlimit']))
 			else:
