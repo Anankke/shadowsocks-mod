@@ -44,7 +44,7 @@ class DbTransfer(object):
 		
 		if get_config().MYSQL_SSL_ENABLE == 1:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
+										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
 		else:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
