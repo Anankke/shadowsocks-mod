@@ -246,9 +246,9 @@ def get_config(is_local):
     config['connect_verbose_info'] = config.get('connect_verbose_info', 0)
     config['local_address'] = to_str(config.get('local_address', '127.0.0.1'))
     config['local_port'] = config.get('local_port', 1080)
-    config['forbidden_ip'] = config.get('forbidden_ip', '127.0.0.0/8,::1/128')
+    config['forbidden_ip'] = config.get('forbidden_ip', '')
     config['forbidden_port'] = config.get('forbidden_port', '')
-    config['disconnect_ip'] = config.get('disconnect_ip', '127.0.0.0/8,::1/128')
+    config['disconnect_ip'] = config.get('disconnect_ip', '')
 	
     if is_local:
         if config.get('server', None) is None:
