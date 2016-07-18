@@ -189,8 +189,12 @@ class DbTransfer(object):
 		except Exception as e:
 			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
 		
-		conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-								passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		if get_config().MYSQL_SSL_ENABLE == 1:
+			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
+										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
+		else:
+			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
+										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		conn.autocommit(True)
 		
 		cur = conn.cursor()
