@@ -26,7 +26,7 @@ class DbTransfer(object):
 		self.last_update_transfer = {}
 		self.event = threading.Event()
 		self.port_uid_table = {}
-		self.onlineuser_cache = lru_cache.LRUCache(timeout=60*30)
+		self.onlineuser_cache = lru_cache.LRUCache(timeout=60)
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
 
