@@ -19,22 +19,21 @@ import fcntl
 switchrule = None
 db_instance = None
 
-node_speedlimit = 0.00
-traffic_rate = 0.0
-
-port_uid_table = {}
-
 class DbTransfer(object):
 	def __init__(self):
 		import threading
 		self.last_get_transfer = {}
+		self.last_update_transfer = {}
 		self.event = threading.Event()
+		self.port_uid_table = {}
+		self.onlineuser_cache = lru_cache.LRUCache(timeout=60*30)
+		self.node_speedlimit = 0.00
+		self.traffic_rate = 0.0
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
 		update_transfer = {}
 		
-		global port_uid_table
 		query_head = 'UPDATE user'
 		query_sub_when = ''
 		query_sub_when2 = ''
@@ -61,7 +60,7 @@ class DbTransfer(object):
 			update_transfer[id] = transfer
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / traffic_rate) +"', '" + str(dt_transfer[id][1] / traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / self.traffic_rate) +"', '" + str(dt_transfer[id][1] / self.traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
 			
@@ -98,7 +97,7 @@ class DbTransfer(object):
 		for id in online_iplist.keys():
 			for ip in online_iplist[id]:
 				cur = conn.cursor()
-				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
+				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
 				cur.close()
 				
 		deny_str = ""
@@ -178,7 +177,6 @@ class DbTransfer(object):
 
 	def pull_db_all_user(self):
 		import cymysql
-		global node_speedlimit,traffic_rate
 		#数据库所有用户信息
 		try:
 			switchrule = importloader.load('switchrule')
@@ -208,8 +206,8 @@ class DbTransfer(object):
 		
 		cur.close()
 		
-		node_speedlimit = float(nodeinfo[2])
-		traffic_rate = float(nodeinfo[3])
+		self.node_speedlimit = float(nodeinfo[2])
+		self.traffic_rate = float(nodeinfo[3])
 		
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
@@ -240,8 +238,7 @@ class DbTransfer(object):
 		#启动没超流量的服务
 		#需要动态载入switchrule，以便实时修改规则
 		
-		global port_uid_table
-		global node_speedlimit
+		
 		try:
 			switchrule = importloader.load('switchrule')
 		except Exception as e:
@@ -258,7 +255,7 @@ class DbTransfer(object):
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
 			
-			port_uid_table[row['port']] = row['id']
+			self.port_uid_table[row['port']] = row['id']
 
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
 			
@@ -274,8 +271,8 @@ class DbTransfer(object):
 					cfg[name] = cfg[name].encode('utf-8')
 					
 			if 'node_speedlimit' in cfg:
-				if float(node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
-					cfg['node_speedlimit'] = max(float(node_speedlimit),float(cfg['node_speedlimit']))
+				if float(self.node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
+					cfg['node_speedlimit'] = max(float(self.node_speedlimit),float(cfg['node_speedlimit']))
 			else:
 				cfg['node_speedlimit'] = 0.00
 			
@@ -325,7 +322,7 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
-				del port_uid_table[row['port']]
+				del self.port_uid_table[row['port']]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
