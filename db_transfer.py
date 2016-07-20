@@ -128,6 +128,7 @@ class DbTransfer(object):
 					deny_file.write(deny_str + "\n")
 					deny_file.close()
 		conn.close()
+		return update_transfer
 		
 	def uptime(self):
 		with open('/proc/uptime', 'r') as f:
