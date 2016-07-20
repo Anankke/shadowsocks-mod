@@ -26,7 +26,6 @@ class DbTransfer(object):
 		self.last_update_transfer = {}
 		self.event = threading.Event()
 		self.port_uid_table = {}
-		self.onlineuser_cache = lru_cache.LRUCache(timeout=60)
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
 
@@ -39,7 +38,7 @@ class DbTransfer(object):
 		query_sub_when2 = ''
 		query_sub_in = None
 		
-		alive_user_count = len(self.onlineuser_cache)
+		alive_user_count = 0
 		bandwidth_thistime = 0
 		
 		if get_config().MYSQL_SSL_ENABLE == 1:
@@ -58,6 +57,8 @@ class DbTransfer(object):
 			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
 			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
 			update_transfer[id] = dt_transfer[id]
+			
+			alive_user_count = alive_user_count + 1
 			
 			cur = conn.cursor()
 			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / self.traffic_rate) +"', '" + str(dt_transfer[id][1] / self.traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
@@ -170,13 +171,6 @@ class DbTransfer(object):
 				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
 					continue
 				dt_transfer[id] = [curr_transfer[id][0], curr_transfer[id][1]]
-			if id in self.last_get_transfer:
-				if curr_transfer[id][0] + curr_transfer[id][1] > self.last_get_transfer[id][0] + self.last_get_transfer[id][1]:
-					self.onlineuser_cache[id] = curr_transfer[id][0] + curr_transfer[id][1]
-			else:
-				self.onlineuser_cache[id] = curr_transfer[id][0] + curr_transfer[id][1]
-		self.onlineuser_cache.sweep()
-
 		update_transfer = self.update_all_user(dt_transfer)
 		for id in update_transfer.keys():
 			last = self.last_update_transfer.get(id, [0,0])
