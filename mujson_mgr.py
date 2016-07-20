@@ -28,20 +28,45 @@ class MuJsonLoader(object):
 class MuMgr(object):
 	def __init__(self):
 		self.config_path = get_config().MUDB_FILE
-		self.server_addr = get_config().SERVER_PUB_ADDR
+		try:
+			self.server_addr = get_config().SERVER_PUB_ADDR
+		except:
+			self.server_addr = '127.0.0.1'
 		self.data = MuJsonLoader()
 
-	def ssrlink(self, user):
+		if self.server_addr == '127.0.0.1':
+			self.server_addr = self.getipaddr()
+
+	def getipaddr(self, ifname = 'eth0'):
+		import socket
+		import struct
+		import fcntl
+		ret = '127.0.0.1'
+		try:
+			ret = socket.gethostbyname(socket.getfqdn(socket.gethostname()))
+		except:
+			pass
+		if ret == '127.0.0.1':
+			try:
+				s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+				ret = socket.inet_ntoa(fcntl.ioctl(s.fileno(), 0x8915, struct.pack('256s', ifname[:15]))[20:24])
+			except:
+				pass
+		return ret
+
+	def ssrlink(self, user, encode):
 		protocol = user.get('protocol', '')
 		obfs = user.get('obfs', '')
 		protocol = protocol.replace("_compatible", "")
 		obfs = obfs.replace("_compatible", "")
 		link = "%s:%s:%s:%s:%s:%s" % (self.server_addr, user['port'], protocol, user['method'], obfs, common.to_str(base64.urlsafe_b64encode(common.to_bytes(user['passwd']))))
-		return "ssr://" + common.to_str(base64.urlsafe_b64encode(common.to_bytes(link)))
+		return "ssr://" + ( encode and common.to_str(base64.urlsafe_b64encode(common.to_bytes(link))) or link)
 
 	def userinfo(self, user):
 		ret = ""
 		for key in user.keys():
+			if key in ['enable']:
+				continue
 			ret += '\n'
 			if key in ['transfer_enable', 'u', 'd'] :
 				val = user[key]
@@ -58,7 +83,8 @@ class MuMgr(object):
 					ret += "    %s : %s  G Bytes" % (key, val)
 			else:
 				ret += "    %s : %s" % (key, user[key])
-		ret += "\n    " + self.ssrlink(user)
+		ret += "\n    " + self.ssrlink(user, False)
+		ret += "\n    " + self.ssrlink(user, True)
 		return ret
 
 	def rand_pass(self):
@@ -163,6 +189,8 @@ Options:
   -m METHOD              encryption method, default: aes-128-cfb
   -O PROTOCOL            protocol plugin, default: auth_sha1_v2_compatible
   -o OBFS                obfs plugin, default: tls1.2_ticket_auth_compatible
+  -G PROTOCOL_PARAM      protocol plugin param
+  -g OBFS_PARAM          obfs plugin param
   -t TRANSFER            max transfer for G bytes, default: 1048576, can be float point number
   -f FORBID              set forbidden ports. Example (ban 1~79 and 81~100): -f "1-79,81-100"
 
@@ -171,10 +199,24 @@ General options:
 ''')
 
 def main():
-	shortopts = 'adeclu:p:k:O:o:m:t:f:h'
+	shortopts = 'adeclu:p:k:O:o:G:g:m:t:f:h'
 	longopts = ['help']
 	action = None
 	user = {}
+	fast_set_obfs = {'0': 'plain',
+			'1': 'http_simple_compatible',
+			'-1': 'http_simple',
+			'2': 'http_post_compatible',
+			'-2': 'http_post',
+			'3': 'tls1.2_ticket_auth_compatible',
+			'-3': 'tls1.2_ticket_auth'}
+	fast_set_protocol = {'0': 'origin',
+			'1': 'verify_sha1_compatible',
+			'-1': 'verify_sha1',
+			'2': 'auth_sha1_compatible',
+			'-2': 'auth_sha1',
+			'3': 'auth_sha1_v2_compatible',
+			'-3': 'auth_sha1_v2'}
 	try:
 		optlist, args = getopt.getopt(sys.argv[1:], shortopts, longopts)
 		for key, value in optlist:
@@ -195,9 +237,19 @@ def main():
 			elif key == '-k':
 				user['passwd'] = value
 			elif key == '-o':
-				user['obfs'] = value
+				if value in fast_set_obfs:
+					user['obfs'] = fast_set_obfs[value]
+				else:
+					user['obfs'] = value
 			elif key == '-O':
-				user['protocol'] = value
+				if value in fast_set_protocol:
+					user['protocol'] = fast_set_protocol[value]
+				else:
+					user['protocol'] = value
+			elif key == '-g':
+				user['obfs_param'] = value
+			elif key == '-G':
+				user['protocol_param'] = value
 			elif key == '-m':
 				user['method'] = value
 			elif key == '-f':

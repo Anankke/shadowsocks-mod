@@ -8,7 +8,7 @@ import os
 import socket
 from server_pool import ServerPool
 import traceback
-from shadowsocks import common, shell
+from shadowsocks import common, shell, lru_cache
 from configloader import load_config, get_config
 import importloader
 import platform
@@ -32,6 +32,7 @@ class DbTransfer(object):
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
+		update_transfer = {}
 		
 		global port_uid_table
 		query_head = 'UPDATE user'
@@ -39,7 +40,7 @@ class DbTransfer(object):
 		query_sub_when2 = ''
 		query_sub_in = None
 		
-		alive_user_count = 0
+		alive_user_count = len(self.onlineuser_cache)
 		bandwidth_thistime = 0
 		
 		if get_config().MYSQL_SSL_ENABLE == 1:
@@ -57,14 +58,13 @@ class DbTransfer(object):
 			
 			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
 			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
-			
+			update_transfer[id] = transfer
 			
 			cur = conn.cursor()
 			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / traffic_rate) +"', '" + str(dt_transfer[id][1] / traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
 			cur.close()
 			
-			alive_user_count = alive_user_count + 1
-		
+			
 			bandwidth_thistime = bandwidth_thistime + dt_transfer[id][0] + dt_transfer[id][1]
 			
 			if query_sub_in is not None:
@@ -152,31 +152,29 @@ class DbTransfer(object):
 
 	def push_db_all_user(self):
 		#更新用户流量到数据库
-		last_transfer = self.last_get_transfer
+		last_transfer = self.last_update_transfer
 		curr_transfer = ServerPool.get_instance().get_servers_transfer()
 		#上次和本次的增量
 		dt_transfer = {}
 		for id in curr_transfer.keys():
 			if id in last_transfer:
-				if last_transfer[id][0] == curr_transfer[id][0] and last_transfer[id][1] == curr_transfer[id][1]:
+				if curr_transfer[id][0] + curr_transfer[id][1] - last_transfer[id][0] - last_transfer[id][1] <= 0:
 					continue
-				elif curr_transfer[id][0] == 0 and curr_transfer[id][1] == 0:
-					continue
-				elif last_transfer[id][0] <= curr_transfer[id][0] and \
-				last_transfer[id][1] <= curr_transfer[id][1]:
-					dt_transfer[id] = [int((curr_transfer[id][0] - last_transfer[id][0]) * traffic_rate),
-										int((curr_transfer[id][1] - last_transfer[id][1]) * traffic_rate)]
+				if last_transfer[id][0] <= curr_transfer[id][0] and \
+						last_transfer[id][1] <= curr_transfer[id][1]:
+					dt_transfer[id] = [curr_transfer[id][0] - last_transfer[id][0],
+										curr_transfer[id][1] - last_transfer[id][1]]
 				else:
-					dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
-										int(curr_transfer[id][1] * traffic_rate)]
+					dt_transfer[id] = [curr_transfer[id][0], curr_transfer[id][1]]
 			else:
-				if curr_transfer[id][0] == 0 and curr_transfer[id][1] == 0:
+				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
 					continue
-				dt_transfer[id] = [int(curr_transfer[id][0] * traffic_rate),
-									int(curr_transfer[id][1] * traffic_rate)]
+				dt_transfer[id] = [curr_transfer[id][0], curr_transfer[id][1]]
 
-		self.update_all_user(dt_transfer)
-		self.last_get_transfer = curr_transfer
+		update_transfer = self.update_all_user(dt_transfer)
+		for id in update_transfer.keys():
+			last = self.last_get_transfer.get(id, [0,0])
+		self.last_get_transfer[id] = [last[0] + update_transfer[id][0], last[1] + update_transfer[id][1]]
 
 	def pull_db_all_user(self):
 		import cymysql
@@ -316,7 +314,9 @@ class DbTransfer(object):
 
 			elif allow and ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
-				logging.info('db start server at port [%s] pass [%s]' % (port, passwd))
+				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
+				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
+				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
 
 		for row in last_rows:
@@ -332,7 +332,9 @@ class DbTransfer(object):
 			self.event.wait(eventloop.TIMEOUT_PRECISION + eventloop.TIMEOUT_PRECISION / 2)
 			for port in new_servers.keys():
 				passwd, cfg = new_servers[port]
-				logging.info('db start server at port [%s] pass [%s]' % (port, passwd))
+				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
+				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
+				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
 
 	@staticmethod

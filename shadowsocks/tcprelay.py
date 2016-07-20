@@ -368,7 +368,7 @@ class TCPRelayHandler(object):
         if type(host_list) == list:
             host_post = common.to_str(host_list[((hash_code & 0xffffffff) + addr) % len(host_list)])
         else:
-            host_post = host_list
+            host_post = common.to_str(host_list)
         items = host_post.rsplit(':', 1)
         if len(items) > 1:
             try:
@@ -384,7 +384,7 @@ class TCPRelayHandler(object):
         host, port = self._get_redirect_host(client_address, ogn_data)
         if port == 0:
             raise Exception('can not parse header')
-        data = b"\x03" + common.chr(len(host)) + common.to_bytes(host) + struct.pack('>H', port)
+        data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         logging.warn("TCP data redir %s:%d %s" % (host, port, binascii.hexlify(data)))
         return data + ogn_data
 
@@ -478,22 +478,24 @@ class TCPRelayHandler(object):
                 if data is None:
                     data = self._handel_protocol_error(self._client_address, ogn_data)
                 header_result = parse_header(data)
+                if header_result is not None:
+                    try:
+                        common.to_str(header_result[1])
+                    except Exception as e:
+                        header_result = None
                 if header_result is None:
                     data = self._handel_protocol_error(self._client_address, ogn_data)
                     header_result = parse_header(data)
             connecttype, remote_addr, remote_port, header_length = header_result
-			
+            common.connect_log('%s connecting %s:%d from %s:%d' %
+                        ((connecttype == 0) and 'TCP' or 'UDP',
+                            common.to_str(remote_addr), remote_port,
+                            self._client_address[0], self._client_address[1]))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0:
                 self._server.connected_iplist.append(self._client_address[0])
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
-			
-            common.connect_log('%s connecting %s:%d from %s:%d' %
-                        ((connecttype == 0) and 'TCP' or 'UDP',
-                            common.to_str(remote_addr), remote_port,
-                            self._client_address[0], self._client_address[1]))
-			
             self._remote_address = (common.to_str(remote_addr), remote_port)
             self._remote_udp = (connecttype != 0)
             # pause reading
