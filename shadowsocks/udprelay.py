@@ -721,7 +721,7 @@ class TCPRelayHandler(object):
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
 						
-                    if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0:
+                    if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0 and self._server.is_reading_connected_iplist == False:
                         self._server._connected_iplist.append(common.to_str(addr[0]))
 					
                     if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_reading_wrong_iplist == False:
@@ -939,6 +939,7 @@ class UDPRelay(object):
 		
         self.connected_iplist = []
         self.wrong_iplist = {}
+        self.is_reading_connected_iplist = False
         self.is_reading_wrong_iplist = False
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
@@ -1058,8 +1059,8 @@ class UDPRelay(object):
     def _handel_protocol_error(self, client_address, ogn_data):
         #raise Exception('can not parse header')
         logging.warn("Protocol ERROR, UDP ogn data %s from %s:%d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1]))
-        if client_address[0] not in wrong_iplist and client_address[0] != 0 and is_reading_wrong_iplist == False:
-            wrong_iplist[client_address[0]] = time.time()
+        if client_address[0] not in self.wrong_iplist and client_address[0] != 0 and self.is_reading_wrong_iplist == False:
+            self.wrong_iplist[client_address[0]] = time.time()
 
     def _handle_server(self):
         server = self._server_socket
@@ -1452,8 +1453,10 @@ class UDPRelay(object):
 			
 		
     def connected_iplist_clean(self):
+        self.is_reading_connected_iplist = True
         self.connected_iplist = []
-		
+        self.is_reading_connected_iplist = False
+        
     def wrong_iplist_clean(self):
         self.is_reading_wrong_iplist = True
         
