@@ -6,7 +6,7 @@ NODE_ID = 1
 SPEEDTEST = 6
 CLOUDSAFE = 1
 ANTISSATTACK = 0
-AUTOEXEC = 1
+AUTOEXEC = 0
 
 SERVER_PUB_ADDR = '127.0.0.1' # mujson_mgr need this to generate ssr link
 API_INTERFACE = 'glzjinmod' #mudbjson, sspanelv2, sspanelv3, sspanelv3ssr, muapiv2(not support)
