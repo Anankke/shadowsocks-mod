@@ -491,7 +491,7 @@ class TCPRelayHandler(object):
                         ((connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1]))
-            if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0:
+            if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_reading_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
@@ -959,6 +959,7 @@ class TCPRelay(object):
         self.server_transfer_dl = 0
         self.server_connections = 0
         self.connected_iplist = []
+        self.is_reading_connected_iplist = False
         self.wrong_iplist = {}
         self.is_reading_wrong_iplist = False
         
@@ -1174,7 +1175,9 @@ class TCPRelay(object):
         self._sweep_timeout()
         
     def connected_iplist_clean(self):
+        self.is_reading_connected_iplist = True
         self.connected_iplist = []
+        self.is_reading_connected_iplist = False
         
     def wrong_iplist_clean(self):
         self.is_reading_wrong_iplist = True
