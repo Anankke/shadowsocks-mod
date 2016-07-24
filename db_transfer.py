@@ -286,6 +286,12 @@ class DbTransfer(object):
 				
 			if 'forbidden_port' not in cfg:
 				cfg['forbidden_port'] = ''
+				
+			if 'protocol_param' not in cfg:
+				cfg['protocol_param'] = ''
+				
+			if 'obfs_param' not in cfg:
+				cfg['obfs_param'] = ''
 
 			if port not in cur_servers:
 				cur_servers[port] = passwd
