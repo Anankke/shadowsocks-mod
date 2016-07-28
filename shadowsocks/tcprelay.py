@@ -364,18 +364,31 @@ class TCPRelayHandler(object):
         if len(address_bytes) == 4:
             addr = struct.unpack('>I', address_bytes)[0]
         else:
-            addr = 0
-        if type(host_list) == list:
-            host_post = common.to_str(host_list[((hash_code & 0xffffffff) + addr) % len(host_list)])
-        else:
-            host_post = common.to_str(host_list)
-        items = host_post.rsplit(':', 1)
-        if len(items) > 1:
-            try:
-                return (items[0], int(items[1]))
-            except:
-                pass
-        return (host_post, 80)
+        host_port = []
+        match_port = False
+        if type(host_list) != list:
+            host_list = [host_list]
+        for host in host_list:
+            items = common.to_str(host).rsplit(':', 1)
+            if len(items) > 1:
+                try:
+                    port = int(items[1])
+                    if port == self._server._listen_port:
+                        match_port = True
+                    host_port.append((items[0], port))
+                except:
+                    pass
+            else:
+                host_port.append((host, 80))
+
+        if match_port:
+            last_host_port = host_port
+            host_port = []
+            for host in last_host_port:
+                if host[1] == self._server._listen_port:
+                    host_port.append(host)
+
+        return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
 
     def _handel_protocol_error(self, client_address, ogn_data):
         logging.warn("Protocol ERROR, TCP ogn data %s from %s:%d via port %d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1], self._server._listen_port))
