@@ -364,6 +364,8 @@ class TCPRelayHandler(object):
         if len(address_bytes) == 4:
             addr = struct.unpack('>I', address_bytes)[0]
         else:
+            addr = 0
+         
         host_port = []
         match_port = False
         if type(host_list) != list:
