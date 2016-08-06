@@ -54,14 +54,14 @@ class DbTransfer(object):
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
 				continue
 			
-			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
-			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
+			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0]*self.traffic_rate)
+			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1]*self.traffic_rate)
 			update_transfer[id] = dt_transfer[id]
 			
 			alive_user_count = alive_user_count + 1
 			
 			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0] / self.traffic_rate) +"', '" + str(dt_transfer[id][1] / self.traffic_rate) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow(dt_transfer[id][0]+dt_transfer[id][1]) + "', unix_timestamp()); ")
+			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1])*self.traffic_rate) + "', unix_timestamp()); ")
 			cur.close()
 			
 			
