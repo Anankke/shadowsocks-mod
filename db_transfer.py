@@ -54,8 +54,8 @@ class DbTransfer(object):
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
 				continue
 			
-			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0])
-			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1])
+			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0]*self.traffic_rate)
+			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1]*self.traffic_rate)
 			update_transfer[id] = dt_transfer[id]
 			
 			alive_user_count = alive_user_count + 1
