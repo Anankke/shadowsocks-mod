@@ -104,10 +104,10 @@ class TCPRelayHandler(object):
         self._remote_udp = False
         self._config = config
         self._dns_resolver = dns_resolver
-		
+        
         self._bytesSent = 0
         self._timeCreated = time.time()
-		
+        
         
 
         # TCP Relay works as either sslocal or ssserver
@@ -163,7 +163,7 @@ class TCPRelayHandler(object):
         self._client_address = local_sock.getpeername()[:2]
         self._accept_address = local_sock.getsockname()[:2]
         self._remote_address = None
-		
+        
         
         
         if is_local:
@@ -186,8 +186,8 @@ class TCPRelayHandler(object):
     @property
     def remote_address(self):
         return self._remote_address
-		
-	
+        
+    
 
     def _get_a_server(self):
         server = self._config['server']
@@ -206,7 +206,7 @@ class TCPRelayHandler(object):
 
     def _update_stream(self, stream, status):
         # update a stream to a new waiting status
-		
+        
         # check if status is changed
         # only update if dirty
         dirty = False
@@ -243,7 +243,7 @@ class TCPRelayHandler(object):
         if not sock:
             return False
         logging.debug("_write_to_sock %s %s %s" % (self._remote_sock, sock, self._remote_udp))
-		
+        
         
         if float(self._config['node_speedlimit']) > 0:
             now = time.time()
@@ -251,8 +251,8 @@ class TCPRelayHandler(object):
             self._bytesSent += len(data)
             requiredDuration = self._bytesSent / self._server.bandwidth
             time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-			
-		
+            
+        
         uncomplete = False
         if self._remote_udp and sock == self._remote_sock:
             try:
@@ -287,7 +287,7 @@ class TCPRelayHandler(object):
                     if addrs:
                         af, socktype, proto, canonname, server_addr = addrs[0]
                         data = data[header_length:]
-						
+                        
                         if af == socket.AF_INET6:
                             self._remote_sock_v6.sendto(data, (server_addr[0], dest_port))
                         else:
@@ -548,7 +548,7 @@ class TCPRelayHandler(object):
 
     def _create_remote_socket(self, ip, port):
 
-		
+        
         if self._remote_udp:
             addrs_v6 = socket.getaddrinfo("::", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
             addrs = socket.getaddrinfo("0.0.0.0", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
@@ -887,7 +887,7 @@ class TCPRelayHandler(object):
         # handle all events in this handler and dispatch them to methods
         self._bytesSent = 0
         self._timeCreated = time.time()
-		
+        
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
             return
@@ -1008,10 +1008,10 @@ class TCPRelay(object):
             self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
         else:
             self._disconnect_ipset = None
-		
+        
         self.latency = 0
         self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
-		
+        
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self.obfs_data = obfs.obfs(config['obfs']).init_data()
 
