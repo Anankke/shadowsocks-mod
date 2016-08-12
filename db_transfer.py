@@ -1,4 +1,4 @@
-﻿#!/usr/bin/python
+#!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
 import logging
@@ -22,7 +22,6 @@ db_instance = None
 class DbTransfer(object):
 	def __init__(self):
 		import threading
-		self.last_get_transfer = {}
 		self.last_update_transfer = {}
 		self.event = threading.Event()
 		self.port_uid_table = {}
@@ -175,7 +174,6 @@ class DbTransfer(object):
 		for id in update_transfer.keys():
 			last = self.last_update_transfer.get(id, [0,0])
 			self.last_update_transfer[id] = [last[0] + update_transfer[id][0], last[1] + update_transfer[id][1]]
-		self.last_get_transfer = curr_transfer
 
 	def pull_db_all_user(self):
 		import cymysql
@@ -304,6 +302,8 @@ class DbTransfer(object):
 				if not allow:
 					logging.info('db stop server at port [%s]' % (port,))
 					ServerPool.get_instance().cb_del_server(port)
+					if port in self.last_update_transfer:
+						del self.last_update_transfer[port]
 				else:
 					cfgchange = False
 					if port in ServerPool.get_instance().tcp_servers_pool:
@@ -322,6 +322,8 @@ class DbTransfer(object):
 					if cfgchange:
 						logging.info('db stop server at port [%s] reason: config changed: %s' % (port, cfg))
 						ServerPool.get_instance().cb_del_server(port)
+						if port in self.last_update_transfer:
+							del self.last_update_transfer[port]
 						new_servers[port] = (passwd, cfg)
 
 			elif allow and ServerPool.get_instance().server_run_status(port) is False:
@@ -337,6 +339,8 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
+				if port in self.last_update_transfer:
+					del self.last_update_transfer[row['port']]
 				del self.port_uid_table[row['port']]
 
 		if len(new_servers) > 0:
@@ -354,9 +358,13 @@ class DbTransfer(object):
 		for port in [v for v in ServerPool.get_instance().tcp_servers_pool.keys()]:
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				ServerPool.get_instance().cb_del_server(port)
+				if port in self.last_update_transfer:
+					del self.last_update_transfer[port]
 		for port in [v for v in ServerPool.get_instance().tcp_ipv6_servers_pool.keys()]:
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				ServerPool.get_instance().cb_del_server(port)
+				if port in self.last_update_transfer:
+					del self.last_update_transfer[port]
 
 	@staticmethod
 	def thread_db(obj):
@@ -441,4 +449,5 @@ class MuJsonTransfer(DbTransfer):
 					logging.error(e)
 				
 		return rows
+
 
