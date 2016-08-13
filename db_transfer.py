@@ -1,4 +1,4 @@
-#!/usr/bin/python
+﻿#!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
 import logging
@@ -339,7 +339,7 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
-				if port in self.last_update_transfer:
+				if row['port'] in self.last_update_transfer:
 					del self.last_update_transfer[row['port']]
 				del self.port_uid_table[row['port']]
 
@@ -449,5 +449,4 @@ class MuJsonTransfer(DbTransfer):
 					logging.error(e)
 				
 		return rows
-
 
