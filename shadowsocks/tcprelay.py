@@ -395,6 +395,8 @@ class TCPRelayHandler(object):
 
     def _handel_protocol_error(self, client_address, ogn_data):
         logging.warn("Protocol ERROR, TCP ogn data %s from %s:%d via port %d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1], self._server._listen_port))
+        if client_address[0] not in self._server.wrong_iplist and client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
+            self._server.wrong_iplist[client_address[0]] = time.time()
         self._encrypt_correct = False
         #create redirect or disconnect by hash code
         host, port = self._get_redirect_host(client_address, ogn_data)
@@ -920,8 +922,6 @@ class TCPRelayHandler(object):
     def _log_error(self, e):
         logging.error('%s when handling connection from %s:%d' %
                       (e, self._client_address[0], self._client_address[1]))
-        if self._client_address[0] not in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
-            self._server.wrong_iplist[self._client_address[0]] = time.time()
 
     def stage(self):
         return self._stage
