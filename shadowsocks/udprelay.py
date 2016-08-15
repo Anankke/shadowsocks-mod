@@ -282,10 +282,10 @@ class TCPRelayHandler(object):
         self._config = config
         self._dns_resolver = dns_resolver
         self._local_id = local_id
-		
+        
         self._bytesSent = 0
         self._timeCreated = time.time()
-		
+        
         self._is_local = is_local
         self._stage = STAGE_INIT
         self._password = config['password']
@@ -331,8 +331,8 @@ class TCPRelayHandler(object):
     @property
     def remote_address(self):
         return self._remote_address
-		
-	
+        
+    
 
     def add_local_address(self, addr):
         self._client_address.add(addr)
@@ -348,8 +348,8 @@ class TCPRelayHandler(object):
     def _update_stream(self, stream, status):
         # update a stream to a new waiting status
 
-		
-		
+        
+        
         # check if status is changed
         # only update if dirty
         dirty = False
@@ -392,8 +392,8 @@ class TCPRelayHandler(object):
             self._bytesSent += len(data)
             requiredDuration = self._bytesSent / self._server.bandwidth
             time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-			
-			
+            
+            
         uncomplete = False
         retry = 0
         if sock == self._local_sock:
@@ -431,8 +431,8 @@ class TCPRelayHandler(object):
                     shell.print_exception(e)
                     self.destroy()
                     return False
-					
-		
+                    
+        
         if uncomplete:
             if sock == self._local_sock:
                 self._update_stream(STREAM_DOWN, WAIT_STATUS_WRITING)
@@ -465,8 +465,8 @@ class TCPRelayHandler(object):
         if self._server._disconnect_ipset:
             if common.to_str(addr[0]) in self._disconnect_ipset:
                 raise Exception('IP %s is in disconnect list, reject' %
-                                common.to_str(addr[0]))						
-		
+                                common.to_str(addr[0]))                        
+        
         remote_sock = socket.socket(af, socktype, proto)
         self._remote_sock = remote_sock
 
@@ -720,18 +720,18 @@ class TCPRelayHandler(object):
                     if header_result is None:
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
-						
+                        
                     if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0 and self._server.is_reading_connected_iplist == False:
                         self._server._connected_iplist.append(common.to_str(addr[0]))
-					
+                    
                     if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_reading_wrong_iplist == False:
                         del self._server.wrong_iplist[common.to_str(addr[0])]
-						
+                        
                     self._remote_address = (common.to_str(remote_addr), remote_port)
                     self._stage = STAGE_DNS
                     self._dns_resolver.resolve(remote_addr,
                                                self._handle_dns_resolved)
-                    common.connect_log('TCPonUDP connect %s:%d from %s:%d' % (remote_addr, remote_port, addr[0], addr[1]))
+                    common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
                 else:
                     # ileagal request
                     rsp_data = self._pack_rsp_data(CMD_DISCONNECT, RSP_STATE_EMPTY)
@@ -816,7 +816,7 @@ class TCPRelayHandler(object):
     def handle_event(self, sock, event):
         self._bytesSent = 0
         self._timeCreated = time.time()
-		
+        
         # handle all events in this handler and dispatch them to methods
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
@@ -934,9 +934,9 @@ class UDPRelay(object):
         self._closed = False
         self.server_transfer_ul = 0
         self.server_transfer_dl = 0
-		
-		
-		
+        
+        
+        
         self.connected_iplist = []
         self.wrong_iplist = {}
         self.is_reading_connected_iplist = False
@@ -960,7 +960,7 @@ class UDPRelay(object):
         self._fd_to_handlers = {}
         self._reqid_to_hd = {}
         self._data_to_write_to_server_socket = []
-		
+        
         self.latency = 0
         self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
 
@@ -1144,7 +1144,7 @@ class UDPRelay(object):
                                     sa[1])
                     # drop
                     return            
-			
+            
             client = socket.socket(af, socktype, proto)
             client.setblocking(False)
             is_dns = False
@@ -1165,9 +1165,9 @@ class UDPRelay(object):
 
             logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
 
-            common.connect_log('UDP data to %s:%d from %s:%d' %
+            common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
                         (common.to_str(server_addr), server_port,
-                            r_addr[0], r_addr[1]))
+                            r_addr[0], r_addr[1], self._listen_port))
 
         self._cache.clear(self._udp_cache_size)
         self._cache_dns_client.clear(16)
@@ -1450,8 +1450,8 @@ class UDPRelay(object):
             if before_sweep_size != len(self._sockets):
                 logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
             self._sweep_timeout()
-			
-		
+            
+        
     def connected_iplist_clean(self):
         self.is_reading_connected_iplist = True
         self.connected_iplist = []

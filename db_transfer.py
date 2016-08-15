@@ -106,22 +106,42 @@ class DbTransfer(object):
 			server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
 			for id in wrong_iplist.keys():
 				for ip in wrong_iplist[id]:
-					if str(ip) == str(server_ip):
+					realip = ""
+					is_ipv6 = False
+					if is_ip(ip) != False:
+						if(is_ip(ip) == socket.AF_INET):
+							realip = ip
+						else:
+							if match_ipv4_address(ip) != None:
+								realip = match_ipv4_address(ip)
+							else:
+								is_ipv6 = True
+								realip = ip
+					else:
 						continue
+						
+					if str(realip) == str(server_ip):
+						continue
+					
 					cur = conn.cursor()
-					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
+					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
 					rows = cur.fetchone()
 					cur.close()
+					
 					
 					if rows != None:
 						continue
 					if get_config().CLOUDSAFE == 1:
 						cur = conn.cursor()
-						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
+						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(realip) + "', unix_timestamp())")
 						cur.close()
 						if get_config().CLOUDSAFE == 0:
-							os.system('route add -host %s gw 127.0.0.1' % str(ip))
-					deny_str = deny_str + "\nALL: " + str(ip)
+							if is_ipv6 == False:
+								os.system('route add -host %s gw 127.0.0.1' % str(realip))
+								deny_str = deny_str + "\nALL: " + str(realip)
+							else:
+								os.system('ip -6 route add ::1/128 via %s/128' % str(realip))
+								deny_str = deny_str + "\nALL: [" + str(realip) +"]/128"
 				if get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
 					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)

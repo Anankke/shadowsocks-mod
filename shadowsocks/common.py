@@ -22,6 +22,7 @@ import socket
 import struct
 import logging
 import binascii
+import re
 
 def compat_ord(s):
     if type(s) == int:
@@ -116,6 +117,22 @@ def is_ip(address):
         except (TypeError, ValueError, OSError, IOError):
             pass
     return False
+
+def match_ipv4_address(address):
+    pat = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
+    test = pat.match(hostIP)
+    if test:
+        return test.group(1)
+    else:
+        return None
+
+def match_ipv6_address(address):
+    pat = re.compile("(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}")
+    test = pat.match(hostIP)
+    if test:
+        return test.group(1)
+    else:
+        return None
 
 
 def patch_socket():

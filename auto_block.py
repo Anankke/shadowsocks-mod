@@ -15,21 +15,22 @@ import socket
 import re
 import platform
 import fcntl
+from shadowsocks import common
 
 
-
+def get_ip(text):
+	if match_ipv4_address(text) != None:
+		return match_ipv4_address(text)
+	else:
+		if match_ipv6_address(text) != None:
+			return match_ipv6_address(text)
+	return None
 
 def file_len(fname):
 	with open(fname) as f:
 		for i, l in enumerate(f):
 			pass
 	return i + 1
-	
-def get_ip(text):
-	reip = re.compile(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])')
-	for ip in reip.findall(text):
-		return ip
-	return None
 
 def auto_block_thread():
 	if configloader.get_config().CLOUDSAFE == 0 or platform.system() != 'Linux':
@@ -115,13 +116,24 @@ def auto_block_thread():
 				
 					if str(node) == str(configloader.get_config().NODE_ID):
 						if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1 and ip not in denyed_ip_list:
-							deny_str_at = deny_str_at + "\nALL: " + str(ip)
-							os.system('route add -host %s gw 127.0.0.1' % str(ip))
+							if is_ip(ip) != False:
+								if is_ip(ip) == socket.AF_INET:
+									os.system('route add -host %s gw 127.0.0.1' % str(ip))
+									deny_str = deny_str + "\nALL: " + str(ip)
+								else:
+									os.system('ip -6 route add ::1/128 via %s/128' % str(ip))
+									deny_str = deny_str + "\nALL: [" + str(ip) +"]/128"
+							
 							logging.info("Remote Block ip:" + str(ip))
 					else:
-						deny_str = deny_str + "\nALL: " + str(ip)
+						if is_ip(ip) != False:
+							if is_ip(ip) == socket.AF_INET:
+								os.system('route add -host %s gw 127.0.0.1' % str(ip))
+								deny_str = deny_str + "\nALL: " + str(ip)
+							else:
+								os.system('ip -6 route add ::1/128 via %s/128' % str(ip))
+								deny_str = deny_str + "\nALL: [" + str(ip) +"]/128"
 						logging.info("Remote Block ip:" + str(ip))
-						os.system('route add -host %s gw 127.0.0.1' % str(ip))
 				
 			
 			deny_file=open('/etc/hosts.deny','a')
@@ -157,6 +169,11 @@ def auto_block_thread():
 					ip = str(row[1])
 					if line.find(ip) != -1:
 						del deny_lines[i]
+						if is_ip(ip) != False:
+							if is_ip(ip) == socket.AF_INET:
+								os.system('route del -host %s gw 127.0.0.1' % str(ip))
+							else:
+								os.system('ip -6 route del ::1/128 via %s/128' % str(ip))
 						os.system('route del -host %s gw 127.0.0.1' % str(ip))
 						logging.info("Unblock ip:" + str(ip))
 				i = i + 1
