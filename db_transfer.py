@@ -409,7 +409,7 @@ class DbTransfer(object):
 					trace = traceback.format_exc()
 					logging.error(trace)
 					#logging.warn('db thread except:%s' % e)
-				if db_instance.event.wait(get_config().MYSQL_UPDATE_TIME) or not ServerPool.get_instance().thread.is_alive():
+				if db_instance.event.wait(get_config().MYSQL_UPDATE_TIME) or not db_instance.is_all_thread_alive():
 					break
 		except KeyboardInterrupt as e:
 			pass
@@ -421,6 +421,12 @@ class DbTransfer(object):
 	def thread_db_stop():
 		global db_instance
 		db_instance.event.set()
+		
+	def is_all_thread_alive(self):
+		for port in ServerPool.get_instance().thread_pool:
+			if not ServerPool.get_instance().thread_pool[port].is_alive():
+				return False
+		return True
 
 class MuJsonTransfer(DbTransfer):
 	def __init__(self):
