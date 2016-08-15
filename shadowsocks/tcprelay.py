@@ -508,7 +508,7 @@ class TCPRelayHandler(object):
             common.connect_log('%s connecting %s:%d from %s:%d via port %d' %
                         ((connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
-                            self._client_address[0], self._client_address[1], self._server.listen_port))
+                            self._client_address[0], self._client_address[1], self._server._listen_port))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_reading_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
 
@@ -880,7 +880,7 @@ class TCPRelayHandler(object):
         if self._remote_sock:
             logging.error(eventloop.get_sock_error(self._remote_sock))
             if self._remote_address:
-                logging.error("when connect to %s:%d from %s:%d via port %d" % (self._remote_address[0], self._remote_address[1], self._client_address[0], self._client_address[1], self._server.listen_port))
+                logging.error("when connect to %s:%d from %s:%d via port %d" % (self._remote_address[0], self._remote_address[1], self._client_address[0], self._client_address[1], self._server._listen_port))
             else:
                 logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
         self.destroy()
