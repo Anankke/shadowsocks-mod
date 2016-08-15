@@ -142,6 +142,8 @@ class DbTransfer(object):
 						else:
 							os.system('ip -6 route add ::1/128 via %s/128' % str(realip))
 							deny_str = deny_str + "\nALL: [" + str(realip) +"]/128"
+							
+						logging.info("Local Block ip:" + str(realip))
 				if get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
 					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)

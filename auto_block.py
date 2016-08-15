@@ -174,7 +174,6 @@ def auto_block_thread():
 								os.system('route del -host %s gw 127.0.0.1' % str(ip))
 							else:
 								os.system('ip -6 route del ::1/128 via %s/128' % str(ip))
-						os.system('route del -host %s gw 127.0.0.1' % str(ip))
 						logging.info("Unblock ip:" + str(ip))
 				i = i + 1
 			
