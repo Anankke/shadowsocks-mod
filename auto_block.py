@@ -19,11 +19,11 @@ from shadowsocks import common
 
 
 def get_ip(text):
-	if match_ipv4_address(text) != None:
-		return match_ipv4_address(text)
+	if common.match_ipv4_address(text) != None:
+		return common.match_ipv4_address(text)
 	else:
-		if match_ipv6_address(text) != None:
-			return match_ipv6_address(text)
+		if common.match_ipv6_address(text) != None:
+			return common.match_ipv6_address(text)
 	return None
 
 def file_len(fname):
@@ -116,8 +116,8 @@ def auto_block_thread():
 				
 					if str(node) == str(configloader.get_config().NODE_ID):
 						if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1 and ip not in denyed_ip_list:
-							if is_ip(ip) != False:
-								if is_ip(ip) == socket.AF_INET:
+							if common.is_ip(ip) != False:
+								if common.is_ip(ip) == socket.AF_INET:
 									os.system('route add -host %s gw 127.0.0.1' % str(ip))
 									deny_str = deny_str + "\nALL: " + str(ip)
 								else:
@@ -126,8 +126,8 @@ def auto_block_thread():
 							
 							logging.info("Remote Block ip:" + str(ip))
 					else:
-						if is_ip(ip) != False:
-							if is_ip(ip) == socket.AF_INET:
+						if common.is_ip(ip) != False:
+							if common.is_ip(ip) == socket.AF_INET:
 								os.system('route add -host %s gw 127.0.0.1' % str(ip))
 								deny_str = deny_str + "\nALL: " + str(ip)
 							else:
@@ -169,8 +169,8 @@ def auto_block_thread():
 					ip = str(row[1])
 					if line.find(ip) != -1:
 						del deny_lines[i]
-						if is_ip(ip) != False:
-							if is_ip(ip) == socket.AF_INET:
+						if common.is_ip(ip) != False:
+							if common.is_ip(ip) == socket.AF_INET:
 								os.system('route del -host %s gw 127.0.0.1' % str(ip))
 							else:
 								os.system('ip -6 route del ::1/128 via %s/128' % str(ip))

@@ -118,22 +118,17 @@ def is_ip(address):
             pass
     return False
 
-def match_ipv4_address(address):
-    pat = re.compile("\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}")
-    test = pat.match(hostIP)
-    if test:
-        return test.group(1)
-    else:
-        return None
+def match_ipv4_address(text):
+    reip = re.compile(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])')
+    for ip in reip.findall(text):
+        return ip
+    return None
 
-def match_ipv6_address(address):
-    pat = re.compile("(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}")
-    test = pat.match(hostIP)
-    if test:
-        return test.group(1)
-    else:
-        return None
-
+def match_ipv6_address(text):
+    reip = re.compile(r'(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])')
+    for ip in reip.findall(text):
+        return ip
+    return None
 
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):

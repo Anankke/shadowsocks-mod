@@ -108,12 +108,12 @@ class DbTransfer(object):
 				for ip in wrong_iplist[id]:
 					realip = ""
 					is_ipv6 = False
-					if is_ip(ip) != False:
-						if(is_ip(ip) == socket.AF_INET):
+					if common.is_ip(ip) != False:
+						if(common.is_ip(ip) == socket.AF_INET):
 							realip = ip
 						else:
-							if match_ipv4_address(ip) != None:
-								realip = match_ipv4_address(ip)
+							if common.match_ipv4_address(ip) != None:
+								realip = common.match_ipv4_address(ip)
 							else:
 								is_ipv6 = True
 								realip = ip
@@ -135,13 +135,13 @@ class DbTransfer(object):
 						cur = conn.cursor()
 						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(realip) + "', unix_timestamp())")
 						cur.close()
-						if get_config().CLOUDSAFE == 0:
-							if is_ipv6 == False:
-								os.system('route add -host %s gw 127.0.0.1' % str(realip))
-								deny_str = deny_str + "\nALL: " + str(realip)
-							else:
-								os.system('ip -6 route add ::1/128 via %s/128' % str(realip))
-								deny_str = deny_str + "\nALL: [" + str(realip) +"]/128"
+					else:
+						if is_ipv6 == False:
+							os.system('route add -host %s gw 127.0.0.1' % str(realip))
+							deny_str = deny_str + "\nALL: " + str(realip)
+						else:
+							os.system('ip -6 route add ::1/128 via %s/128' % str(realip))
+							deny_str = deny_str + "\nALL: [" + str(realip) +"]/128"
 				if get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
 					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)

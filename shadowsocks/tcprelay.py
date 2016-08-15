@@ -1217,7 +1217,7 @@ class TCPRelay(object):
         
         temp_new_list = {}
         for key in self.wrong_iplist: 
-            if self.wrong_iplist[key] > time.time()-300:
+            if self.wrong_iplist[key] > time.time() - 60:
                 temp_new_list[key] = self.wrong_iplist[key]
         
         self.wrong_iplist = temp_new_list.copy()
