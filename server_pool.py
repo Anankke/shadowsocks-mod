@@ -288,15 +288,27 @@ class ServerPool(object):
 		if port in self.tcp_servers_pool:
 			templist = self.tcp_servers_pool[port].wrong_iplist.copy()
 			for ip in templist:
-				if ip not in ret:
+				if ip not in ret and templist[ip] < time.time()-300:
 					ret.append(ip)
 			self.tcp_servers_pool[port].wrong_iplist_clean()
-		if port in self.udp_servers_pool:
+		if port in self.udp_servers_pool and templist[ip] < time.time()-300:
 			templist = self.udp_servers_pool[port].wrong_iplist.copy()
 			for ip in templist:
 				if ip not in ret:
 					ret.append(ip)
 			self.udp_servers_pool[port].wrong_iplist_clean()
+		if port in self.tcp_ipv6_servers_pool and templist[ip] < time.time()-300:
+			templist = self.tcp_ipv6_servers_pool[port].wrong_iplist.copy()
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.tcp_ipv6_servers_pool[port].wrong_iplist_clean()
+		if port in self.udp_ipv6_servers_pool and templist[ip] < time.time()-300:
+			templist = self.udp_ipv6_servers_pool[port].wrong_iplist.copy()
+			for ip in templist:
+				if ip not in ret:
+					ret.append(ip)
+			self.udp_ipv6_servers_pool[port].wrong_iplist_clean()
 		return ret
 		
 
