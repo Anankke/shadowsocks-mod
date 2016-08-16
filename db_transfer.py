@@ -377,16 +377,17 @@ class DbTransfer(object):
 
 	@staticmethod
 	def del_servers():
+		global db_instance
 		for port in [v for v in ServerPool.get_instance().tcp_servers_pool.keys()]:
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				ServerPool.get_instance().cb_del_server(port)
-				if port in self.last_update_transfer:
-					del self.last_update_transfer[port]
+				if port in db_instance.last_update_transfer:
+					del db_instance.last_update_transfer[port]
 		for port in [v for v in ServerPool.get_instance().tcp_ipv6_servers_pool.keys()]:
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				ServerPool.get_instance().cb_del_server(port)
-				if port in self.last_update_transfer:
-					del self.last_update_transfer[port]
+				if port in db_instance.last_update_transfer:
+					del db_instance.last_update_transfer[port]
 
 	@staticmethod
 	def thread_db(obj):
