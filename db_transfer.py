@@ -318,6 +318,9 @@ class DbTransfer(object):
 			else:
 				logging.error('more than one user use the same port [%s]' % (port,))
 				continue
+
+			if get_config().MULTI_THREAD == 0:
+				cfg['node_speedlimit'] = 0.00
 				
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
@@ -427,6 +430,8 @@ class DbTransfer(object):
 		for port in ServerPool.get_instance().thread_pool:
 			if not ServerPool.get_instance().thread_pool[port].is_alive():
 				return False
+		if not ServerPool.get_instance().thread.is_alive():
+			return False
 		return True
 
 class MuJsonTransfer(DbTransfer):

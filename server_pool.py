@@ -55,6 +55,12 @@ class ServerPool(object):
 		self.eventloop_pool = {}
 		self.thread_pool = {}
 		self.dns_resolver_pool = {}
+
+		self.dns_resolver = asyncdns.DNSResolver()
+
+		self.loop = eventloop.EventLoop()
+		self.thread = MainThread( (self.loop, self.dns_resolver, self.mgr) )
+		self.thread.start()
 		
 		self.tcp_servers_pool = {}
 		self.tcp_ipv6_servers_pool = {}
@@ -71,6 +77,7 @@ class ServerPool(object):
 	def stop(self):
 		for port in self.eventloop_pool:
 			self.eventloop_pool[port].stop()
+		self.loop.stop()
 
 	@staticmethod
 	def _loop(loop, dns_resolver, mgr):
@@ -111,66 +118,121 @@ class ServerPool(object):
 		ret = True
 		port = int(port)
 		ipv6_ok = False
+
+		if user_config['node_speedlimit'] == 0.00:
+			if 'server_ipv6' in self.config:
+				if port in self.tcp_ipv6_servers_pool:
+					logging.info("server already at %s:%d" % (self.config['server_ipv6'], port))
+					return 'this port server is already running'
+				else:
+					a_config = self.config.copy()
+					a_config.update(user_config)
+					if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][0] == "[" and a_config['server_ipv6'][-1] == "]":
+						a_config['server_ipv6'] = a_config['server_ipv6'][1:-1]
+					a_config['server'] = a_config['server_ipv6']
+					a_config['server_port'] = port
+					a_config['max_connect'] = 128
+					a_config['method'] = common.to_str(a_config['method'])
+					try:
+						logging.info("starting server at [%s]:%d" % (common.to_str(a_config['server']), port))
+
+						tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
+						tcp_server.add_to_loop(self.loop)
+						self.tcp_ipv6_servers_pool.update({port: tcp_server})
+
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.loop)
+						self.udp_ipv6_servers_pool.update({port: udp_server})
+
+						if common.to_str(a_config['server_ipv6']) == "::":
+							ipv6_ok = True
+					except Exception as e:
+						logging.warn("IPV6 %s " % (e,))
+
+			if 'server' in self.config:
+				if port in self.tcp_servers_pool:
+					logging.info("server already at %s:%d" % (common.to_str(self.config['server']), port))
+					return 'this port server is already running'
+				else:
+					a_config = self.config.copy()
+					a_config.update(user_config)
+					a_config['server_port'] = port
+					a_config['max_connect'] = 128
+					a_config['method'] = common.to_str(a_config['method'])
+					try:
+						logging.info("starting server at %s:%d" % (common.to_str(a_config['server']), port))
+
+						tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver, False)
+						tcp_server.add_to_loop(self.loop)
+						self.tcp_servers_pool.update({port: tcp_server})
+
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
+						udp_server.add_to_loop(self.loop)
+						self.udp_servers_pool.update({port: udp_server})
+
+					except Exception as e:
+						if not ipv6_ok:
+							logging.warn("IPV4 %s " % (e,))
+		else:
+			self.dns_resolver_pool[port] = self.dns_resolver = asyncdns.DNSResolver()
+			self.eventloop_pool[port] = eventloop.EventLoop()
+			self.thread_pool[port] = MainThread( (self.eventloop_pool[port], self.dns_resolver_pool[port], self.mgr) )
+			self.thread_pool[port].start()
 		
-		self.dns_resolver_pool[port] = self.dns_resolver = asyncdns.DNSResolver()
-		self.eventloop_pool[port] = eventloop.EventLoop()
-		self.thread_pool[port] = MainThread( (self.eventloop_pool[port], self.dns_resolver_pool[port], self.mgr) )
-		self.thread_pool[port].start()
 		
-		
-		if 'server_ipv6' in self.config:
-			if port in self.tcp_ipv6_servers_pool:
-				logging.info("server already at %s:%d" % (self.config['server_ipv6'], port))
-				return 'this port server is already running'
-			else:
-				a_config = self.config.copy()
-				a_config.update(user_config)
-				if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][0] == "[" and a_config['server_ipv6'][-1] == "]":
-					a_config['server_ipv6'] = a_config['server_ipv6'][1:-1]
-				a_config['server'] = a_config['server_ipv6']
-				a_config['server_port'] = port
-				a_config['max_connect'] = 128
-				a_config['method'] = common.to_str(a_config['method'])
-				try:
-					logging.info("starting server at [%s]:%d" % (common.to_str(a_config['server']), port))
+			if 'server_ipv6' in self.config:
+				if port in self.tcp_ipv6_servers_pool:
+					logging.info("server already at %s:%d" % (self.config['server_ipv6'], port))
+					return 'this port server is already running'
+				else:
+					a_config = self.config.copy()
+					a_config.update(user_config)
+					if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][0] == "[" and a_config['server_ipv6'][-1] == "]":
+						a_config['server_ipv6'] = a_config['server_ipv6'][1:-1]
+					a_config['server'] = a_config['server_ipv6']
+					a_config['server_port'] = port
+					a_config['max_connect'] = 128
+					a_config['method'] = common.to_str(a_config['method'])
+					try:
+						logging.info("starting server at [%s]:%d" % (common.to_str(a_config['server']), port))
 
-					tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
-					tcp_server.add_to_loop(self.eventloop_pool[port])
-					self.tcp_ipv6_servers_pool.update({port: tcp_server})
+						tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
+						tcp_server.add_to_loop(self.eventloop_pool[port])
+						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-					udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
-					udp_server.add_to_loop(self.eventloop_pool[port])
-					self.udp_ipv6_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_ipv6_servers_pool.update({port: udp_server})
 
-					if common.to_str(a_config['server_ipv6']) == "::":
-						ipv6_ok = True
-				except Exception as e:
-					logging.warn("IPV6 %s " % (e,))
+						if common.to_str(a_config['server_ipv6']) == "::":
+							ipv6_ok = True
+					except Exception as e:
+						logging.warn("IPV6 %s " % (e,))
 
-		if 'server' in self.config:
-			if port in self.tcp_servers_pool:
-				logging.info("server already at %s:%d" % (common.to_str(self.config['server']), port))
-				return 'this port server is already running'
-			else:
-				a_config = self.config.copy()
-				a_config.update(user_config)
-				a_config['server_port'] = port
-				a_config['max_connect'] = 128
-				a_config['method'] = common.to_str(a_config['method'])
-				try:
-					logging.info("starting server at %s:%d" % (common.to_str(a_config['server']), port))
+			if 'server' in self.config:
+				if port in self.tcp_servers_pool:
+					logging.info("server already at %s:%d" % (common.to_str(self.config['server']), port))
+					return 'this port server is already running'
+				else:
+					a_config = self.config.copy()
+					a_config.update(user_config)
+					a_config['server_port'] = port
+					a_config['max_connect'] = 128
+					a_config['method'] = common.to_str(a_config['method'])
+					try:
+						logging.info("starting server at %s:%d" % (common.to_str(a_config['server']), port))
 
-					tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver_pool[port], False)
-					tcp_server.add_to_loop(self.eventloop_pool[port])
-					self.tcp_servers_pool.update({port: tcp_server})
+						tcp_server = tcprelay.TCPRelay(a_config, self.dns_resolver_pool[port], False)
+						tcp_server.add_to_loop(self.eventloop_pool[port])
+						self.tcp_servers_pool.update({port: tcp_server})
 
-					udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
-					udp_server.add_to_loop(self.eventloop_pool[port])
-					self.udp_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_servers_pool.update({port: udp_server})
 
-				except Exception as e:
-					if not ipv6_ok:
-						logging.warn("IPV4 %s " % (e,))
+					except Exception as e:
+						if not ipv6_ok:
+							logging.warn("IPV4 %s " % (e,))
 
 		return True
 
@@ -218,6 +280,9 @@ class ServerPool(object):
 					del self.udp_ipv6_servers_pool[port]
 				except Exception as e:
 					logging.warn(e)
+
+		if port in self.eventloop_pool:
+			self.eventloop_pool[port].stop()
 
 		return True
 
