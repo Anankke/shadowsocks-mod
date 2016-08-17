@@ -395,7 +395,7 @@ class TCPRelayHandler(object):
 
     def _handel_protocol_error(self, client_address, ogn_data):
         logging.warn("Protocol ERROR, TCP ogn data %s from %s:%d via port %d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1], self._server._listen_port))
-        if client_address[0] not in self._server.wrong_iplist and client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
+        if client_address[0] not in self._server.wrong_iplist and client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
             self._server.wrong_iplist[client_address[0]] = time.time()
         self._encrypt_correct = False
         #create redirect or disconnect by hash code
@@ -509,10 +509,18 @@ class TCPRelayHandler(object):
                         ((connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port))
-            if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_reading_connected_iplist == False:
+            for id in self._server._config["detect_text_list"]:
+                if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                    if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                        self._server.detect_log_list.append(id)
+                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
+                        (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'], (connecttype == 0) and 'TCP' or 'UDP',
+                            common.to_str(remote_addr), remote_port,
+                            self._client_address[0], self._client_address[1], self._server._listen_port))
+            if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
 
-            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_reading_wrong_iplist == False:
+            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
             self._remote_address = (common.to_str(remote_addr), remote_port)
             self._remote_udp = (connecttype != 0)
@@ -992,10 +1000,12 @@ class TCPRelay(object):
         self.server_transfer_dl = 0
         self.server_connections = 0
         self.connected_iplist = []
-        self.is_reading_connected_iplist = False
+        self.is_cleaning_connected_iplist = False
         self.wrong_iplist = {}
-        self.is_reading_wrong_iplist = False
-        
+        self.is_cleaning_wrong_iplist = False
+        self.detect_log_list = []
+        self.is_cleaning_detect_log = False
+	
         if 'forbidden_ip' in config:
             self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
         else:
@@ -1208,12 +1218,12 @@ class TCPRelay(object):
         self._sweep_timeout()
         
     def connected_iplist_clean(self):
-        self.is_reading_connected_iplist = True
-        self.connected_iplist = []
-        self.is_reading_connected_iplist = False
+        self.is_cleaning_connected_iplist = True
+        del self.connected_iplist[:]
+        self.is_cleaning_connected_iplist = False
         
     def wrong_iplist_clean(self):
-        self.is_reading_wrong_iplist = True
+        self.is_cleaning_wrong_iplist = True
         
         temp_new_list = {}
         for key in self.wrong_iplist: 
@@ -1222,7 +1232,12 @@ class TCPRelay(object):
         
         self.wrong_iplist = temp_new_list.copy()
         
-        self.is_reading_wrong_iplist = False
+        self.is_cleaning_wrong_iplist = False
+
+    def detect_log_list_clean(self):
+        self.is_cleaning_detect_log = True
+        del self.detect_log_list[:]
+        self.is_cleaning_detect_log = False
         
 
     def close(self, next_tick=False):

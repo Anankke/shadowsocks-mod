@@ -27,6 +27,9 @@ class DbTransfer(object):
 		self.port_uid_table = {}
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
+		
+		self.detect_text_list = {}
+		self.detect_text_ischanged = False
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -99,6 +102,14 @@ class DbTransfer(object):
 				cur = conn.cursor()
 				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
 				cur.close()
+
+		detect_log_list = ServerPool.get_instance().get_servers_detect_log()
+		for port in detect_log_list.keys():
+			for rule_id in detect_log_list[port]:
+				cur = conn.cursor()
+				cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
+				cur.close()
+
 				
 		deny_str = ""
 		if platform.system() == 'Linux' and get_config().ANTISSATTACK == 1 :
@@ -245,6 +256,44 @@ class DbTransfer(object):
 				d[keys[column]] = r[column]
 			rows.append(d)
 		cur.close()
+
+		#读取审计规则,数据包匹配部分
+		keys_detect = ['id','regex']
+		
+		cur = conn.cursor()
+		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 1")
+		
+		exist_id_list = []
+	
+		for r in cur.fetchall():
+			id = long(r[0])
+			exist_id_list.append(id)
+			if r[0] not in self.detect_text_list:
+				d = {}
+				d['id'] = id
+				d['regex'] = r[1]			
+				self.detect_text_list[id] = d
+				self.detect_text_ischanged = True
+			else:
+				if r[1] != self.detect_text_list[r[0]]['regex']:
+					del self.detect_text_list[id]
+					d = {}
+					d['id'] = r[0]
+					d['regex'] = r[1]			
+					self.detect_text_list[id] = d
+					self.detect_text_ischanged = True
+		
+		deleted_id_list = []
+		for id in self.detect_text_list:
+			if id not in exist_id_list:
+				deleted_id_list.append(id)
+				self.detect_text_ischanged = True
+				
+				
+		for id in deleted_id_list:
+			del self.detect_text_list[id]
+		
+		cur.close()
 		conn.close()
 		return rows
 
@@ -321,6 +370,8 @@ class DbTransfer(object):
 
 			if get_config().MULTI_THREAD == 0:
 				cfg['node_speedlimit'] = 0.00
+
+			cfg['detect_text_list'] = self.detect_text_list.copy()
 				
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
@@ -331,6 +382,8 @@ class DbTransfer(object):
 						del self.last_update_transfer[port]
 				else:
 					cfgchange = False
+					if self.detect_text_ischanged == True:
+						cfgchange = True
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						relay = ServerPool.get_instance().tcp_servers_pool[port]
 						for name in merge_config_keys:
@@ -356,7 +409,7 @@ class DbTransfer(object):
 				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
-				ServerPool.get_instance().new_server(port, cfg)
+				ServerPool.get_instance().new_server(port, cfg, )
 
 		for row in last_rows:
 			if row['port'] in cur_servers:
@@ -408,6 +461,7 @@ class DbTransfer(object):
 					db_instance.push_db_all_user()
 					rows = db_instance.pull_db_all_user()
 					db_instance.del_server_out_of_bound_safe(last_rows, rows)
+					db_instance.detect_text_ischanged = False
 					last_rows = rows
 				except Exception as e:
 					trace = traceback.format_exc()

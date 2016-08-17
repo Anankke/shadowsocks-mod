@@ -350,6 +350,46 @@ class ServerPool(object):
 		return ret
 		
 
+	def get_servers_detect_log(self):
+		servers = self.tcp_servers_pool.copy()
+		servers.update(self.tcp_ipv6_servers_pool)
+		servers.update(self.udp_servers_pool)
+		servers.update(self.udp_ipv6_servers_pool)
+		ret = {}
+		for port in servers.keys():
+			templist = self.get_server_detect_log(port)
+			if templist != [] :
+				ret[port] = templist[:]
+		return ret
+
+
+	def get_server_detect_log(self, port):
+		port = int(port)
+		ret = []
+		if port in self.tcp_servers_pool:
+			ret = self.tcp_servers_pool[port].detect_log_list[:]
+			self.tcp_servers_pool[port].detect_log_list_clean()
+		if port in self.udp_servers_pool:
+			templist = self.udp_servers_pool[port].detect_log_list[:]
+			for id in templist:
+				if id not in ret:
+					ret.append(id)
+			self.udp_servers_pool[port].detect_log_list_clean()
+		if port in self.tcp_ipv6_servers_pool:
+			templist = self.tcp_ipv6_servers_pool[port].detect_log_list[:]
+			for id in templist:
+				if id not in ret:
+					ret.append(id)
+			self.tcp_ipv6_servers_pool[port].detect_log_list_clean()
+		if port in self.udp_ipv6_servers_pool:
+			templist = self.udp_ipv6_servers_pool[port].detect_log_list[:]
+			for id in templist:
+				if id not in ret:
+					ret.append(id)
+			self.udp_ipv6_servers_pool[port].detect_log_list_clean()
+		return ret
+		
+
 	def get_servers_iplist(self):
 		servers = self.tcp_servers_pool.copy()
 		servers.update(self.tcp_ipv6_servers_pool)

@@ -721,10 +721,10 @@ class TCPRelayHandler(object):
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
                         
-                    if common.to_str(addr[0]) not in self._server._connected_iplist and addr[0] != 0 and self._server.is_reading_connected_iplist == False:
-                        self._server._connected_iplist.append(common.to_str(addr[0]))
+                    if common.to_str(addr[0]) not in self._server.connected_iplist and addr[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                        self._server.connected_iplist.append(common.to_str(addr[0]))
                     
-                    if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_reading_wrong_iplist == False:
+                    if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                         del self._server.wrong_iplist[common.to_str(addr[0])]
                         
                     self._remote_address = (common.to_str(remote_addr), remote_port)
@@ -732,6 +732,13 @@ class TCPRelayHandler(object):
                     self._dns_resolver.resolve(remote_addr,
                                                self._handle_dns_resolved)
                     common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    for id in self._server._config["detect_text_list"]:
+                        if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                            self._server.detect_log_list.append(id)
+                        if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                                (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'],
+                                remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
                 else:
                     # ileagal request
                     rsp_data = self._pack_rsp_data(CMD_DISCONNECT, RSP_STATE_EMPTY)
@@ -939,8 +946,10 @@ class UDPRelay(object):
         
         self.connected_iplist = []
         self.wrong_iplist = {}
-        self.is_reading_connected_iplist = False
-        self.is_reading_wrong_iplist = False
+        self.detect_log_list = []
+        self.is_cleaning_connected_iplist = False
+        self.is_cleaning_wrong_iplist = False
+        self.is_cleaning_detect_log = False
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self._protocol = obfs.obfs(config['protocol'])
@@ -1059,7 +1068,7 @@ class UDPRelay(object):
     def _handel_protocol_error(self, client_address, ogn_data):
         #raise Exception('can not parse header')
         logging.warn("Protocol ERROR, UDP ogn data %s from %s:%d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1]))
-        if client_address[0] not in self.wrong_iplist and client_address[0] != 0 and self.is_reading_wrong_iplist == False:
+        if client_address[0] not in self.wrong_iplist and client_address[0] != 0 and self.is_cleaning_wrong_iplist == False:
             self.wrong_iplist[client_address[0]] = time.time()
 
     def _handle_server(self):
@@ -1165,9 +1174,23 @@ class UDPRelay(object):
 
             logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
 
+            for id in self._config["detect_text_list"]:
+                if common.match_regex(self._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                    if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
+                        self.detect_log_list.append(id)
+                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                        (self._config["detect_text_list"][id]['id'], self._config["detect_text_list"][id]['regex'],
+                            common.to_str(server_addr), server_port,
+                            r_addr[0], r_addr[1], self._listen_port))
+
             common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
                         (common.to_str(server_addr), server_port,
                             r_addr[0], r_addr[1], self._listen_port))
+            if common.to_str(server_addr) in self.wrong_iplist and server_addr != 0 and self.is_cleaning_wrong_iplist == False:
+                del self.wrong_iplist[common.to_str(server_addr)]
+            if common.to_str(server_addr) not in self.connected_iplist and server_addr != 0 and self.is_cleaning_connected_iplist == False:
+                        self.connected_iplist.append(common.to_str(server_addr))
+            
 
         self._cache.clear(self._udp_cache_size)
         self._cache_dns_client.clear(16)
@@ -1453,12 +1476,12 @@ class UDPRelay(object):
             
         
     def connected_iplist_clean(self):
-        self.is_reading_connected_iplist = True
-        self.connected_iplist = []
-        self.is_reading_connected_iplist = False
+        self.is_cleaning_connected_iplist = True
+        del self.connected_iplist[:]
+        self.is_cleaning_connected_iplist = False
         
     def wrong_iplist_clean(self):
-        self.is_reading_wrong_iplist = True
+        self.is_cleaning_wrong_iplist = True
         
         temp_new_list = {}
         for key in self.wrong_iplist: 
@@ -1467,7 +1490,12 @@ class UDPRelay(object):
         
         self.wrong_iplist = temp_new_list.copy()
         
-        self.is_reading_wrong_iplist = True
+        self.is_cleaning_wrong_iplist = True
+
+    def detect_log_list_clean(self):
+        self.is_cleaning_detect_log = True
+        del self.detect_log_list[:]
+        self.is_cleaning_detect_log = False
 
     def close(self, next_tick=False):
         logging.debug('UDP close')

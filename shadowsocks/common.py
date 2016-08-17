@@ -130,6 +130,12 @@ def match_ipv6_address(text):
         return ip
     return None
 
+def match_regex(regex,text):
+    regex = re.compile(regex)
+    for item in regex.findall(text):
+        return True
+    return False
+
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):
         socket.inet_pton = inet_pton
