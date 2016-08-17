@@ -249,18 +249,30 @@ class ServerPool(object):
 
 	def cb_del_server(self, port):
 		port = int(port)
-
+		
+		is_not_single = True
+		if port in self.eventloop_pool:
+			self.eventloop_pool[port].stop()
+			is_not_single = False
+			del self.eventloop_pool[port]
+			
+		if port in self.dns_resolver_pool:
+			del self.dns_resolver_pool[port]
+			
+		if port in self.thread_pool:
+			del self.thread_pool[port]
+		
 		if port not in self.tcp_servers_pool:
 			logging.info("stopped server at %s:%d already stop" % (self.config['server'], port))
 		else:
 			logging.info("stopped server at %s:%d" % (self.config['server'], port))
 			try:
-				self.tcp_servers_pool[port].close(True)
+				self.tcp_servers_pool[port].close(is_not_single)
 				del self.tcp_servers_pool[port]
 			except Exception as e:
 				logging.warn(e)
 			try:
-				self.udp_servers_pool[port].close(True)
+				self.udp_servers_pool[port].close(is_not_single)
 				del self.udp_servers_pool[port]
 			except Exception as e:
 				logging.warn(e)
@@ -271,19 +283,17 @@ class ServerPool(object):
 			else:
 				logging.info("stopped server at [%s]:%d" % (self.config['server_ipv6'], port))
 				try:
-					self.tcp_ipv6_servers_pool[port].close(True)
+					self.tcp_ipv6_servers_pool[port].close(is_not_single)
 					del self.tcp_ipv6_servers_pool[port]
 				except Exception as e:
 					logging.warn(e)
 				try:
-					self.udp_ipv6_servers_pool[port].close(True)
+					self.udp_ipv6_servers_pool[port].close(is_not_single)
 					del self.udp_ipv6_servers_pool[port]
 				except Exception as e:
 					logging.warn(e)
-
-		if port in self.eventloop_pool:
-			self.eventloop_pool[port].stop()
-
+					
+		
 		return True
 
 	def get_server_transfer(self, port):
