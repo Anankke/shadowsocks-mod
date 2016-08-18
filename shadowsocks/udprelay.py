@@ -1186,10 +1186,10 @@ class UDPRelay(object):
             common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
                         (common.to_str(server_addr), server_port,
                             r_addr[0], r_addr[1], self._listen_port))
-            if common.to_str(server_addr) in self.wrong_iplist and server_addr != 0 and self.is_cleaning_wrong_iplist == False:
-                del self.wrong_iplist[common.to_str(server_addr)]
-            if common.to_str(server_addr) not in self.connected_iplist and server_addr != 0 and self.is_cleaning_connected_iplist == False:
-                        self.connected_iplist.append(common.to_str(server_addr))
+            if common.to_str(r_addr[0]) in self.wrong_iplist and r_addr[0] != 0 and self.is_cleaning_wrong_iplist == False:
+                del self.wrong_iplist[common.to_str(r_addr[0])]
+            if common.to_str(r_addr[0]) not in self.connected_iplist and r_addr[0] != 0 and self.is_cleaning_connected_iplist == False:
+                        self.connected_iplist.append(common.to_str(r_addr[0]))
             
 
         self._cache.clear(self._udp_cache_size)
