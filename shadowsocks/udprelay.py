@@ -731,13 +731,23 @@ class TCPRelayHandler(object):
                     self._stage = STAGE_DNS
                     self._dns_resolver.resolve(remote_addr,
                                                self._handle_dns_resolved)
-                    common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    if self._server._connect_hex_data == False :
+                        common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    else:
+                        common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d ,hex data : %s' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port, binascii.hexlify(data)))
                     for id in self._server._config["detect_text_list"]:
-                        if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                            self._server.detect_log_list.append(id)
                         if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                self._server.detect_log_list.append(id)
                             raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
                                 (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'],
+                                remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    for id in self._server._config["detect_hex_list"]:
+                        if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                self._server.detect_log_list.append(id)
+                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                                (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
                                 remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
                 else:
                     # ileagal request
@@ -915,6 +925,12 @@ class UDPRelay(object):
         self._config = config
         if config.get('connect_verbose_info', 0) > 0:
             common.connect_log = logging.info
+    
+        if config.get('connect_hex_data', 0) > 0:
+            self._connect_hex_data = True
+        else:
+            self._connect_hex_data = False
+    
         if is_local:
             self._listen_addr = config['local_address']
             self._listen_port = config['local_port']
@@ -1182,10 +1198,22 @@ class UDPRelay(object):
                         (self._config["detect_text_list"][id]['id'], self._config["detect_text_list"][id]['regex'],
                             common.to_str(server_addr), server_port,
                             r_addr[0], r_addr[1], self._listen_port))
-
-            common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
+            for id in self._config["detect_hex_list"]:
+                if common.match_regex(self._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                    if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
+                        self.detect_log_list.append(id)
+                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                        (self._config["detect_hex_list"][id]['id'], self._config["detect_hex_list"][id]['regex'],
+                            common.to_str(server_addr), server_port,
+                            r_addr[0], r_addr[1], self._listen_port))
+            if self._connect_hex_data == False :
+                common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
                         (common.to_str(server_addr), server_port,
                             r_addr[0], r_addr[1], self._listen_port))
+            else:
+                common.connect_log('UDP data to %s:%d from %s:%d via port %d,hex data : %s' %
+                        (common.to_str(server_addr), server_port,
+                            r_addr[0], r_addr[1], self._listen_port, binascii.hexlify(data)))
             if common.to_str(r_addr[0]) in self.wrong_iplist and r_addr[0] != 0 and self.is_cleaning_wrong_iplist == False:
                 del self.wrong_iplist[common.to_str(r_addr[0])]
             if common.to_str(r_addr[0]) not in self.connected_iplist and r_addr[0] != 0 and self.is_cleaning_connected_iplist == False:

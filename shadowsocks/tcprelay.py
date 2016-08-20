@@ -505,16 +505,30 @@ class TCPRelayHandler(object):
                     data = self._handel_protocol_error(self._client_address, ogn_data)
                     header_result = parse_header(data)
             connecttype, remote_addr, remote_port, header_length = header_result
-            common.connect_log('%s connecting %s:%d from %s:%d via port %d' %
+            if self._server._connect_hex_data == False :
+                common.connect_log('%s connecting %s:%d from %s:%d via port %d' %
                         ((connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port))
+            else:
+                common.connect_log('%s connecting %s:%d from %s:%d via port %d,hex data : %s' %
+                        ((connecttype == 0) and 'TCP' or 'UDP',
+                            common.to_str(remote_addr), remote_port,
+                            self._client_address[0], self._client_address[1], self._server._listen_port, binascii.hexlify(data)))
             for id in self._server._config["detect_text_list"]:
                 if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
                     if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
                         self._server.detect_log_list.append(id)
                     raise Exception('This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
                         (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'], (connecttype == 0) and 'TCP' or 'UDP',
+                            common.to_str(remote_addr), remote_port,
+                            self._client_address[0], self._client_address[1], self._server._listen_port))
+            for id in self._server._config["detect_hex_list"]:
+                if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                    if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                        self._server.detect_log_list.append(id)
+                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                        (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
@@ -989,7 +1003,7 @@ class TCPRelay(object):
         self.is_cleaning_wrong_iplist = False
         self.detect_log_list = []
         self.is_cleaning_detect_log = False
-	
+    
         if 'forbidden_ip' in config:
             self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
         else:
@@ -1011,6 +1025,11 @@ class TCPRelay(object):
 
         if config.get('connect_verbose_info', 0) > 0:
             common.connect_log = logging.info
+            
+        if config.get('connect_hex_data', 0) > 0:
+            self._connect_hex_data = True
+        else:
+            self._connect_hex_data = False
 
         self._timeout = config['timeout']
         self._timeouts = []  # a list for all the handlers

@@ -31,6 +31,9 @@ class DbTransfer(object):
 		self.detect_text_list = {}
 		self.detect_text_ischanged = False
 
+		self.detect_hex_list = {}
+		self.detect_hex_ischanged = False
+
 	def update_all_user(self, dt_transfer):
 		import cymysql
 		update_transfer = {}
@@ -292,6 +295,40 @@ class DbTransfer(object):
 				
 		for id in deleted_id_list:
 			del self.detect_text_list[id]
+
+
+		cur = conn.cursor()
+		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 2")
+		
+		exist_id_list = []
+	
+		for r in cur.fetchall():
+			id = long(r[0])
+			exist_id_list.append(id)
+			if r[0] not in self.detect_hex_list:
+				d = {}
+				d['id'] = id
+				d['regex'] = r[1]			
+				self.detect_hex_list[id] = d
+				self.detect_hex_ischanged = True
+			else:
+				if r[1] != self.detect_hex_list[r[0]]['regex']:
+					del self.detect_hex_list[id]
+					d = {}
+					d['id'] = r[0]
+					d['regex'] = r[1]			
+					self.detect_hex_list[id] = d
+					self.detect_hex_ischanged = True
+		
+		deleted_id_list = []
+		for id in self.detect_hex_list:
+			if id not in exist_id_list:
+				deleted_id_list.append(id)
+				self.detect_hex_ischanged = True
+				
+				
+		for id in deleted_id_list:
+			del self.detect_hex_list[id]
 		
 		cur.close()
 		conn.close()
@@ -372,6 +409,7 @@ class DbTransfer(object):
 				cfg['node_speedlimit'] = 0.00
 
 			cfg['detect_text_list'] = self.detect_text_list.copy()
+			cfg['detect_hex_list'] = self.detect_hex_list.copy()
 				
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
@@ -382,7 +420,7 @@ class DbTransfer(object):
 						del self.last_update_transfer[port]
 				else:
 					cfgchange = False
-					if self.detect_text_ischanged == True:
+					if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
 						cfgchange = True
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						relay = ServerPool.get_instance().tcp_servers_pool[port]
@@ -462,6 +500,7 @@ class DbTransfer(object):
 					rows = db_instance.pull_db_all_user()
 					db_instance.del_server_out_of_bound_safe(last_rows, rows)
 					db_instance.detect_text_ischanged = False
+					db_instance.detect_hex_ischanged = False
 					last_rows = rows
 				except Exception as e:
 					trace = traceback.format_exc()
