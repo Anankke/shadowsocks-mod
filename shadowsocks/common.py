@@ -23,6 +23,7 @@ import struct
 import logging
 import binascii
 import re
+import md5
 
 def compat_ord(s):
     if type(s) == int:
@@ -135,6 +136,30 @@ def match_regex(regex,text):
     for item in regex.findall(text):
         return True
     return False
+
+def match_host(data):
+    return find_between(to_str(data), "Host: ", "\r\n")
+
+def get_md5(data):
+    m1 = md5.new()   
+    m1.update(data)   
+    return m1.hexdigest()   
+
+def find_between( s, first, last ):
+    try:
+        start = s.index( first ) + len( first )
+        end = s.index( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
+
+def find_between_r( s, first, last ):
+    try:
+        start = s.rindex( first ) + len( first )
+        end = s.rindex( last, start )
+        return s[start:end]
+    except ValueError:
+        return ""
 
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):

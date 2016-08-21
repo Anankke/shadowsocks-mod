@@ -104,6 +104,7 @@ class TCPRelayHandler(object):
         self._remote_udp = False
         self._config = config
         self._dns_resolver = dns_resolver
+        self._current_user_id = 0
         
         self._bytesSent = 0
         self._timeCreated = time.time()
@@ -310,7 +311,10 @@ class TCPRelayHandler(object):
             try:
                 if self._encrypt_correct:
                     if sock == self._remote_sock:
-                        self._server.server_transfer_ul += len(data)
+                        if self._current_user_id != 0 and self._server._config["is_multi_user"] == 1:
+                            self._server.mu_server_transfer_ul[self._current_user_id] += len(data)
+                        else:
+                            self._server.server_transfer_ul += len(data)
                         self._update_activity(len(data))
                 if data:
                     l = len(data)
@@ -517,22 +521,38 @@ class TCPRelayHandler(object):
                             self._client_address[0], self._client_address[1], self._server._listen_port, binascii.hexlify(data)))
             for id in self._server._config["detect_text_list"]:
                 if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
-                    if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                        self._server.detect_log_list.append(id)
+                    if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                        if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
+                            templist = self._server.mu_detect_log_list[self._current_user_id]
+                            templist.append(id)
+                            self._server.mu_detect_log_list[self._current_user_id] = templist
+                    else:
+                        if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                            self._server.detect_log_list.append(id)
                     raise Exception('This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
                         (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'], (connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port))
             for id in self._server._config["detect_hex_list"]:
                 if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
-                    if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                        self._server.detect_log_list.append(id)
+                    if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                        if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
+                            templist = self._server.mu_detect_log_list[self._current_user_id]
+                            templist.append(id)
+                            self._server.mu_detect_log_list[self._current_user_id] = templist
+                    else:
+                        if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                            self._server.detect_log_list.append(id)
                     raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
                         (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
+            if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0 and self._server.is_cleaning_mu_connected_iplist == False:
+                templist = self._server.mu_connected_iplist[self._current_user_id]
+                templist.append(self._client_address[0])
+                self._server.mu_connected_iplist[self._current_user_id] = templist
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
@@ -582,26 +602,48 @@ class TCPRelayHandler(object):
             raise Exception("getaddrinfo failed for %s:%d" % (ip, port))
         af, socktype, proto, canonname, sa = addrs[0]
         if not self._remote_udp:
-            if self._server._forbidden_iplist:
-                if common.to_str(sa[0]) in self._server._forbidden_iplist:
-                    if self._remote_address:
-                        raise Exception('IP %s is in forbidden list, when connect to %s:%d via port %d' %
-                            (common.to_str(sa[0]), self._remote_address[0], self._remote_address[1], self._server._listen_port))
-                    raise Exception('IP %s is in forbidden list, reject' %
-                                    common.to_str(sa[0]))
-            if self._server._forbidden_portset:
-                if sa[1] in self._server._forbidden_portset:
-                    if self._remote_address:
-                        raise Exception('Port %d is in forbidden list, when connect to %s:%d via port %d' %
-                            (sa[1], self._remote_address[0], self._remote_address[1], self._server._listen_port))
-                    raise Exception('Port %d is in forbidden list, reject' % sa[1])
-            if self._server._disconnect_ipset:
-                if self._client_address[0] in self._server._disconnect_ipset:
-                    if self._remote_address:
-                        raise Exception('IP %s is in disconnect list, when connect to %s:%d via port %d' %
-                            (self._client_address[0], self._remote_address[0], self._remote_address[1], self._server._listen_port))
-                    raise Exception('IP %s is in disconnect list, reject' %
-                                    self._client_address[0])
+            if self._server._config["is_multi_user"] == 1 and self._current_user_id != 0:
+                if self._server.multi_user_table[self._current_user_id]['_forbidden_iplist']:
+                    if common.to_str(sa[0]) in self._server.multi_user_table[self._current_user_id]['_forbidden_iplist']:
+                        if self._remote_address:
+                            raise Exception('IP %s is in forbidden list, when connect to %s:%d via port %d' %
+                                (common.to_str(sa[0]), self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                        raise Exception('IP %s is in forbidden list, reject' %
+                                        common.to_str(sa[0]))
+                if self._server.multi_user_table[self._current_user_id]['_forbidden_portset']:
+                    if sa[1] in self._server.multi_user_table[self._current_user_id]['_forbidden_portset']:
+                        if self._remote_address:
+                            raise Exception('Port %d is in forbidden list, when connect to %s:%d via port %d' %
+                                (sa[1], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                        raise Exception('Port %d is in forbidden list, reject' % sa[1])
+                if self._server.multi_user_table[self._current_user_id]['_disconnect_ipset']:
+                    if self._client_address[0] in self._server.multi_user_table[self._current_user_id]['_disconnect_ipset']:
+                        if self._remote_address:
+                            raise Exception('IP %s is in disconnect list, when connect to %s:%d via port %d' %
+                                (self._client_address[0], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                        raise Exception('IP %s is in disconnect list, reject' %
+                                        self._client_address[0])
+            else:
+                if self._server._forbidden_iplist:
+                    if common.to_str(sa[0]) in self._server._forbidden_iplist:
+                        if self._remote_address:
+                            raise Exception('IP %s is in forbidden list, when connect to %s:%d via port %d' %
+                                (common.to_str(sa[0]), self._remote_address[0], self._remote_address[1], self._server._listen_port))
+                        raise Exception('IP %s is in forbidden list, reject' %
+                                        common.to_str(sa[0]))
+                if self._server._forbidden_portset:
+                    if sa[1] in self._server._forbidden_portset:
+                        if self._remote_address:
+                            raise Exception('Port %d is in forbidden list, when connect to %s:%d via port %d' %
+                                (sa[1], self._remote_address[0], self._remote_address[1], self._server._listen_port))
+                        raise Exception('Port %d is in forbidden list, reject' % sa[1])
+                if self._server._disconnect_ipset:
+                    if self._client_address[0] in self._server._disconnect_ipset:
+                        if self._remote_address:
+                            raise Exception('IP %s is in disconnect list, when connect to %s:%d via port %d' %
+                                (self._client_address[0], self._remote_address[0], self._remote_address[1], self._server._listen_port))
+                        raise Exception('IP %s is in disconnect list, reject' %
+                                        self._client_address[0])
         remote_sock = socket.socket(af, socktype, proto)
         self._remote_sock = remote_sock
         self._fd_to_handlers[remote_sock.fileno()] = self
@@ -733,6 +775,34 @@ class TCPRelayHandler(object):
                         data = self._obfs.server_encode(b'')
                         self._write_to_sock(data, self._local_sock)
                     if obfs_decode[1]:
+                        if self._server._config["obfs"] == "http_simple" and self._server._config["is_multi_user"] == 1:
+                            host = common.match_host(data)
+                            host_list = host.split(".",2)
+                            if len(host_list) == 3:
+                                host_md5 = host_list[0]
+                                host_id = host_list[1]
+                                try:
+                                    if self._server.multi_user_table[int(host_id)]["md5"] == host_md5:
+                                        self._current_user_id = int(host_id)
+                                        if self._current_user_id not in self._server.mu_server_transfer_ul:
+                                            self._server.mu_server_transfer_ul[self._current_user_id] = 0
+                                        if self._current_user_id not in self._server.mu_server_transfer_dl:
+                                            self._server.mu_server_transfer_dl[self._current_user_id] = 0
+                                        if self._current_user_id not in self._server.mu_connected_iplist:
+                                            self._server.mu_connected_iplist[self._current_user_id] = []
+                                        if self._current_user_id not in self._server.mu_detect_log_list:
+                                            self._server.mu_detect_log_list[self._current_user_id] = []
+                                    else:
+                                        raise Exception('The host:%s md5 is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                except Exception as e:
+                                    logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                    return
+                            else:
+                                if self._current_user_id == 0:
+                                    raise Exception('The host:%s id is not assign,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
                         if not self._protocol.obfs.server_info.recv_iv:
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
@@ -842,7 +912,10 @@ class TCPRelayHandler(object):
                     data = self._encryptor.encrypt(data)
                     data = self._obfs.server_encode(data)
             self._update_activity(len(data))
-            self._server.server_transfer_dl += len(data)
+            if self._current_user_id != 0 and self._server._config["is_multi_user"] == 1:
+                self._server.mu_server_transfer_dl[self._current_user_id] += len(data)
+            else:
+                self._server.server_transfer_dl += len(data)
         else:
             return
         try:
@@ -996,13 +1069,21 @@ class TCPRelay(object):
         self._fd_to_handlers = {}
         self.server_transfer_ul = 0
         self.server_transfer_dl = 0
+        self.mu_server_transfer_ul = {}
+        self.mu_server_transfer_dl = {}
         self.server_connections = 0
         self.connected_iplist = []
+        self.mu_connected_iplist = {}
         self.is_cleaning_connected_iplist = False
+        self.is_cleaning_mu_connected_iplist = False
         self.wrong_iplist = {}
         self.is_cleaning_wrong_iplist = False
         self.detect_log_list = []
+        self.mu_detect_log_list = {}
+        self.multi_user_table = self._config['users_table']
         self.is_cleaning_detect_log = False
+        self.is_cleaning_mu_detect_log_list = False
+        
     
         if 'forbidden_ip' in config:
             self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
@@ -1016,6 +1097,22 @@ class TCPRelay(object):
             self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
         else:
             self._disconnect_ipset = None
+        
+        if config["is_multi_user"] == 1:
+            for id in self.multi_user_table:
+                if self.multi_user_table[id]['forbidden_ip'] != None:
+                    self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(self.multi_user_table[id]['forbidden_ip']))
+                else:
+                    self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(""))
+                if self.multi_user_table[id]['disconnect_ip'] != None:
+                    self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(self.multi_user_table[id]['disconnect_ip']))
+                else:
+                    self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(""))
+                if self.multi_user_table[id]['forbidden_port'] != None:
+                    self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(self.multi_user_table[id]['forbidden_port']))
+                else:
+                    self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(""))
+        
         
         self.latency = 0
         self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
@@ -1225,6 +1322,12 @@ class TCPRelay(object):
         del self.connected_iplist[:]
         self.is_cleaning_connected_iplist = False
         
+    def mu_connected_iplist_clean(self):
+        self.is_cleaning_mu_connected_iplist = True
+        for id in self.mu_connected_iplist:
+            del self.mu_connected_iplist[id][:]
+        self.is_cleaning_mu_connected_iplist = False
+        
     def wrong_iplist_clean(self):
         self.is_cleaning_wrong_iplist = True
         
@@ -1241,6 +1344,15 @@ class TCPRelay(object):
         self.is_cleaning_detect_log = True
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
+        
+    def mu_connected_detect_log_list_clean(self):
+        self.is_cleaning_mu_detect_log_list = True
+        for id in self.mu_detect_log_list:
+            del self.mu_detect_log_list[id][:]
+        self.is_cleaning_mu_detect_log_list = False
+        
+    def modify_multi_user_table(self,new_table):
+        self._multi_user_table = new_table.copy() 
         
 
     def close(self, next_tick=False):

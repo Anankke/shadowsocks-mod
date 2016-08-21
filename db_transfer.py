@@ -25,6 +25,8 @@ class DbTransfer(object):
 		self.last_update_transfer = {}
 		self.event = threading.Event()
 		self.port_uid_table = {}
+		self.uid_port_table = {}
+		self.old_md5_users = {}
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
 		
@@ -218,7 +220,7 @@ class DbTransfer(object):
 			switchrule = importloader.load('switchrule')
 			keys = switchrule.getKeys()
 		except Exception as e:
-			keys = ['port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
+			keys = ['id' , 'port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 		
 		if get_config().MYSQL_SSL_ENABLE == 1:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
@@ -353,6 +355,22 @@ class DbTransfer(object):
 			logging.error('load switchrule.py fail')
 		cur_servers = {}
 		new_servers = {}
+		
+		md5_users = {}
+		for row in rows:
+			md5_users[row['id']] = row.copy()
+			del md5_users[row['id']]['u']
+			del md5_users[row['id']]['d']
+			if md5_users[row['id']]['disconnect_ip'] == None:
+				md5_users[row['id']]['disconnect_ip'] = ''
+				
+			if md5_users[row['id']]['forbidden_ip'] == None:
+				md5_users[row['id']]['forbidden_ip'] = ''
+				
+			if md5_users[row['id']]['forbidden_port'] == None:
+				md5_users[row['id']]['forbidden_port'] = ''
+			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
+		
 		for row in rows:
 			try:
 				allow = switchrule.isTurnOn(row) and row['enable'] == 1 and row['u'] + row['d'] < row['transfer_enable']
@@ -364,8 +382,9 @@ class DbTransfer(object):
 			cfg = {'password': passwd}
 			
 			self.port_uid_table[row['port']] = row['id']
+			self.uid_port_table[row['id']] = row['port']
 
-			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip']
+			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 			
 			for name in read_config_keys:
 				if name in row and row[name]:
@@ -398,6 +417,9 @@ class DbTransfer(object):
 				
 			if 'obfs_param' not in cfg:
 				cfg['obfs_param'] = ''
+				
+			if 'is_multi_user' not in cfg:
+				cfg['is_multi_user'] = 0
 
 			if port not in cur_servers:
 				cur_servers[port] = passwd
@@ -410,7 +432,9 @@ class DbTransfer(object):
 
 			cfg['detect_text_list'] = self.detect_text_list.copy()
 			cfg['detect_hex_list'] = self.detect_hex_list.copy()
-				
+			
+			cfg['users_table'] = md5_users.copy()
+			
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				if not allow:
@@ -422,6 +446,16 @@ class DbTransfer(object):
 					cfgchange = False
 					if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
 						cfgchange = True
+					if cmp(self.old_md5_users,md5_users) != 0 and row['is_multi_user'] == 1:
+						if port in ServerPool.get_instance().tcp_servers_pool:
+							ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
+						if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+							ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+						if port in ServerPool.get_instance().udp_servers_pool:
+							ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
+						if port in ServerPool.get_instance().udp_ipv6_servers_pool:
+							ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+						
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						relay = ServerPool.get_instance().tcp_servers_pool[port]
 						for name in merge_config_keys:
@@ -436,7 +470,7 @@ class DbTransfer(object):
 								break;
 					#config changed
 					if cfgchange:
-						logging.info('db stop server at port [%s] reason: config changed: %s' % (port, cfg))
+						logging.info('db stop server at port [%s] reason: config changed!' % (port))
 						ServerPool.get_instance().cb_del_server(port)
 						if port in self.last_update_transfer:
 							del self.last_update_transfer[port]
@@ -447,7 +481,9 @@ class DbTransfer(object):
 				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
-				ServerPool.get_instance().new_server(port, cfg, )
+				ServerPool.get_instance().new_server(port, cfg)
+				
+		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
 		for row in last_rows:
 			if row['port'] in cur_servers:
@@ -468,6 +504,8 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
+				
+		self.old_md5_users = md5_users.copy()
 
 	@staticmethod
 	def del_servers():

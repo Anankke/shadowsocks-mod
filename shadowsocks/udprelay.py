@@ -963,6 +963,7 @@ class UDPRelay(object):
         self.connected_iplist = []
         self.wrong_iplist = {}
         self.detect_log_list = []
+        self.multi_user_table = self._config['users_table']
         self.is_cleaning_connected_iplist = False
         self.is_cleaning_wrong_iplist = False
         self.is_cleaning_detect_log = False
@@ -1111,6 +1112,7 @@ class UDPRelay(object):
                 return
             self._protocol.obfs.server_info.recv_iv = ref_iv[0]
             data = self._protocol.server_udp_post_decrypt(data)
+            
 
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
         if not self._is_local:
@@ -1524,6 +1526,9 @@ class UDPRelay(object):
         self.is_cleaning_detect_log = True
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
+
+    def modify_multi_user_table(self,new_table):
+        self._multi_user_table = new_table.copy() 
 
     def close(self, next_tick=False):
         logging.debug('UDP close')
