@@ -793,11 +793,14 @@ class TCPRelayHandler(object):
                                         if self._current_user_id not in self._server.mu_detect_log_list:
                                             self._server.mu_detect_log_list[self._current_user_id] = []
                                     else:
-                                        raise Exception('The host:%s md5 is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                        logging.error('The host:%s md5 is error,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                        self.destroy()
+                                        return
                                 except Exception as e:
                                     logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                    self.destroy()
                                     return
                             else:
                                 if self._current_user_id == 0:
