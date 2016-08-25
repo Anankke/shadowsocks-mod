@@ -549,10 +549,12 @@ class TCPRelayHandler(object):
                             self._client_address[0], self._client_address[1], self._server._listen_port))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
-            if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0 and self._server.is_cleaning_mu_connected_iplist == False:
-                templist = self._server.mu_connected_iplist[self._current_user_id]
-                templist.append(self._client_address[0])
-                self._server.mu_connected_iplist[self._current_user_id] = templist
+            
+            if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0 and self._server.is_cleaning_mu_connected_iplist == False:
+                    templist = self._server.mu_connected_iplist[self._current_user_id]
+                    templist.append(self._client_address[0])
+                    self._server.mu_connected_iplist[self._current_user_id] = templist
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
