@@ -392,7 +392,7 @@ class ServerPool(object):
 		port = int(port)
 		ret = {}
 		if port in self.tcp_servers_pool:
-			tempdict = self.tcp_servers_pool[port].mu_connected_iplist
+			tempdict = self.tcp_servers_pool[port].mu_connected_iplist.copy()
 			for id in tempdict:
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = []
@@ -402,7 +402,7 @@ class ServerPool(object):
 				ret[self.uid_port_table[id]] = tempret[:]
 			self.tcp_servers_pool[port].mu_connected_iplist_clean()
 		if port in self.tcp_ipv6_servers_pool:
-			tempdict = self.tcp_ipv6_servers_pool[port].mu_connected_iplist
+			tempdict = self.tcp_ipv6_servers_pool[port].mu_connected_iplist.copy()
 			for id in tempdict:
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = []
@@ -493,7 +493,7 @@ class ServerPool(object):
 		port = int(port)
 		ret = {}
 		if port in self.tcp_servers_pool:
-			tempdict = self.tcp_servers_pool[port].mu_detect_log_list
+			tempdict = self.tcp_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = []
@@ -502,7 +502,7 @@ class ServerPool(object):
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
 		if port in self.tcp_ipv6_servers_pool:
-			tempdict = self.tcp_ipv6_servers_pool[port].mu_detect_log_list
+			tempdict = self.tcp_ipv6_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = []

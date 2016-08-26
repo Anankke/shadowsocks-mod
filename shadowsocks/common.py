@@ -23,7 +23,7 @@ import struct
 import logging
 import binascii
 import re
-import md5
+import hashlib
 
 def compat_ord(s):
     if type(s) == int:
@@ -141,8 +141,7 @@ def match_host(data):
     return find_between(to_str(data), "Host: ", "\r\n")
 
 def get_md5(data):
-    m1 = md5.new()   
-    m1.update(data)   
+    m1 = hashlib.md5(data)   
     return m1.hexdigest()   
 
 def find_between( s, first, last ):

@@ -550,11 +550,13 @@ class TCPRelayHandler(object):
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
             
+            
             if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
-                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0 and self._server.is_cleaning_mu_connected_iplist == False:
+                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:                             
                     templist = self._server.mu_connected_iplist[self._current_user_id]
                     templist.append(self._client_address[0])
                     self._server.mu_connected_iplist[self._current_user_id] = templist
+                    
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
@@ -806,8 +808,10 @@ class TCPRelayHandler(object):
                                     return
                             else:
                                 if self._current_user_id == 0:
-                                    raise Exception('The host:%s id is not assign,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                    logging.error('The host:%s id is not assign,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                    self.destroy()
+                                    return
                         if not self._protocol.obfs.server_info.recv_iv:
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
