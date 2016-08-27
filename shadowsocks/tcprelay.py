@@ -779,7 +779,7 @@ class TCPRelayHandler(object):
                         data = self._obfs.server_encode(b'')
                         self._write_to_sock(data, self._local_sock)
                     if obfs_decode[1]:
-                        if self._server._config["obfs"] == "http_simple" and self._server._config["is_multi_user"] == 1:
+                        if self._server._config["obfs"] == "http_simple" and self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
                             host = common.match_host(data)
                             host_list = host.split(".",2)
                             if len(host_list) == 3:
