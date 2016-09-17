@@ -105,11 +105,11 @@ class TCPRelayHandler(object):
         self._config = config
         self._dns_resolver = dns_resolver
         self._current_user_id = 0
-        
+
         self._bytesSent = 0
         self._timeCreated = time.time()
-        
-        
+
+
 
         # TCP Relay works as either sslocal or ssserver
         # if is_local, this is sslocal
@@ -129,7 +129,7 @@ class TCPRelayHandler(object):
         server_info.port = server._listen_port
         server_info.protocol_param = ''
         server_info.obfs_param = config['obfs_param']
-        
+
         server_info.iv = self._encryptor.cipher_iv
         server_info.recv_iv = b''
         server_info.key = self._encryptor.cipher_key
@@ -164,9 +164,9 @@ class TCPRelayHandler(object):
         self._client_address = local_sock.getpeername()[:2]
         self._accept_address = local_sock.getsockname()[:2]
         self._remote_address = None
-        
-        
-        
+
+
+
         if is_local:
             self._chosen_server = self._get_a_server()
         fd_to_handlers[local_sock.fileno()] = self
@@ -187,8 +187,8 @@ class TCPRelayHandler(object):
     @property
     def remote_address(self):
         return self._remote_address
-        
-    
+
+
 
     def _get_a_server(self):
         server = self._config['server']
@@ -207,7 +207,7 @@ class TCPRelayHandler(object):
 
     def _update_stream(self, stream, status):
         # update a stream to a new waiting status
-        
+
         # check if status is changed
         # only update if dirty
         dirty = False
@@ -244,16 +244,16 @@ class TCPRelayHandler(object):
         if not sock:
             return False
         logging.debug("_write_to_sock %s %s %s" % (self._remote_sock, sock, self._remote_udp))
-        
-        
+
+
         if float(self._config['node_speedlimit']) > 0:
             now = time.time()
             connectionDuration = now - self._timeCreated
             self._bytesSent += len(data)
             requiredDuration = self._bytesSent / self._server.bandwidth
             time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-            
-        
+
+
         uncomplete = False
         if self._remote_udp and sock == self._remote_sock:
             try:
@@ -288,7 +288,7 @@ class TCPRelayHandler(object):
                     if addrs:
                         af, socktype, proto, canonname, server_addr = addrs[0]
                         data = data[header_length:]
-                        
+
                         if af == socket.AF_INET6:
                             self._remote_sock_v6.sendto(data, (server_addr[0], dest_port))
                         else:
@@ -370,7 +370,7 @@ class TCPRelayHandler(object):
             addr = struct.unpack('>I', address_bytes)[0]
         else:
             addr = 0
-         
+
         host_port = []
         match_port = False
         if type(host_list) != list:
@@ -549,14 +549,14 @@ class TCPRelayHandler(object):
                             self._client_address[0], self._client_address[1], self._server._listen_port))
             if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                 self._server.connected_iplist.append(self._client_address[0])
-            
-            
+
+
             if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
-                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:                             
+                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:
                     templist = self._server.mu_connected_iplist[self._current_user_id]
                     templist.append(self._client_address[0])
                     self._server.mu_connected_iplist[self._current_user_id] = templist
-                    
+
 
             if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                 del self._server.wrong_iplist[self._client_address[0]]
@@ -596,7 +596,7 @@ class TCPRelayHandler(object):
 
     def _create_remote_socket(self, ip, port):
 
-        
+
         if self._remote_udp:
             addrs_v6 = socket.getaddrinfo("::", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
             addrs = socket.getaddrinfo("0.0.0.0", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
@@ -861,7 +861,7 @@ class TCPRelayHandler(object):
             self._handle_stage_addr(ogn_data, data)
 
     def _on_remote_read(self, is_remote_sock):
-        
+
         # handle all remote read events
         data = None
         try:
@@ -947,7 +947,7 @@ class TCPRelayHandler(object):
 
     def _on_remote_write(self):
         # handle remote writable event
-        
+
         self._stage = STAGE_STREAM
         if self._data_to_write_to_remote:
             data = b''.join(self._data_to_write_to_remote)
@@ -977,7 +977,7 @@ class TCPRelayHandler(object):
         # handle all events in this handler and dispatch them to methods
         self._bytesSent = 0
         self._timeCreated = time.time()
-        
+
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
             return
@@ -1092,8 +1092,8 @@ class TCPRelay(object):
         self.multi_user_table = self._config['users_table']
         self.is_cleaning_detect_log = False
         self.is_cleaning_mu_detect_log_list = False
-        
-    
+
+
         if 'forbidden_ip' in config:
             self._forbidden_iplist = IPNetwork(config['forbidden_ip'])
         else:
@@ -1106,7 +1106,7 @@ class TCPRelay(object):
             self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
         else:
             self._disconnect_ipset = None
-        
+
         if config["is_multi_user"] == 1:
             for id in self.multi_user_table:
                 if self.multi_user_table[id]['forbidden_ip'] != None:
@@ -1121,17 +1121,17 @@ class TCPRelay(object):
                     self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(self.multi_user_table[id]['forbidden_port']))
                 else:
                     self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(""))
-        
-        
+
+
         self.latency = 0
         self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
-        
+
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self.obfs_data = obfs.obfs(config['obfs']).init_data()
 
         if config.get('connect_verbose_info', 0) > 0:
             common.connect_log = logging.info
-            
+
         if config.get('connect_hex_data', 0) > 0:
             self._connect_hex_data = True
         else:
@@ -1325,44 +1325,57 @@ class TCPRelay(object):
             for handler in list(self._fd_to_handlers.values()):
                 handler.destroy()
         self._sweep_timeout()
-        
+
     def connected_iplist_clean(self):
         self.is_cleaning_connected_iplist = True
         del self.connected_iplist[:]
         self.is_cleaning_connected_iplist = False
-        
+
     def mu_connected_iplist_clean(self):
         self.is_cleaning_mu_connected_iplist = True
         for id in self.mu_connected_iplist:
             del self.mu_connected_iplist[id][:]
         self.is_cleaning_mu_connected_iplist = False
-        
+
     def wrong_iplist_clean(self):
         self.is_cleaning_wrong_iplist = True
-        
+
         temp_new_list = {}
-        for key in self.wrong_iplist: 
+        for key in self.wrong_iplist:
             if self.wrong_iplist[key] > time.time() - 60:
                 temp_new_list[key] = self.wrong_iplist[key]
-        
+
         self.wrong_iplist = temp_new_list.copy()
-        
+
         self.is_cleaning_wrong_iplist = False
 
     def detect_log_list_clean(self):
         self.is_cleaning_detect_log = True
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
-        
+
     def mu_connected_detect_log_list_clean(self):
         self.is_cleaning_mu_detect_log_list = True
         for id in self.mu_detect_log_list:
             del self.mu_detect_log_list[id][:]
         self.is_cleaning_mu_detect_log_list = False
-        
+
     def modify_multi_user_table(self,new_table):
-        self._multi_user_table = new_table.copy() 
-        
+        self.multi_user_table = new_table.copy()
+        for id in self.multi_user_table:
+            if self.multi_user_table[id]['forbidden_ip'] != None:
+                self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(self.multi_user_table[id]['forbidden_ip']))
+            else:
+                self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(""))
+            if self.multi_user_table[id]['disconnect_ip'] != None:
+                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(self.multi_user_table[id]['disconnect_ip']))
+            else:
+                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(""))
+            if self.multi_user_table[id]['forbidden_port'] != None:
+                self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(self.multi_user_table[id]['forbidden_port']))
+            else:
+                self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(""))
+
 
     def close(self, next_tick=False):
         logging.debug('TCP close')

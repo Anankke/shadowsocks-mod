@@ -29,7 +29,7 @@ class DbTransfer(object):
 		self.old_md5_users = {}
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
-		
+
 		self.detect_text_list = {}
 		self.detect_text_ischanged = False
 
@@ -39,41 +39,41 @@ class DbTransfer(object):
 	def update_all_user(self, dt_transfer):
 		import cymysql
 		update_transfer = {}
-		
+
 		query_head = 'UPDATE user'
 		query_sub_when = ''
 		query_sub_when2 = ''
 		query_sub_in = None
-		
+
 		alive_user_count = 0
 		bandwidth_thistime = 0
-		
+
 		if get_config().MYSQL_SSL_ENABLE == 1:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
 		else:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
-		
+
 		conn.autocommit(True)
-		
+
 		for id in dt_transfer.keys():
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
 				continue
-			
+
 			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0] * self.traffic_rate)
 			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1] * self.traffic_rate)
 			update_transfer[id] = dt_transfer[id]
-			
+
 			alive_user_count = alive_user_count + 1
-			
+
 			cur = conn.cursor()
 			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1]) * self.traffic_rate) + "', unix_timestamp()); ")
 			cur.close()
-			
-			
+
+
 			bandwidth_thistime = bandwidth_thistime + ((dt_transfer[id][0] + dt_transfer[id][1]) * self.traffic_rate)
-			
+
 			if query_sub_in is not None:
 				query_sub_in += ',%s' % id
 			else:
@@ -83,24 +83,24 @@ class DbTransfer(object):
 						' END, d = CASE port' + query_sub_when2 + \
 						' END, t = unix_timestamp() ' + \
 						' WHERE port IN (%s)' % query_sub_in
-			
+
 			cur = conn.cursor()
 			cur.execute(query_sql)
 			cur.close()
-		
+
 		cur = conn.cursor()
 		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + str(bandwidth_thistime) + "' WHERE `id` = " +  str(get_config().NODE_ID) + " ; ")
 		cur.close()
-		
+
 		cur = conn.cursor()
 		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
 		cur.close()
-		
+
 
 		cur = conn.cursor()
 		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
 		cur.close()
-		
+
 		online_iplist = ServerPool.get_instance().get_servers_iplist()
 		for id in online_iplist.keys():
 			for ip in online_iplist[id]:
@@ -115,7 +115,7 @@ class DbTransfer(object):
 				cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
 				cur.close()
 
-				
+
 		deny_str = ""
 		if platform.system() == 'Linux' and get_config().ANTISSATTACK == 1 :
 			wrong_iplist = ServerPool.get_instance().get_servers_wrong()
@@ -135,16 +135,16 @@ class DbTransfer(object):
 								realip = ip
 					else:
 						continue
-						
+
 					if str(realip) == str(server_ip):
 						continue
-					
+
 					cur = conn.cursor()
 					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
 					rows = cur.fetchone()
 					cur.close()
-					
-					
+
+
 					if rows != None:
 						continue
 					if get_config().CLOUDSAFE == 1:
@@ -158,7 +158,7 @@ class DbTransfer(object):
 						else:
 							os.system('ip -6 route add ::1/128 via %s/128' % str(realip))
 							deny_str = deny_str + "\nALL: [" + str(realip) +"]/128"
-							
+
 						logging.info("Local Block ip:" + str(realip))
 				if get_config().CLOUDSAFE == 0:
 					deny_file=open('/etc/hosts.deny','a')
@@ -167,25 +167,25 @@ class DbTransfer(object):
 					deny_file.close()
 		conn.close()
 		return update_transfer
-		
+
 	def uptime(self):
 		with open('/proc/uptime', 'r') as f:
 			return float(f.readline().split()[0])
-	
+
 	def load(self):
 		import os
 		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
-		
+
 	def trafficShow(self,Traffic):
 		if Traffic<1024 :
 			return str(round((Traffic),2))+"B";
-		
+
 		if Traffic<1024*1024 :
 			return str(round((Traffic/1024),2))+"KB";
-		
+
 		if Traffic<1024*1024*1024 :
 			return str(round((Traffic/1024/1024),2))+"MB";
-		
+
 		return str(round((Traffic/1024/1024/1024),2))+"GB";
 
 	def push_db_all_user(self):
@@ -221,7 +221,7 @@ class DbTransfer(object):
 			keys = switchrule.getKeys()
 		except Exception as e:
 			keys = ['id' , 'port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
-		
+
 		if get_config().MYSQL_SSL_ENABLE == 1:
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
@@ -229,29 +229,29 @@ class DbTransfer(object):
 			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
 										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 		conn.autocommit(True)
-		
+
 		cur = conn.cursor()
-		
+
 		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
 		nodeinfo = cur.fetchone()
-		
+
 		if nodeinfo == None :
 			rows = []
 			cur.close()
 			conn.commit()
 			conn.close()
 			return rows
-		
+
 		cur.close()
-		
+
 		self.node_speedlimit = float(nodeinfo[2])
 		self.traffic_rate = float(nodeinfo[3])
-		
+
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
 		else:
 			node_group_sql = "AND `node_group`=" + str(nodeinfo[0])
-		
+
 		cur = conn.cursor()
 		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(nodeinfo[1]) +" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
 		rows = []
@@ -264,19 +264,19 @@ class DbTransfer(object):
 
 		#读取审计规则,数据包匹配部分
 		keys_detect = ['id','regex']
-		
+
 		cur = conn.cursor()
 		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 1")
-		
+
 		exist_id_list = []
-	
+
 		for r in cur.fetchall():
 			id = long(r[0])
 			exist_id_list.append(id)
 			if r[0] not in self.detect_text_list:
 				d = {}
 				d['id'] = id
-				d['regex'] = r[1]			
+				d['regex'] = r[1]
 				self.detect_text_list[id] = d
 				self.detect_text_ischanged = True
 			else:
@@ -284,33 +284,33 @@ class DbTransfer(object):
 					del self.detect_text_list[id]
 					d = {}
 					d['id'] = r[0]
-					d['regex'] = r[1]			
+					d['regex'] = r[1]
 					self.detect_text_list[id] = d
 					self.detect_text_ischanged = True
-		
+
 		deleted_id_list = []
 		for id in self.detect_text_list:
 			if id not in exist_id_list:
 				deleted_id_list.append(id)
 				self.detect_text_ischanged = True
-				
-				
+
+
 		for id in deleted_id_list:
 			del self.detect_text_list[id]
 
 
 		cur = conn.cursor()
 		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 2")
-		
+
 		exist_id_list = []
-	
+
 		for r in cur.fetchall():
 			id = long(r[0])
 			exist_id_list.append(id)
 			if r[0] not in self.detect_hex_list:
 				d = {}
 				d['id'] = id
-				d['regex'] = r[1]			
+				d['regex'] = r[1]
 				self.detect_hex_list[id] = d
 				self.detect_hex_ischanged = True
 			else:
@@ -318,20 +318,20 @@ class DbTransfer(object):
 					del self.detect_hex_list[id]
 					d = {}
 					d['id'] = r[0]
-					d['regex'] = r[1]			
+					d['regex'] = r[1]
 					self.detect_hex_list[id] = d
 					self.detect_hex_ischanged = True
-		
+
 		deleted_id_list = []
 		for id in self.detect_hex_list:
 			if id not in exist_id_list:
 				deleted_id_list.append(id)
 				self.detect_hex_ischanged = True
-				
-				
+
+
 		for id in deleted_id_list:
 			del self.detect_hex_list[id]
-		
+
 		cur.close()
 		conn.close()
 		return rows
@@ -347,30 +347,37 @@ class DbTransfer(object):
 		#停止超流量的服务
 		#启动没超流量的服务
 		#需要动态载入switchrule，以便实时修改规则
-		
-		
+
+
 		try:
 			switchrule = importloader.load('switchrule')
 		except Exception as e:
 			logging.error('load switchrule.py fail')
 		cur_servers = {}
 		new_servers = {}
-		
+
 		md5_users = {}
+		md5_changed = False
+
 		for row in rows:
 			md5_users[row['id']] = row.copy()
 			del md5_users[row['id']]['u']
 			del md5_users[row['id']]['d']
 			if md5_users[row['id']]['disconnect_ip'] == None:
 				md5_users[row['id']]['disconnect_ip'] = ''
-				
+
 			if md5_users[row['id']]['forbidden_ip'] == None:
 				md5_users[row['id']]['forbidden_ip'] = ''
-				
+
 			if md5_users[row['id']]['forbidden_port'] == None:
 				md5_users[row['id']]['forbidden_port'] = ''
 			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
-		
+
+			if row['id'] in self.old_md5_users:
+				for key in md5_users[row['id']]:
+					if not self.cmp(self.old_md5_users[row['id']][key], md5_users[row['id']][key]):
+						md5_changed = True
+
 		for row in rows:
 			try:
 				allow = switchrule.isTurnOn(row) and row['enable'] == 1 and row['u'] + row['d'] < row['transfer_enable']
@@ -380,44 +387,44 @@ class DbTransfer(object):
 			port = row['port']
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
-			
+
 			self.port_uid_table[row['port']] = row['id']
 			self.uid_port_table[row['id']] = row['port']
 
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
-			
+
 			for name in read_config_keys:
 				if name in row and row[name]:
 					cfg[name] = row[name]
-					
-					
-			
+
+
+
 			merge_config_keys = ['password'] + read_config_keys
 			for name in cfg.keys():
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
-					
+
 			if 'node_speedlimit' in cfg:
 				if float(self.node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
 					cfg['node_speedlimit'] = max(float(self.node_speedlimit),float(cfg['node_speedlimit']))
 			else:
 				cfg['node_speedlimit'] = max(float(self.node_speedlimit),float(0.00))
-			
+
 			if 'disconnect_ip' not in cfg:
 				cfg['disconnect_ip'] = ''
-				
+
 			if 'forbidden_ip' not in cfg:
 				cfg['forbidden_ip'] = ''
-				
+
 			if 'forbidden_port' not in cfg:
 				cfg['forbidden_port'] = ''
-				
+
 			if 'protocol_param' not in cfg:
 				cfg['protocol_param'] = ''
-				
+
 			if 'obfs_param' not in cfg:
 				cfg['obfs_param'] = ''
-				
+
 			if 'is_multi_user' not in cfg:
 				cfg['is_multi_user'] = 0
 
@@ -432,9 +439,9 @@ class DbTransfer(object):
 
 			cfg['detect_text_list'] = self.detect_text_list.copy()
 			cfg['detect_hex_list'] = self.detect_hex_list.copy()
-			
+
 			cfg['users_table'] = md5_users.copy()
-			
+
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				if not allow:
@@ -446,7 +453,8 @@ class DbTransfer(object):
 					cfgchange = False
 					if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
 						cfgchange = True
-					if cmp(self.old_md5_users,md5_users) != 0 and row['is_multi_user'] == 1:
+					if md5_changed == True and row['is_multi_user'] == 1:
+						logging.info('Multi user-port info changed,notify changing.....mu port %d' % (port))
 						if port in ServerPool.get_instance().tcp_servers_pool:
 							ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
 						if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
@@ -455,7 +463,7 @@ class DbTransfer(object):
 							ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
 						if port in ServerPool.get_instance().udp_ipv6_servers_pool:
 							ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
-						
+
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						relay = ServerPool.get_instance().tcp_servers_pool[port]
 						for name in merge_config_keys:
@@ -482,7 +490,7 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
-				
+
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
 		for row in last_rows:
@@ -504,7 +512,7 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
-				
+
 		self.old_md5_users = md5_users.copy()
 
 	@staticmethod
@@ -556,7 +564,7 @@ class DbTransfer(object):
 	def thread_db_stop():
 		global db_instance
 		db_instance.event.set()
-		
+
 	def is_all_thread_alive(self):
 		for port in ServerPool.get_instance().thread_pool:
 			if not ServerPool.get_instance().thread_pool[port].is_alive():
@@ -612,6 +620,5 @@ class MuJsonTransfer(DbTransfer):
 						row['disconnect_ip'] = common.IPNetwork(row['disconnect_ip'])
 				except Exception as e:
 					logging.error(e)
-				
-		return rows
 
+		return rows
