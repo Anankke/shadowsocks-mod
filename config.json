@@ -8,7 +8,7 @@
     "timeout": 120,
     "udp_timeout": 60,
     "method": "aes-256-cfb",
-    "protocol": "origin",
+    "protocol": "auth_sha1_v2_compatible",
     "protocol_param": "",
     "obfs": "plain",
     "obfs_param": "",
