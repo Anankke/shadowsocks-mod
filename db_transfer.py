@@ -378,6 +378,10 @@ class DbTransfer(object):
 					if not self.cmp(self.old_md5_users[row['id']][key], md5_users[row['id']][key]):
 						md5_changed = True
 
+		for old_user in self.old_md5_users:
+			if old_user not in md5_users:
+				md5_changed = True
+
 		for row in rows:
 			try:
 				allow = switchrule.isTurnOn(row) and row['enable'] == 1 and row['u'] + row['d'] < row['transfer_enable']
