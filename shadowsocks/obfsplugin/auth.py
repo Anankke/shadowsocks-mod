@@ -702,6 +702,8 @@ class auth_sha1_v2(verify_base):
             return (buf, False)
         self.recv_buf += buf
         out_buf = b''
+        sendback = False
+
         if not self.has_recv_header:
             if len(self.recv_buf) < 4:
                 return (b'', False)
@@ -736,8 +738,8 @@ class auth_sha1_v2(verify_base):
                 return self.not_match_return(self.recv_buf)
             self.recv_buf = self.recv_buf[length:]
             self.has_recv_header = True
+            sendback = True
 
-        sendback = False
         while len(self.recv_buf) > 2:
             length = struct.unpack('>H', self.recv_buf[:2])[0]
             if length >= 8192 or length < 7:
@@ -1121,6 +1123,8 @@ class auth_sha1_v4(verify_base):
             return (buf, False)
         self.recv_buf += buf
         out_buf = b''
+        sendback = False
+
         if not self.has_recv_header:
             if len(self.recv_buf) <= 6:
                 return (b'', False)
@@ -1160,8 +1164,8 @@ class auth_sha1_v4(verify_base):
                 return self.not_match_return(self.recv_buf)
             self.recv_buf = self.recv_buf[length:]
             self.has_recv_header = True
+            sendback = True
 
-        sendback = False
         while len(self.recv_buf) > 4:
             crc = struct.pack('<H', binascii.crc32(self.recv_buf[:2]) & 0xFFFF)
             if crc != self.recv_buf[2:4]:
@@ -1357,6 +1361,8 @@ class auth_aes128(verify_base):
             return (buf, False)
         self.recv_buf += buf
         out_buf = b''
+        sendback = False
+
         if not self.has_recv_header:
             if len(self.recv_buf) < 30:
                 return (b'', False)
@@ -1395,8 +1401,8 @@ class auth_aes128(verify_base):
                 return self.not_match_return(self.recv_buf)
             self.recv_buf = self.recv_buf[length:]
             self.has_recv_header = True
+            sendback = True
 
-        sendback = False
         while len(self.recv_buf) > 4:
             crc = struct.pack('<H', binascii.crc32(self.recv_buf[:2]) & 0xFFFF)
             if crc != self.recv_buf[2:4]:
