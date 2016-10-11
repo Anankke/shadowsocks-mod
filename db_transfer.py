@@ -542,6 +542,10 @@ class DbTransfer(object):
 		socket.setdefaulttimeout(timeout)
 		last_rows = []
 		db_instance = obj()
+
+		shell.log_shadowsocks_version()
+		import resource
+		logging.info('current process RLIMIT_NOFILE resource: soft %d hard %d'  % resource.getrlimit(resource.RLIMIT_NOFILE))
 		try:
 			while True:
 				load_config()
