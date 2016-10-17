@@ -282,10 +282,10 @@ class TCPRelayHandler(object):
         self._config = config
         self._dns_resolver = dns_resolver
         self._local_id = local_id
-        
+
         self._bytesSent = 0
         self._timeCreated = time.time()
-        
+
         self._is_local = is_local
         self._stage = STAGE_INIT
         self._password = config['password']
@@ -298,7 +298,7 @@ class TCPRelayHandler(object):
         self._request_id = 0
         self._client_address = AddressMap()
         self._remote_address = None
-        
+
         self._sendingqueue = SendingQueue()
         self._recvqueue = RecvQueue()
         if 'forbidden_ip' in config:
@@ -331,8 +331,8 @@ class TCPRelayHandler(object):
     @property
     def remote_address(self):
         return self._remote_address
-        
-    
+
+
 
     def add_local_address(self, addr):
         self._client_address.add(addr)
@@ -348,8 +348,8 @@ class TCPRelayHandler(object):
     def _update_stream(self, stream, status):
         # update a stream to a new waiting status
 
-        
-        
+
+
         # check if status is changed
         # only update if dirty
         dirty = False
@@ -386,14 +386,14 @@ class TCPRelayHandler(object):
         if not data or not sock:
             return False
 
-        if float(self._config['node_speedlimit']) > 0:
+        if float(self._server.bandwidth) > 0:
             now = time.time()
             connectionDuration = now - self._timeCreated
             self._bytesSent += len(data)
             requiredDuration = self._bytesSent / self._server.bandwidth
             time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-            
-            
+
+
         uncomplete = False
         retry = 0
         if sock == self._local_sock:
@@ -431,8 +431,8 @@ class TCPRelayHandler(object):
                     shell.print_exception(e)
                     self.destroy()
                     return False
-                    
-        
+
+
         if uncomplete:
             if sock == self._local_sock:
                 self._update_stream(STREAM_DOWN, WAIT_STATUS_WRITING)
@@ -465,8 +465,8 @@ class TCPRelayHandler(object):
         if self._server._disconnect_ipset:
             if common.to_str(addr[0]) in self._disconnect_ipset:
                 raise Exception('IP %s is in disconnect list, reject' %
-                                common.to_str(addr[0]))                        
-        
+                                common.to_str(addr[0]))
+
         remote_sock = socket.socket(af, socktype, proto)
         self._remote_sock = remote_sock
 
@@ -720,13 +720,13 @@ class TCPRelayHandler(object):
                     if header_result is None:
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
-                        
+
                     if common.to_str(addr[0]) not in self._server.connected_iplist and addr[0] != 0 and self._server.is_cleaning_connected_iplist == False:
                         self._server.connected_iplist.append(common.to_str(addr[0]))
-                    
+
                     if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                         del self._server.wrong_iplist[common.to_str(addr[0])]
-                        
+
                     self._remote_address = (common.to_str(remote_addr), remote_port)
                     self._stage = STAGE_DNS
                     self._dns_resolver.resolve(remote_addr,
@@ -735,20 +735,22 @@ class TCPRelayHandler(object):
                         common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
                     else:
                         common.connect_log('TCPonUDP connect %s:%d from %s:%d via port %d ,hex data : %s' % (remote_addr, remote_port, addr[0], addr[1], self._server._listen_port, binascii.hexlify(data)))
-                    for id in self._server._config["detect_text_list"]:
-                        if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
-                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                                self._server.detect_log_list.append(id)
-                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
-                                (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'],
-                                remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
-                    for id in self._server._config["detect_hex_list"]:
-                        if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
-                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                                self._server.detect_log_list.append(id)
-                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
-                                (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
-                                remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    if 'detect_text_list' in self._server._config:
+                        for id in self._server._config["detect_text_list"]:
+                            if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                                if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                    self._server.detect_log_list.append(id)
+                                raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                                    (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'],
+                                    remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
+                    if 'detect_hex_list' in self._server._config:
+                        for id in self._server._config["detect_hex_list"]:
+                            if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                                if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                    self._server.detect_log_list.append(id)
+                                raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                                    (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
+                                    remote_addr, remote_port, addr[0], addr[1], self._server._listen_port))
                 else:
                     # ileagal request
                     rsp_data = self._pack_rsp_data(CMD_DISCONNECT, RSP_STATE_EMPTY)
@@ -833,7 +835,7 @@ class TCPRelayHandler(object):
     def handle_event(self, sock, event):
         self._bytesSent = 0
         self._timeCreated = time.time()
-        
+
         # handle all events in this handler and dispatch them to methods
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
@@ -925,12 +927,12 @@ class UDPRelay(object):
         self._config = config
         if config.get('connect_verbose_info', 0) > 0:
             common.connect_log = logging.info
-    
+
         if config.get('connect_hex_data', 0) > 0:
             self._connect_hex_data = True
         else:
             self._connect_hex_data = False
-    
+
         if is_local:
             self._listen_addr = config['local_address']
             self._listen_port = config['local_port']
@@ -957,13 +959,14 @@ class UDPRelay(object):
         self._closed = False
         self.server_transfer_ul = 0
         self.server_transfer_dl = 0
-        
-        
-        
+
+
+
         self.connected_iplist = []
         self.wrong_iplist = {}
         self.detect_log_list = []
-        self.multi_user_table = self._config['users_table']
+        if 'users_table' in self._config:
+            self.multi_user_table = self._config['users_table']
         self.is_cleaning_connected_iplist = False
         self.is_cleaning_wrong_iplist = False
         self.is_cleaning_detect_log = False
@@ -987,9 +990,12 @@ class UDPRelay(object):
         self._fd_to_handlers = {}
         self._reqid_to_hd = {}
         self._data_to_write_to_server_socket = []
-        
+
         self.latency = 0
-        self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
+        if 'node_speedlimit' not in config:
+            self.bandwidth = 0
+        else:
+            self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self._timeouts = []  # a list for all the handlers
         # we trim the timeouts once a while
@@ -1113,7 +1119,7 @@ class UDPRelay(object):
                 return
             self._protocol.obfs.server_info.recv_iv = ref_iv[0]
             data = self._protocol.server_udp_post_decrypt(data)
-            
+
 
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
         if not self._is_local:
@@ -1171,8 +1177,8 @@ class UDPRelay(object):
                     logging.debug('Port %d is in forbidden list, reject' %
                                     sa[1])
                     # drop
-                    return            
-            
+                    return
+
             client = socket.socket(af, socktype, proto)
             client.setblocking(False)
             is_dns = False
@@ -1193,22 +1199,24 @@ class UDPRelay(object):
 
             logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
 
-            for id in self._config["detect_text_list"]:
-                if common.match_regex(self._config["detect_text_list"][id]['regex'],common.to_str(data)):
-                    if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
-                        self.detect_log_list.append(id)
-                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
-                        (self._config["detect_text_list"][id]['id'], self._config["detect_text_list"][id]['regex'],
-                            common.to_str(server_addr), server_port,
-                            r_addr[0], r_addr[1], self._listen_port))
-            for id in self._config["detect_hex_list"]:
-                if common.match_regex(self._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
-                    if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
-                        self.detect_log_list.append(id)
-                    raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
-                        (self._config["detect_hex_list"][id]['id'], self._config["detect_hex_list"][id]['regex'],
-                            common.to_str(server_addr), server_port,
-                            r_addr[0], r_addr[1], self._listen_port))
+            if 'detect_text_list' in self._config:
+                for id in self._config["detect_text_list"]:
+                    if common.match_regex(self._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                        if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
+                            self.detect_log_list.append(id)
+                        raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                            (self._config["detect_text_list"][id]['id'], self._config["detect_text_list"][id]['regex'],
+                                common.to_str(server_addr), server_port,
+                                r_addr[0], r_addr[1], self._listen_port))
+            if 'detect_hex_list' in self._config:
+                for id in self._config["detect_hex_list"]:
+                    if common.match_regex(self._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                        if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
+                            self.detect_log_list.append(id)
+                        raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                            (self._config["detect_hex_list"][id]['id'], self._config["detect_hex_list"][id]['regex'],
+                                common.to_str(server_addr), server_port,
+                                r_addr[0], r_addr[1], self._listen_port))
             if self._connect_hex_data == False :
                 common.connect_log('UDP data to %s:%d from %s:%d via port %d' %
                         (common.to_str(server_addr), server_port,
@@ -1221,7 +1229,7 @@ class UDPRelay(object):
                 del self.wrong_iplist[common.to_str(r_addr[0])]
             if common.to_str(r_addr[0]) not in self.connected_iplist and r_addr[0] != 0 and self.is_cleaning_connected_iplist == False:
                         self.connected_iplist.append(common.to_str(r_addr[0]))
-            
+
 
         self._cache.clear(self._udp_cache_size)
         self._cache_dns_client.clear(16)
@@ -1504,23 +1512,23 @@ class UDPRelay(object):
             if before_sweep_size != len(self._sockets):
                 logging.debug('UDP port %5d sockets %d' % (self._listen_port, len(self._sockets)))
             self._sweep_timeout()
-            
-        
+
+
     def connected_iplist_clean(self):
         self.is_cleaning_connected_iplist = True
         del self.connected_iplist[:]
         self.is_cleaning_connected_iplist = False
-        
+
     def wrong_iplist_clean(self):
         self.is_cleaning_wrong_iplist = True
-        
+
         temp_new_list = {}
-        for key in self.wrong_iplist: 
+        for key in self.wrong_iplist:
             if self.wrong_iplist[key] > time.time() - 60:
                 temp_new_list[key] = self.wrong_iplist[key]
-        
+
         self.wrong_iplist = temp_new_list.copy()
-        
+
         self.is_cleaning_wrong_iplist = True
 
     def detect_log_list_clean(self):
@@ -1529,7 +1537,7 @@ class UDPRelay(object):
         self.is_cleaning_detect_log = False
 
     def modify_multi_user_table(self,new_table):
-        self._multi_user_table = new_table.copy() 
+        self._multi_user_table = new_table.copy()
 
     def close(self, next_tick=False):
         logging.debug('UDP close')
