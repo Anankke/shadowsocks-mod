@@ -26,7 +26,6 @@ class DbTransfer(object):
 		self.event = threading.Event()
 		self.port_uid_table = {}
 		self.uid_port_table = {}
-		self.old_md5_users = {}
 		self.node_speedlimit = 0.00
 		self.traffic_rate = 0.0
 
@@ -177,13 +176,13 @@ class DbTransfer(object):
 		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
 
 	def trafficShow(self,Traffic):
-		if Traffic<1024 :
+		if Traffic < 1024 :
 			return str(round((Traffic),2))+"B";
 
-		if Traffic<1024*1024 :
+		if Traffic < 1024*1024 :
 			return str(round((Traffic/1024),2))+"KB";
 
-		if Traffic<1024*1024*1024 :
+		if Traffic < 1024*1024*1024 :
 			return str(round((Traffic/1024/1024),2))+"MB";
 
 		return str(round((Traffic/1024/1024/1024),2))+"GB";
@@ -357,7 +356,6 @@ class DbTransfer(object):
 		new_servers = {}
 
 		md5_users = {}
-		md5_changed = False
 
 		for row in rows:
 			md5_users[row['id']] = row.copy()
@@ -373,21 +371,7 @@ class DbTransfer(object):
 				md5_users[row['id']]['forbidden_port'] = ''
 			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
 
-			if row['id'] in self.old_md5_users:
-				for key in md5_users[row['id']]:
-					if not self.cmp(self.old_md5_users[row['id']][key], md5_users[row['id']][key]):
-						md5_changed = True
-
-		for old_user in self.old_md5_users:
-			if old_user not in md5_users:
-				md5_changed = True
-
 		for row in rows:
-			try:
-				allow = switchrule.isTurnOn(row) and row['enable'] == 1 and row['u'] + row['d'] < row['transfer_enable']
-			except Exception as e:
-				allow = False
-
 			port = row['port']
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
@@ -448,47 +432,39 @@ class DbTransfer(object):
 
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
-				if not allow:
-					logging.info('db stop server at port [%s]' % (port,))
+				cfgchange = False
+				if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
+					cfgchange = True
+				if row['is_multi_user'] == 1:
+					if port in ServerPool.get_instance().tcp_servers_pool:
+						ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
+					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+						ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+					if port in ServerPool.get_instance().udp_servers_pool:
+						ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
+					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
+						ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+
+				if port in ServerPool.get_instance().tcp_servers_pool:
+					relay = ServerPool.get_instance().tcp_servers_pool[port]
+					for name in merge_config_keys:
+						if name in cfg and not self.cmp(cfg[name], relay._config[name]):
+							cfgchange = True
+							break;
+				if not cfgchange and port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+					relay = ServerPool.get_instance().tcp_ipv6_servers_pool[port]
+					for name in merge_config_keys:
+						if name in cfg and not self.cmp(cfg[name], relay._config[name]):
+							cfgchange = True
+							break;
+				#config changed
+				if cfgchange:
+					logging.info('db stop server at port [%s] reason: config changed!' % (port))
 					ServerPool.get_instance().cb_del_server(port)
 					if port in self.last_update_transfer:
 						del self.last_update_transfer[port]
-				else:
-					cfgchange = False
-					if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
-						cfgchange = True
-					if md5_changed == True and row['is_multi_user'] == 1:
-						logging.info('Multi user-port info changed,notify changing.....mu port %d' % (port))
-						if port in ServerPool.get_instance().tcp_servers_pool:
-							ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
-						if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-							ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
-						if port in ServerPool.get_instance().udp_servers_pool:
-							ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
-						if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-							ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
-
-					if port in ServerPool.get_instance().tcp_servers_pool:
-						relay = ServerPool.get_instance().tcp_servers_pool[port]
-						for name in merge_config_keys:
-							if name in cfg and not self.cmp(cfg[name], relay._config[name]):
-								cfgchange = True
-								break;
-					if not cfgchange and port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-						relay = ServerPool.get_instance().tcp_ipv6_servers_pool[port]
-						for name in merge_config_keys:
-							if name in cfg and not self.cmp(cfg[name], relay._config[name]):
-								cfgchange = True
-								break;
-					#config changed
-					if cfgchange:
-						logging.info('db stop server at port [%s] reason: config changed!' % (port))
-						ServerPool.get_instance().cb_del_server(port)
-						if port in self.last_update_transfer:
-							del self.last_update_transfer[port]
-						new_servers[port] = (passwd, cfg)
-
-			elif allow and ServerPool.get_instance().server_run_status(port) is False:
+					new_servers[port] = (passwd, cfg)
+			elif ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
 				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
@@ -515,9 +491,8 @@ class DbTransfer(object):
 				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
+				self.port_uid_table[row['port']] = row['id']
 				ServerPool.get_instance().new_server(port, cfg)
-
-		self.old_md5_users = md5_users.copy()
 
 	@staticmethod
 	def del_servers():
