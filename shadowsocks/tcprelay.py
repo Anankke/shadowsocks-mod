@@ -791,36 +791,27 @@ class TCPRelayHandler(object):
                         data = self._obfs.server_encode(b'')
                         self._write_to_sock(data, self._local_sock)
                     if obfs_decode[1]:
-                        if self._server._config["obfs"] == "http_simple" and self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                        if (self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post") and self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
                             host = common.match_host(data)
-                            host_list = host.split(".",2)
-                            if len(host_list) == 3:
-                                host_md5 = host_list[0]
-                                host_id = host_list[1]
-                                try:
-                                    if self._server.multi_user_table[int(host_id)]["md5"] == host_md5:
-                                        self._current_user_id = int(host_id)
-                                        if self._current_user_id not in self._server.mu_server_transfer_ul:
-                                            self._server.mu_server_transfer_ul[self._current_user_id] = 0
-                                        if self._current_user_id not in self._server.mu_server_transfer_dl:
-                                            self._server.mu_server_transfer_dl[self._current_user_id] = 0
-                                        if self._current_user_id not in self._server.mu_connected_iplist:
-                                            self._server.mu_connected_iplist[self._current_user_id] = []
-                                        if self._current_user_id not in self._server.mu_detect_log_list:
-                                            self._server.mu_detect_log_list[self._current_user_id] = []
-                                    else:
-                                        logging.error('The host:%s md5 is error,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                        is_Failed = True
-                                except Exception as e:
-                                    logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                            try:
+                                if host in self._server.multi_user_host_table:
+                                    self._current_user_id = int(self._server.multi_user_host_table[host])
+                                    if self._current_user_id not in self._server.mu_server_transfer_ul:
+                                        self._server.mu_server_transfer_ul[self._current_user_id] = 0
+                                    if self._current_user_id not in self._server.mu_server_transfer_dl:
+                                        self._server.mu_server_transfer_dl[self._current_user_id] = 0
+                                    if self._current_user_id not in self._server.mu_connected_iplist:
+                                        self._server.mu_connected_iplist[self._current_user_id] = []
+                                    if self._current_user_id not in self._server.mu_detect_log_list:
+                                        self._server.mu_detect_log_list[self._current_user_id] = []
+                                else:
+                                    logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                      (host, self._client_address[0], self._client_address[1], self._server._listen_port))
                                     is_Failed = True
-                            else:
-                                if self._current_user_id == 0:
-                                    logging.error('The host:%s id is not assign,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                          (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                    is_Failed = True
+                            except Exception as e:
+                                logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                      (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                is_Failed = True
                         if not self._protocol.obfs.server_info.recv_iv:
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
@@ -1101,7 +1092,10 @@ class TCPRelay(object):
         self.detect_log_list = []
         self.mu_detect_log_list = {}
         if 'users_table' in self._config:
+            self.multi_user_host_table = {}
             self.multi_user_table = self._config['users_table']
+            for id in self.multi_user_table:
+                self.multi_user_host_table[common.get_mu_host(id, self.multi_user_table[id]['md5'])] = id
         else:
             self._config['is_multi_user'] = 0
         self.is_cleaning_detect_log = False
@@ -1377,9 +1371,12 @@ class TCPRelay(object):
             del self.mu_detect_log_list[id][:]
         self.is_cleaning_mu_detect_log_list = False
 
-    def modify_multi_user_table(self,new_table):
+    def modify_multi_user_table(self, new_table):
         self.multi_user_table = new_table.copy()
+        self.multi_user_host_table = {}
+
         for id in self.multi_user_table:
+            self.multi_user_host_table[common.get_mu_host(id, self.multi_user_table[id]['md5'])] = id
             if self.multi_user_table[id]['forbidden_ip'] != None:
                 self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(self.multi_user_table[id]['forbidden_ip']))
             else:

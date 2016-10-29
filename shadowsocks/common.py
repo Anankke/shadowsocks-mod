@@ -24,6 +24,7 @@ import logging
 import binascii
 import re
 import hashlib
+from configloader import load_config, get_config
 
 def compat_ord(s):
     if type(s) == int:
@@ -131,7 +132,7 @@ def match_ipv6_address(text):
         return ip
     return None
 
-def match_regex(regex,text):
+def match_regex(regex, text):
     regex = re.compile(regex)
     for item in regex.findall(text):
         return True
@@ -140,9 +141,26 @@ def match_regex(regex,text):
 def match_host(data):
     return find_between(to_str(data), "Host: ", "\r\n")
 
+def get_mu_host(id, md5):
+    regex_text = get_config().MU_REGEX
+    regex_text = regex_text.replace('%id', str(id))
+    regex_text = regex_text.replace('%suffix', get_config().MU_SUFFIX)
+    regex = re.compile(r'%[\d]m')
+    for item in regex.findall(regex_text):
+        regex_num = re.compile(r'[\d]')
+        md5_length = 0
+        for item_num in regex_num.findall(item):
+            md5_length = int(item_num)
+        if md5_length < 0:
+            regex_text = regex_text.replace(item, md5[32 - md5_length:])
+        else:
+            regex_text = regex_text.replace(item, md5[:md5_length])
+    return regex_text
+
+
 def get_md5(data):
-    m1 = hashlib.md5(data)   
-    return m1.hexdigest()   
+    m1 = hashlib.md5(data)
+    return m1.hexdigest()
 
 def find_between( s, first, last ):
     try:

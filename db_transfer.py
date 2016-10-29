@@ -428,7 +428,8 @@ class DbTransfer(object):
 			cfg['detect_text_list'] = self.detect_text_list.copy()
 			cfg['detect_hex_list'] = self.detect_hex_list.copy()
 
-			cfg['users_table'] = md5_users.copy()
+			if cfg['is_multi_user'] == 1:
+				cfg['users_table'] = md5_users.copy()
 
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
