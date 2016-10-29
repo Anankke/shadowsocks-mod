@@ -620,8 +620,6 @@ class TCPRelayHandler(object):
                 sock.bind((bind_addr, 0))
 
     def _create_remote_socket(self, ip, port):
-
-
         if self._remote_udp:
             addrs_v6 = socket.getaddrinfo("::", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
             addrs = socket.getaddrinfo("0.0.0.0", 0, 0, socket.SOCK_DGRAM, socket.SOL_UDP)
@@ -767,6 +765,7 @@ class TCPRelayHandler(object):
         if not self._local_sock:
             return
         is_local = self._is_local
+        is_Failed = False
         data = None
         try:
             data = self._local_sock.recv(BUF_SIZE)
@@ -812,19 +811,16 @@ class TCPRelayHandler(object):
                                     else:
                                         logging.error('The host:%s md5 is error,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                        self.destroy()
-                                        return
+                                        is_Failed = True
                                 except Exception as e:
                                     logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                    self.destroy()
-                                    return
+                                    is_Failed = True
                             else:
                                 if self._current_user_id == 0:
                                     logging.error('The host:%s id is not assign,so The connection has been rejected, when connect from %s:%d via port %d' %
                                           (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                    self.destroy()
-                                    return
+                                    is_Failed = True
                         if not self._protocol.obfs.server_info.recv_iv:
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
@@ -833,6 +829,8 @@ class TCPRelayHandler(object):
                         data = obfs_decode[0]
                     try:
                         data, sendback = self._protocol.server_post_decrypt(data)
+                        if is_Failed == True:
+                            data = self._handel_protocol_error(self._client_address, ogn_data)
                         if sendback:
                             backdata = self._protocol.server_pre_encrypt(b'')
                             backdata = self._encryptor.encrypt(backdata)
