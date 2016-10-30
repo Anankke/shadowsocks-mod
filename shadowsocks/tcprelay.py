@@ -793,6 +793,8 @@ class TCPRelayHandler(object):
                     if obfs_decode[1]:
                         if (self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post") and self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
                             host = common.match_host(data)
+                            host_list = host.split(":",2)
+                            host = host_list[0]
                             try:
                                 if host in self._server.multi_user_host_table:
                                     self._current_user_id = int(self._server.multi_user_host_table[host])
