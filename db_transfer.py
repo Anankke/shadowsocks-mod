@@ -358,6 +358,9 @@ class DbTransfer(object):
 		md5_users = {}
 
 		for row in rows:
+			if row['is_multi_user'] == 1:
+				continue
+			
 			md5_users[row['id']] = row.copy()
 			del md5_users[row['id']]['u']
 			del md5_users[row['id']]['d']
