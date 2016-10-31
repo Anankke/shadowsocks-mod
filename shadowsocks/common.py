@@ -152,7 +152,7 @@ def get_mu_host(id, md5):
         for item_num in regex_num.findall(item):
             md5_length = int(item_num)
         if md5_length < 0:
-            regex_text = regex_text.replace(item, md5[32 - md5_length:])
+            regex_text = regex_text.replace(item, md5[32 + md5_length:])
         else:
             regex_text = regex_text.replace(item, md5[:md5_length])
     return regex_text
