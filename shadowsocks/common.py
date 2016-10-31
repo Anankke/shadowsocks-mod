@@ -145,9 +145,9 @@ def get_mu_host(id, md5):
     regex_text = get_config().MU_REGEX
     regex_text = regex_text.replace('%id', str(id))
     regex_text = regex_text.replace('%suffix', get_config().MU_SUFFIX)
-    regex = re.compile(r'%[-1-9]\d*m')
+    regex = re.compile(r'%-?[1-9]\d*m')
     for item in regex.findall(regex_text):
-        regex_num = re.compile(r'[-1-9]\d*')
+        regex_num = re.compile(r'-?[1-9]\d*')
         md5_length = 0
         for item_num in regex_num.findall(item):
             md5_length = int(item_num)
