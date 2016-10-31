@@ -148,7 +148,7 @@ def get_mu_host(id, md5):
     regex = re.compile(r'%-?[1-9]\d*m')
     for item in regex.findall(regex_text):
         regex_num = item.replace('%', "")
-        regex_num = regex_num.replace('%', "")
+        regex_num = regex_num.replace('m', "")
         md5_length = int(regex_num)
         if md5_length < 0:
             regex_text = regex_text.replace(item, md5[32 + md5_length:])
