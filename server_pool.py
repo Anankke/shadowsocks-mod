@@ -60,13 +60,13 @@ class ServerPool(object):
 		self.loop = eventloop.EventLoop()
 		self.thread = MainThread( (self.loop, self.dns_resolver, self.mgr) )
 		self.thread.start()
-		
+
 		self.tcp_servers_pool = {}
 		self.tcp_ipv6_servers_pool = {}
 		self.udp_servers_pool = {}
 		self.udp_ipv6_servers_pool = {}
 		self.stat_counter = {}
-		
+
 		self.uid_port_table = {}
 
 	@staticmethod
@@ -179,8 +179,8 @@ class ServerPool(object):
 			self.eventloop_pool[port] = eventloop.EventLoop()
 			self.thread_pool[port] = MainThread( (self.eventloop_pool[port], self.dns_resolver_pool[port], self.mgr) )
 			self.thread_pool[port].start()
-		
-		
+
+
 			if 'server_ipv6' in self.config:
 				if port in self.tcp_ipv6_servers_pool:
 					logging.info("server already at %s:%d" % (self.config['server_ipv6'], port))
@@ -250,19 +250,19 @@ class ServerPool(object):
 
 	def cb_del_server(self, port):
 		port = int(port)
-		
+
 		is_not_single = True
 		if port in self.eventloop_pool:
 			self.eventloop_pool[port].stop()
 			is_not_single = False
 			del self.eventloop_pool[port]
-			
+
 		if port in self.dns_resolver_pool:
 			del self.dns_resolver_pool[port]
-			
+
 		if port in self.thread_pool:
 			del self.thread_pool[port]
-		
+
 		if port not in self.tcp_servers_pool:
 			logging.info("stopped server at %s:%d already stop" % (self.config['server'], port))
 		else:
@@ -293,8 +293,8 @@ class ServerPool(object):
 					del self.udp_ipv6_servers_pool[port]
 				except Exception as e:
 					logging.warn(e)
-					
-		
+
+
 		return True
 
 	def get_server_transfer(self, port):
@@ -313,7 +313,7 @@ class ServerPool(object):
 			ret[0] += self.udp_ipv6_servers_pool[port].server_transfer_ul
 			ret[1] += self.udp_ipv6_servers_pool[port].server_transfer_dl
 		return ret
-		
+
 	def get_mu_server_transfer(self, port):
 		port = int(port)
 		ret = {}
@@ -328,7 +328,6 @@ class ServerPool(object):
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = [0,0]
 				ret[self.uid_port_table[id]][1] += tempdict[id]
-			self.tcp_servers_pool[port]. mu_connected_iplist_clean()
 		if port in self.tcp_ipv6_servers_pool:
 			tempdict = self.tcp_ipv6_servers_pool[port].mu_server_transfer_ul
 			for id in tempdict:
@@ -340,7 +339,6 @@ class ServerPool(object):
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = [0,0]
 				ret[self.uid_port_table[id]][1] += tempdict[id]
-			self.tcp_ipv6_servers_pool[port].mu_connected_iplist_clean()
 		return ret
 
 	def get_servers_transfer(self):
@@ -360,7 +358,7 @@ class ServerPool(object):
 						ret[id][0] += temprets[id][0]
 						ret[id][1] += temprets[id][1]
 		return ret
-		
+
 	def get_server_iplist(self, port):
 		port = int(port)
 		ret = []
@@ -386,7 +384,7 @@ class ServerPool(object):
 					ret.append(ip)
 			self.udp_ipv6_servers_pool[port].connected_iplist_clean()
 		return ret
-		
+
 	def get_mu_server_iplist(self, port):
 		port = int(port)
 		ret = {}
@@ -411,7 +409,7 @@ class ServerPool(object):
 				ret[self.uid_port_table[id]] = tempret[:]
 			self.tcp_ipv6_servers_pool[port].mu_connected_iplist_clean()
 		return ret
-	
+
 	def get_servers_iplist(self):
 		servers = self.tcp_servers_pool.copy()
 		servers.update(self.tcp_ipv6_servers_pool)
@@ -458,7 +456,7 @@ class ServerPool(object):
 							tempret = ret[id][:]
 							tempret.append(itemid)
 							ret[id] = tempret[:]
-			
+
 		return ret
 
 
@@ -487,7 +485,7 @@ class ServerPool(object):
 					ret.append(id)
 			self.udp_ipv6_servers_pool[port].detect_log_list_clean()
 		return ret
-		
+
 	def get_mu_server_detect_log(self, port):
 		port = int(port)
 		ret = {}
@@ -510,9 +508,9 @@ class ServerPool(object):
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
 		return ret
-		
-		
-		
+
+
+
 	def get_server_wrong(self, port):
 		port = int(port)
 		ret = []
@@ -541,7 +539,7 @@ class ServerPool(object):
 					ret.append(ip)
 			self.udp_ipv6_servers_pool[port].wrong_iplist_clean()
 		return ret
-		
+
 
 	def get_servers_wrong(self):
 		servers = self.tcp_servers_pool.copy()
@@ -554,6 +552,6 @@ class ServerPool(object):
 			if templist != [] :
 				ret[port] = templist[:]
 		return ret
-		
+
 	def push_uid_port_table(self,table):
 		self.uid_port_table = table
