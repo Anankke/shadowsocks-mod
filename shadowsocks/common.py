@@ -138,9 +138,6 @@ def match_regex(regex, text):
         return True
     return False
 
-def match_host(data):
-    return find_between(to_str(data), "Host: ", "\r\n")
-
 def get_mu_host(id, md5):
     regex_text = get_config().MU_REGEX
     regex_text = regex_text.replace('%id', str(id))
@@ -160,22 +157,6 @@ def get_mu_host(id, md5):
 def get_md5(data):
     m1 = hashlib.md5(data)
     return m1.hexdigest()
-
-def find_between( s, first, last ):
-    try:
-        start = s.index( first ) + len( first )
-        end = s.index( last, start )
-        return s[start:end]
-    except ValueError:
-        return ""
-
-def find_between_r( s, first, last ):
-    try:
-        start = s.rindex( first ) + len( first )
-        end = s.rindex( last, start )
-        return s[start:end]
-    except ValueError:
-        return ""
 
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):

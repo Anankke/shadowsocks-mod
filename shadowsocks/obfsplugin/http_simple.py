@@ -201,7 +201,7 @@ class http_simple(plain.plain):
                 ret_buf += datas[1]
             if len(ret_buf) >= 7:
                 self.has_recv_header = True
-                return (ret_buf, True, False)
+                return (ret_buf, True, False, host)
             return self.not_match_return(buf)
         else:
             return (b'', True, False)
@@ -279,7 +279,7 @@ class http_post(http_simple):
                 ret_buf += datas[1]
             if len(ret_buf) >= 7:
                 self.has_recv_header = True
-                return (ret_buf, True, False)
+                return (ret_buf, True, False, host)
             return self.not_match_return(buf)
         else:
             return (b'', True, False)
@@ -334,4 +334,3 @@ class random_head(plain.plain):
             return (buf, True, False)
         # (buffer_to_recv, is_need_decrypt, is_need_to_encode_and_send_back)
         return (b'', False, True)
-
