@@ -47,14 +47,17 @@ class DbTransfer(object):
 		alive_user_count = 0
 		bandwidth_thistime = 0
 
-		if get_config().MYSQL_SSL_ENABLE == 1:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
-		else:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
+		try:
+			if get_config().MYSQL_SSL_ENABLE == 1:
+				conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
+											passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
+			else:
+				conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
+											passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
 
-		conn.autocommit(True)
+			conn.autocommit(True)
+		except Exception as e:
+			logging.error(e)
 
 		for id in dt_transfer.keys():
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
@@ -66,9 +69,15 @@ class DbTransfer(object):
 
 			alive_user_count = alive_user_count + 1
 
-			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1]) * self.traffic_rate) + "', unix_timestamp()); ")
-			cur.close()
+			try:
+				cur = conn.cursor()
+				try:
+					cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1]) * self.traffic_rate) + "', unix_timestamp()); ")
+				except Exception as e:
+					logging.error(e)
+				cur.close()
+			except Exception as e:
+				logging.error(e)
 
 
 			bandwidth_thistime = bandwidth_thistime + ((dt_transfer[id][0] + dt_transfer[id][1]) * self.traffic_rate)
@@ -82,37 +91,71 @@ class DbTransfer(object):
 						' END, d = CASE port' + query_sub_when2 + \
 						' END, t = unix_timestamp() ' + \
 						' WHERE port IN (%s)' % query_sub_in
+			try:
+				cur = conn.cursor()
+				try:
+					cur.execute(query_sql)
+				except Exception as e:
+					logging.error(e)
+				cur.close()
+			except Exception as e:
+				logging.error(e)
 
+		try:
 			cur = conn.cursor()
-			cur.execute(query_sql)
+			try:
+				cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + str(bandwidth_thistime) + "' WHERE `id` = " +  str(get_config().NODE_ID) + " ; ")
+			except Exception as e:
+				logging.error(e)
 			cur.close()
+		except Exception as e:
+			logging.error(e)
 
-		cur = conn.cursor()
-		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + str(bandwidth_thistime) + "' WHERE `id` = " +  str(get_config().NODE_ID) + " ; ")
-		cur.close()
+		try:
+			cur = conn.cursor()
+			try:
+				cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
+			except Exception as e:
+				logging.error(e)
+			cur.close()
+		except Exception as e:
+			logging.error(e)
 
-		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
-		cur.close()
-
-
-		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
-		cur.close()
+		try:
+			cur = conn.cursor()
+			try:
+				cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
+			except Exception as e:
+				logging.error(e)
+			cur.close()
+		except Exception as e:
+			logging.error(e)
 
 		online_iplist = ServerPool.get_instance().get_servers_iplist()
 		for id in online_iplist.keys():
 			for ip in online_iplist[id]:
-				cur = conn.cursor()
-				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
-				cur.close()
+				try:
+					cur = conn.cursor()
+					try:
+						cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
+					except Exception as e:
+						logging.error(e)
+					cur.close()
+				except Exception as e:
+					logging.error(e)
 
 		detect_log_list = ServerPool.get_instance().get_servers_detect_log()
 		for port in detect_log_list.keys():
 			for rule_id in detect_log_list[port]:
-				cur = conn.cursor()
-				cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
-				cur.close()
+				try:
+					cur = conn.cursor()
+					try:
+						cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
+					except Exception as e:
+						logging.error(e)
+					cur.close()
+				except Exception as e:
+					logging.error(e)
 
 
 		deny_str = ""
@@ -138,18 +181,31 @@ class DbTransfer(object):
 					if str(realip) == str(server_ip):
 						continue
 
-					cur = conn.cursor()
-					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
-					rows = cur.fetchone()
-					cur.close()
+					try:
+						cur = conn.cursor()
+						try:
+							cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
+							rows = cur.fetchone()
+						except Exception as e:
+							rows = {}
+							logging.error(e)
+						cur.close()
+					except Exception as e:
+						logging.error(e)
 
 
 					if rows != None:
 						continue
 					if get_config().CLOUDSAFE == 1:
-						cur = conn.cursor()
-						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(realip) + "', unix_timestamp())")
-						cur.close()
+						try:
+							cur = conn.cursor()
+							try:
+								cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(realip) + "', unix_timestamp())")
+							except Exception as e:
+								logging.error(e)
+							cur.close()
+						except Exception as e:
+							logging.error(e)
 					else:
 						if is_ipv6 == False:
 							os.system('route add -host %s gw 127.0.0.1' % str(realip))
@@ -360,7 +416,7 @@ class DbTransfer(object):
 		for row in rows:
 			if row['is_multi_user'] == 1:
 				continue
-			
+
 			md5_users[row['id']] = row.copy()
 			del md5_users[row['id']]['u']
 			del md5_users[row['id']]['d']
@@ -530,7 +586,11 @@ class DbTransfer(object):
 				load_config()
 				try:
 					db_instance.push_db_all_user()
-					rows = db_instance.pull_db_all_user()
+					try:
+						rows = db_instance.pull_db_all_user()
+					except Exception as e:
+						logging.error(e)
+						rows = []
 					db_instance.del_server_out_of_bound_safe(last_rows, rows)
 					db_instance.detect_text_ischanged = False
 					db_instance.detect_hex_ischanged = False

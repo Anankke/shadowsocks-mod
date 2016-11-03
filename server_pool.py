@@ -421,8 +421,7 @@ class ServerPool(object):
 				templist = self.get_server_iplist(port)
 				if templist != [] :
 					ret[port] = templist[:]
-		for port in servers.keys():
-			if servers[port]._config["is_multi_user"] == 1:
+			else:
 				templist = self.get_mu_server_iplist(port)
 				for id in templist:
 					for ip in templist[id]:
