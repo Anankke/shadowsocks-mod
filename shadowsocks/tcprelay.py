@@ -787,39 +787,48 @@ class TCPRelayHandler(object):
                         logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                         self.destroy()
                         return
+                    host = ''
                     if obfs_decode[2]:
                         data = self._obfs.server_encode(b'')
+                        if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                            if self._server._config["obfs"] == "tls1.2_ticket_auth":
+                                if(len(obfs_decode) > 3):
+                                    host = obfs_decode[3]
                         self._write_to_sock(data, self._local_sock)
                     if obfs_decode[1]:
-                        if (self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post") and self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                            host = common.match_host(data)
-                            host_list = host.split(":",2)
-                            host = host_list[0]
-                            try:
-                                if host in self._server.multi_user_host_table:
-                                    self._current_user_id = int(self._server.multi_user_host_table[host])
-                                    if self._current_user_id not in self._server.mu_server_transfer_ul:
-                                        self._server.mu_server_transfer_ul[self._current_user_id] = 0
-                                    if self._current_user_id not in self._server.mu_server_transfer_dl:
-                                        self._server.mu_server_transfer_dl[self._current_user_id] = 0
-                                    if self._current_user_id not in self._server.mu_connected_iplist:
-                                        self._server.mu_connected_iplist[self._current_user_id] = []
-                                    if self._current_user_id not in self._server.mu_detect_log_list:
-                                        self._server.mu_detect_log_list[self._current_user_id] = []
-                                else:
-                                    logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                      (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                    is_Failed = True
-                            except Exception as e:
-                                logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                      (host, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                is_Failed = True
+                        if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                            if self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post":
+                                host = common.match_host(data)
                         if not self._protocol.obfs.server_info.recv_iv:
                             iv_len = len(self._protocol.obfs.server_info.iv)
                             self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
                         data = self._encryptor.decrypt(obfs_decode[0])
                     else:
                         data = obfs_decode[0]
+
+                    if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                        host_list = host.split(":",2)
+                        host = host_list[0]
+                        try:
+                            if host in self._server.multi_user_host_table:
+                                self._current_user_id = int(self._server.multi_user_host_table[host])
+                                if self._current_user_id not in self._server.mu_server_transfer_ul:
+                                    self._server.mu_server_transfer_ul[self._current_user_id] = 0
+                                if self._current_user_id not in self._server.mu_server_transfer_dl:
+                                    self._server.mu_server_transfer_dl[self._current_user_id] = 0
+                                if self._current_user_id not in self._server.mu_connected_iplist:
+                                    self._server.mu_connected_iplist[self._current_user_id] = []
+                                if self._current_user_id not in self._server.mu_detect_log_list:
+                                    self._server.mu_detect_log_list[self._current_user_id] = []
+                            else:
+                                logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                  (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                is_Failed = True
+                        except Exception as e:
+                            logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                  (host, self._client_address[0], self._client_address[1], self._server._listen_port))
+                            is_Failed = True
+
                     try:
                         data, sendback = self._protocol.server_post_decrypt(data)
                         if is_Failed == True:

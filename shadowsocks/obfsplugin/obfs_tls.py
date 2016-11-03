@@ -266,5 +266,14 @@ class tls_ticket_auth(plain.plain):
         self.server_info.data.client_data.sweep()
         self.server_info.data.client_data[verifyid[:22]] = sessionid
         # (buffer_to_recv, is_need_decrypt, is_need_to_encode_and_send_back)
-        return (b'', False, True)
 
+        buf = buf[48:]
+
+        host_name = ''
+        for index in range(len(buf)):
+            if index + 4 < len(buf):
+                if buf[index:index + 4] == b"\x00\x17\x00\x00":
+                    if buf[:index] != '':
+                        host_name = buf[:index]
+
+        return (b'', False, True, host_name)
