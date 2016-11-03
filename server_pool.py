@@ -141,9 +141,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
-						udp_server.add_to_loop(self.loop)
-						self.udp_ipv6_servers_pool.update({port: udp_server})
+						if a_config['is_multi_user'] == 0:
+							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
+							udp_server.add_to_loop(self.loop)
+							self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -167,9 +168,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
-						udp_server.add_to_loop(self.loop)
-						self.udp_servers_pool.update({port: udp_server})
+						if a_config['is_multi_user'] == 0:
+							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
+							udp_server.add_to_loop(self.loop)
+							self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:
@@ -201,9 +203,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
-						udp_server.add_to_loop(self.eventloop_pool[port])
-						self.udp_ipv6_servers_pool.update({port: udp_server})
+						if a_config['is_multi_user'] == 0:
+							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
+							udp_server.add_to_loop(self.eventloop_pool[port])
+							self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -227,9 +230,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
-						udp_server.add_to_loop(self.eventloop_pool[port])
-						self.udp_servers_pool.update({port: udp_server})
+						if a_config['is_multi_user'] == 0:
+							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
+							udp_server.add_to_loop(self.eventloop_pool[port])
+							self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:
@@ -349,14 +353,20 @@ class ServerPool(object):
 		ret = {}
 		for port in servers.keys():
 			if servers[port]._config["is_multi_user"] == 0:
-				ret[port] = self.get_server_transfer(port)
-		for port in servers.keys():
-			if servers[port]._config["is_multi_user"] == 1:
+				if port not in ret:
+					ret[port] = self.get_server_transfer(port)
+				else:
+					tempret = self.get_server_transfer(port)
+					ret[port][0] += tempret[0]
+					ret[port][1] += tempret[1]
+			else:
 				temprets = self.get_mu_server_transfer(port)
-				for id in temprets:
-					if id in ret:
-						ret[id][0] += temprets[id][0]
-						ret[id][1] += temprets[id][1]
+				for port in temprets:
+					if port not in ret:
+						ret[port] = temprets[port][:]
+					else:
+						ret[port][0] += temprets[port][0]
+						ret[port][1] += temprets[port][1]
 		return ret
 
 	def get_server_iplist(self, port):
@@ -420,7 +430,10 @@ class ServerPool(object):
 			if servers[port]._config["is_multi_user"] == 0:
 				templist = self.get_server_iplist(port)
 				if templist != [] :
-					ret[port] = templist[:]
+					if port not in ret:
+						ret[port] = templist[:]
+					else:
+						ret[port] = ret[port] + templist[:]
 			else:
 				templist = self.get_mu_server_iplist(port)
 				for id in templist:
@@ -443,9 +456,11 @@ class ServerPool(object):
 			if servers[port]._config["is_multi_user"] == 0:
 				templist = self.get_server_detect_log(port)
 				if templist != [] :
-					ret[port] = templist[:]
-		for port in servers.keys():
-			if servers[port]._config["is_multi_user"] == 1:
+					if port not in ret:
+						ret[port] = templist[:]
+					else:
+						ret[port] = ret[port] + templist[:]
+			else:
 				templist = self.get_mu_server_detect_log(port)
 				for id in templist:
 					for itemid in templist[id]:
