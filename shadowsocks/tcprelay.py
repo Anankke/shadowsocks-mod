@@ -426,10 +426,14 @@ class TCPRelayHandler(object):
         host_port = []
         match_port = False
         if type(host_list) != list:
-            host_list = [host_list]
+            host_list = host_list.split(",")
         for host in host_list:
             items_sum = common.to_str(host).rsplit('-', 1)
+            items_match = common.to_str(items_sum[0]).rsplit(':', 1)
             items = common.to_str(items_sum[1]).rsplit(':', 1)
+            if len(items_match) > 1:
+                if self._server._listen_port != int(items_match[1]):
+                    continue
             if not items_sum[0] == '*':
                 continue
             if len(items) > 1:
