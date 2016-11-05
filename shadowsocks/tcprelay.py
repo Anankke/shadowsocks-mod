@@ -446,6 +446,7 @@ class TCPRelayHandler(object):
                     pass
             else:
                 host_port.append((host, 80))
+            break
 
         if match_port:
             last_host_port = host_port
