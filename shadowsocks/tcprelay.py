@@ -876,9 +876,9 @@ class TCPRelayHandler(object):
                         data = obfs_decode[0]
 
                     if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                        host_list = host.split(":",2)
-                        host_name = host_list[0]
                         try:
+                            host_list = host.split(":",2)
+                            host_name = host_list[0]
                             if host_name in self._server.multi_user_host_table:
                                 self._current_user_id = int(self._server.multi_user_host_table[host_name])
                                 if self._current_user_id not in self._server.mu_server_transfer_ul:
@@ -894,8 +894,8 @@ class TCPRelayHandler(object):
                                   (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
                                 is_Failed = True
                         except Exception as e:
-                            logging.error('The host:%s id is error,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                  (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
+                            logging.error('The mu hostname is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                  (self._client_address[0], self._client_address[1], self._server._listen_port))
                             is_Failed = True
 
                     try:
