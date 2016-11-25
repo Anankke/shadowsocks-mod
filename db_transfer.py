@@ -360,7 +360,7 @@ class DbTransfer(object):
 		for row in rows:
 			if row['is_multi_user'] == 1:
 				continue
-			
+
 			md5_users[row['id']] = row.copy()
 			del md5_users[row['id']]['u']
 			del md5_users[row['id']]['d']
@@ -475,8 +475,6 @@ class DbTransfer(object):
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
 
-		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
-
 		for row in last_rows:
 			if row['port'] in cur_servers:
 				pass
@@ -486,6 +484,7 @@ class DbTransfer(object):
 				if row['port'] in self.last_update_transfer:
 					del self.last_update_transfer[row['port']]
 				del self.port_uid_table[row['port']]
+				del self.uid_port_table[row['id']]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
@@ -496,7 +495,10 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				self.port_uid_table[row['port']] = row['id']
+				self.uid_port_table[row['id']] = row['port']
 				ServerPool.get_instance().new_server(port, cfg)
+
+		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
 	@staticmethod
 	def del_servers():
