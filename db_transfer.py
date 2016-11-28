@@ -207,10 +207,11 @@ class DbTransfer(object):
 				if curr_transfer[id][0] + curr_transfer[id][1] <= 0:
 					continue
 				dt_transfer[id] = [curr_transfer[id][0], curr_transfer[id][1]]
-		update_transfer = self.update_all_user(dt_transfer)
-		for id in update_transfer.keys():
-			last = self.last_update_transfer.get(id, [0,0])
-			self.last_update_transfer[id] = [last[0] + update_transfer[id][0], last[1] + update_transfer[id][1]]
+		for id in dt_transfer.keys():
+			last = last_transfer.get(id, [0,0])
+			last_transfer[id] = [last[0] + dt_transfer[id][0], last[1] + dt_transfer[id][1]]
+		self.last_update_transfer = last_transfer.copy()
+		self.update_all_user(dt_transfer)
 
 	def pull_db_all_user(self):
 		import cymysql
