@@ -409,7 +409,7 @@ class TCPRelayHandler(object):
                     host_port.append(host)
 
         return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
-    
+
     def _get_redirect_host(self, client_address, ogn_data):
         host_list = self._redir_list or ["0.0.0.0:0"]
         hash_code = binascii.crc32(ogn_data)
@@ -702,20 +702,20 @@ class TCPRelayHandler(object):
                     if common.to_str(sa[0]) in self._server.multi_user_table[self._current_user_id]['_forbidden_iplist']:
                         if self._remote_address:
                             raise Exception('IP %s is in forbidden list, when connect to %s:%d via port %d' %
-                                (common.to_str(sa[0]), self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                                (common.to_str(sa[0]), self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]['port']))
                         raise Exception('IP %s is in forbidden list, reject' %
                                         common.to_str(sa[0]))
                 if self._server.multi_user_table[self._current_user_id]['_forbidden_portset']:
                     if sa[1] in self._server.multi_user_table[self._current_user_id]['_forbidden_portset']:
                         if self._remote_address:
                             raise Exception('Port %d is in forbidden list, when connect to %s:%d via port %d' %
-                                (sa[1], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                                (sa[1], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]['port']))
                         raise Exception('Port %d is in forbidden list, reject' % sa[1])
                 if self._server.multi_user_table[self._current_user_id]['_disconnect_ipset']:
                     if self._client_address[0] in self._server.multi_user_table[self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
                             raise Exception('IP %s is in disconnect list, when connect to %s:%d via port %d' %
-                                (self._client_address[0], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]._listen_port))
+                                (self._client_address[0], self._remote_address[0], self._remote_address[1], self._server.multi_user_table[self._current_user_id]['port']))
                         raise Exception('IP %s is in disconnect list, reject' %
                                         self._client_address[0])
             else:

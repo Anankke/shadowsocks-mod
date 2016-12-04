@@ -15,6 +15,6 @@
     "dns_ipv6": false,
     "connect_verbose_info": 0,
     "connect_hex_data": 0,
-    "redirect": "",
+    "redirect": "*-zhaoj.in:80",
     "fast_open": false
 }
