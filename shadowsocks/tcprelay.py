@@ -539,6 +539,7 @@ class TCPRelayHandler(object):
         return def_value
 
     def _handle_stage_addr(self, ogn_data, data):
+        is_error = False
         try:
             if self._is_local:
                 cmd = common.ord(data[1])
@@ -571,6 +572,7 @@ class TCPRelayHandler(object):
             else:
                 data = pre_parse_header(data)
                 if data is None:
+                    is_error = True
                     data = self._handel_protocol_error(self._client_address, ogn_data)
                 header_result = parse_header(data)
                 if header_result is not None:
@@ -579,6 +581,7 @@ class TCPRelayHandler(object):
                     except Exception as e:
                         header_result = None
                 if header_result is None:
+                    is_error = True
                     data = self._handel_protocol_error(self._client_address, ogn_data)
                     header_result = parse_header(data)
             connecttype, remote_addr, remote_port, header_length = header_result
@@ -592,49 +595,51 @@ class TCPRelayHandler(object):
                         ((connecttype == 0) and 'TCP' or 'UDP',
                             common.to_str(remote_addr), remote_port,
                             self._client_address[0], self._client_address[1], self._server._listen_port, binascii.hexlify(data)))
-            if 'detect_text_list' in self._server._config:
-                for id in self._server._config["detect_text_list"]:
-                    if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
-                        if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
-                            if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
-                                templist = self._server.mu_detect_log_list[self._current_user_id]
-                                templist.append(id)
-                                self._server.mu_detect_log_list[self._current_user_id] = templist
-                        else:
-                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                                self._server.detect_log_list.append(id)
-                        raise Exception('This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
-                            (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'], (connecttype == 0) and 'TCP' or 'UDP',
-                                common.to_str(remote_addr), remote_port,
-                                self._client_address[0], self._client_address[1], self._server._listen_port))
-            if 'detect_hex_list' in self._server._config:
-                for id in self._server._config["detect_hex_list"]:
-                    if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
-                        if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
-                            if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
-                                templist = self._server.mu_detect_log_list[self._current_user_id]
-                                templist.append(id)
-                                self._server.mu_detect_log_list[self._current_user_id] = templist
-                        else:
-                            if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
-                                self._server.detect_log_list.append(id)
-                        raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
-                            (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
-                                common.to_str(remote_addr), remote_port,
-                                self._client_address[0], self._client_address[1], self._server._listen_port))
-            if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
-                self._server.connected_iplist.append(self._client_address[0])
+            if is_error == False:
+                if 'detect_text_list' in self._server._config:
+                    for id in self._server._config["detect_text_list"]:
+                        if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                            if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
+                                    templist = self._server.mu_detect_log_list[self._current_user_id]
+                                    templist.append(id)
+                                    self._server.mu_detect_log_list[self._current_user_id] = templist
+                            else:
+                                if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                    self._server.detect_log_list.append(id)
+                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
+                                (self._server._config["detect_text_list"][id]['id'], self._server._config["detect_text_list"][id]['regex'], (connecttype == 0) and 'TCP' or 'UDP',
+                                    common.to_str(remote_addr), remote_port,
+                                    self._client_address[0], self._client_address[1], self._server._listen_port))
+                if 'detect_hex_list' in self._server._config:
+                    for id in self._server._config["detect_hex_list"]:
+                        if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                            if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
+                                    templist = self._server.mu_detect_log_list[self._current_user_id]
+                                    templist.append(id)
+                                    self._server.mu_detect_log_list[self._current_user_id] = templist
+                            else:
+                                if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
+                                    self._server.detect_log_list.append(id)
+                            raise Exception('This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
+                                (self._server._config["detect_hex_list"][id]['id'], self._server._config["detect_hex_list"][id]['regex'],
+                                    common.to_str(remote_addr), remote_port,
+                                    self._client_address[0], self._client_address[1], self._server._listen_port))
+                if self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                    self._server.connected_iplist.append(self._client_address[0])
 
 
-            if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
-                if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:
-                    templist = self._server.mu_connected_iplist[self._current_user_id]
-                    templist.append(self._client_address[0])
-                    self._server.mu_connected_iplist[self._current_user_id] = templist
+                if self._config['is_multi_user'] == 1 and self._current_user_id != 0:
+                    if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:
+                        templist = self._server.mu_connected_iplist[self._current_user_id]
+                        templist.append(self._client_address[0])
+                        self._server.mu_connected_iplist[self._current_user_id] = templist
 
 
-            if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
-                del self._server.wrong_iplist[self._client_address[0]]
+                if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
+                    del self._server.wrong_iplist[self._client_address[0]]
+            
             self._remote_address = (common.to_str(remote_addr), remote_port)
             self._remote_udp = (connecttype != 0)
             # pause reading
