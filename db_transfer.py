@@ -34,6 +34,7 @@ class DbTransfer(object):
 
 		self.detect_hex_list = {}
 		self.detect_hex_ischanged = False
+		self.mu_only = False
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -232,7 +233,7 @@ class DbTransfer(object):
 
 		cur = conn.cursor()
 
-		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
+		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
 		nodeinfo = cur.fetchone()
 
 		if nodeinfo == None :
@@ -246,6 +247,8 @@ class DbTransfer(object):
 
 		self.node_speedlimit = float(nodeinfo[2])
 		self.traffic_rate = float(nodeinfo[3])
+		
+		self.mu_only = int(nodeinfo[4])
 
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
@@ -253,7 +256,7 @@ class DbTransfer(object):
 			node_group_sql = "AND `node_group`=" + str(nodeinfo[0])
 
 		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(nodeinfo[1]) +" "+node_group_sql+" AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
+		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(nodeinfo[1]) + " " + node_group_sql + " AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
 		rows = []
 		for r in cur.fetchall():
 			d = {}
@@ -348,7 +351,6 @@ class DbTransfer(object):
 		#启动没超流量的服务
 		#需要动态载入switchrule，以便实时修改规则
 
-
 		try:
 			switchrule = importloader.load('switchrule')
 		except Exception as e:
@@ -374,6 +376,23 @@ class DbTransfer(object):
 			if md5_users[row['id']]['forbidden_port'] == None:
 				md5_users[row['id']]['forbidden_port'] = ''
 			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
+			
+		self.port_uid_table = {}
+		self.uid_port_table = {}
+		
+		for row in rows:
+			self.port_uid_table[row['port']] = row['id']
+			self.uid_port_table[row['id']] = row['port']
+			
+		if self.mu_only == 1:
+			i = 0
+			while i < len(rows):
+				if rows[i]['is_multi_user'] == 0:
+					rows.pop(i)
+					i -= 1
+				else:
+					pass
+				i += 1
 
 		for row in rows:
 			port = row['port']
@@ -382,19 +401,18 @@ class DbTransfer(object):
 
 			self.port_uid_table[row['port']] = row['id']
 			self.uid_port_table[row['id']] = row['port']
-
+			
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 
 			for name in read_config_keys:
 				if name in row and row[name]:
 					cfg[name] = row[name]
 
-
-
 			merge_config_keys = ['password'] + read_config_keys
 			for name in cfg.keys():
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
+					
 
 			if 'node_speedlimit' in cfg:
 				if float(self.node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
@@ -434,7 +452,6 @@ class DbTransfer(object):
 
 			if cfg['is_multi_user'] == 1:
 				cfg['users_table'] = md5_users.copy()
-
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				cfgchange = False
@@ -482,10 +499,11 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
-				if row['port'] in self.last_update_transfer:
-					del self.last_update_transfer[row['port']]
-				del self.port_uid_table[row['port']]
-				del self.uid_port_table[row['id']]
+				if self.mu_only == 0 or (self.mu_only == 1 and row['is_multi_user'] == 1):
+					if row['port'] in self.last_update_transfer:
+						del self.last_update_transfer[row['port']]
+					del self.port_uid_table[row['port']]
+					del self.uid_port_table[row['id']]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
@@ -498,7 +516,7 @@ class DbTransfer(object):
 				self.port_uid_table[row['port']] = row['id']
 				self.uid_port_table[row['id']] = row['port']
 				ServerPool.get_instance().new_server(port, cfg)
-
+		
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
 	@staticmethod
