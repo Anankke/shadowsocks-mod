@@ -376,9 +376,7 @@ class DbTransfer(object):
 			if md5_users[row['id']]['forbidden_port'] == None:
 				md5_users[row['id']]['forbidden_port'] = ''
 			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
-			
-		self.port_uid_table = {}
-		self.uid_port_table = {}
+		
 		
 		for row in rows:
 			self.port_uid_table[row['port']] = row['id']
@@ -398,9 +396,6 @@ class DbTransfer(object):
 			port = row['port']
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
-
-			self.port_uid_table[row['port']] = row['id']
-			self.uid_port_table[row['id']] = row['port']
 			
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 
@@ -483,8 +478,6 @@ class DbTransfer(object):
 				if cfgchange:
 					logging.info('db stop server at port [%s] reason: config changed!' % (port))
 					ServerPool.get_instance().cb_del_server(port)
-					if port in self.last_update_transfer:
-						del self.last_update_transfer[port]
 					new_servers[port] = (passwd, cfg)
 			elif ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
@@ -492,6 +485,7 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
+				self.last_update_transfer[port] = [ 0, 0 ]
 
 		for row in last_rows:
 			if row['port'] in cur_servers:
@@ -499,11 +493,6 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
-				if self.mu_only == 0 or (self.mu_only == 1 and row['is_multi_user'] == 1):
-					if row['port'] in self.last_update_transfer:
-						del self.last_update_transfer[row['port']]
-					del self.port_uid_table[row['port']]
-					del self.uid_port_table[row['id']]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
@@ -513,8 +502,6 @@ class DbTransfer(object):
 				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
-				self.port_uid_table[row['port']] = row['id']
-				self.uid_port_table[row['id']] = row['port']
 				ServerPool.get_instance().new_server(port, cfg)
 		
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
