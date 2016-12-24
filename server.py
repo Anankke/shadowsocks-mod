@@ -53,16 +53,16 @@ def main():
 		else:
 			threadMain = MainThread(db_transfer.DbTransfer)
 		threadMain.start()
-		
-		threadSpeedtest = threading.Thread(group = None, target = speedtest_thread.speedtest_thread, name = "speedtest", args = (), kwargs = {}) 
+
+		threadSpeedtest = threading.Thread(group = None, target = speedtest_thread.speedtest_thread, name = "speedtest", args = (), kwargs = {})
 		threadSpeedtest.start()
-		
-		threadAutoexec = threading.Thread(group = None, target = auto_thread.auto_thread, name = "autoexec", args = (), kwargs = {})  
+
+		threadAutoexec = threading.Thread(group = None, target = auto_thread.auto_thread, name = "autoexec", args = (), kwargs = {})
 		threadAutoexec.start()
-		
-		threadAutoblock = threading.Thread(group = None, target = auto_block.auto_block_thread, name = "autoblock", args = (), kwargs = {})  
+
+		threadAutoblock = threading.Thread(group = None, target = auto_block.auto_block_thread, name = "autoblock", args = (), kwargs = {})
 		threadAutoblock.start()
-		
+
 		try:
 			while threadMain.is_alive():
 				time.sleep(10)
@@ -73,4 +73,3 @@ def main():
 
 if __name__ == '__main__':
 	main()
-

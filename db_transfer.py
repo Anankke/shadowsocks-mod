@@ -35,6 +35,9 @@ class DbTransfer(object):
 		self.detect_hex_list = {}
 		self.detect_hex_ischanged = False
 		self.mu_only = False
+		self.is_relay = False
+
+		self.relay_rule_list = {}
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -233,7 +236,7 @@ class DbTransfer(object):
 
 		cur = conn.cursor()
 
-		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
+		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
 		nodeinfo = cur.fetchone()
 
 		if nodeinfo == None :
@@ -247,8 +250,13 @@ class DbTransfer(object):
 
 		self.node_speedlimit = float(nodeinfo[2])
 		self.traffic_rate = float(nodeinfo[3])
-		
+
 		self.mu_only = int(nodeinfo[4])
+
+		if nodeinfo[5] == 10:
+			self.is_relay = True
+		else:
+			self.is_relay = False
 
 		if nodeinfo[0] == 0 :
 			node_group_sql = ""
@@ -335,6 +343,25 @@ class DbTransfer(object):
 		for id in deleted_id_list:
 			del self.detect_hex_list[id]
 
+		#读取中转规则，如果是中转节点的话
+
+		if self.is_relay:
+			self.relay_rule_list = {}
+
+			keys_detect = ['id', 'user_id', 'dist_ip', 'port', 'priority']
+
+			cur = conn.cursor()
+			cur.execute("SELECT " + ','.join(keys_detect) + " FROM relay where `source_node_id` = 0 or `source_node_id` = " + str(get_config().NODE_ID))
+
+			for r in cur.fetchall():
+				d = {}
+				d['id'] = long(r[0])
+				d['user_id'] = long(r[1])
+				d['dist_ip'] = str(r[2])
+				d['port'] = int(r[3])
+				d['priority'] = long(r[4])
+				self.relay_rule_list[d['id']] = d
+
 		cur.close()
 		conn.close()
 		return rows
@@ -376,12 +403,12 @@ class DbTransfer(object):
 			if md5_users[row['id']]['forbidden_port'] == None:
 				md5_users[row['id']]['forbidden_port'] = ''
 			md5_users[row['id']]['md5'] = common.get_md5(str(row['id']) + row['passwd'] + row['method'] + row['obfs'] + row['protocol'])
-		
-		
+
+
 		for row in rows:
 			self.port_uid_table[row['port']] = row['id']
 			self.uid_port_table[row['id']] = row['port']
-			
+
 		if self.mu_only == 1:
 			i = 0
 			while i < len(rows):
@@ -394,9 +421,10 @@ class DbTransfer(object):
 
 		for row in rows:
 			port = row['port']
+			user_id = row['id']
 			passwd = common.to_bytes(row['passwd'])
 			cfg = {'password': passwd}
-			
+
 			read_config_keys = ['method', 'obfs','obfs_param' , 'protocol', 'protocol_param' ,'forbidden_ip', 'forbidden_port' , 'node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 
 			for name in read_config_keys:
@@ -407,7 +435,7 @@ class DbTransfer(object):
 			for name in cfg.keys():
 				if hasattr(cfg[name], 'encode'):
 					cfg[name] = cfg[name].encode('utf-8')
-					
+
 
 			if 'node_speedlimit' in cfg:
 				if float(self.node_speedlimit) > 0.0 or float(cfg['node_speedlimit']) > 0.0 :
@@ -448,6 +476,27 @@ class DbTransfer(object):
 			if cfg['is_multi_user'] == 1:
 				cfg['users_table'] = md5_users.copy()
 
+			if self.is_relay:
+				temp_relay_rules = {}
+				for id in self.relay_rule_list:
+					if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] == 1) and self.relay_rule_list[id]['port'] == port:
+						has_higher_priority = False
+						for priority_id in self.relay_rule_list:
+							if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
+								has_higher_priority = True
+								continue
+
+						if has_higher_priority:
+							continue
+
+						temp_relay_rules[id] = self.relay_rule_list[id]
+
+				cfg['relay_rules'] = temp_relay_rules.copy()
+			else:
+				temp_relay_rules = {}
+
+				cfg['relay_rules'] = temp_relay_rules.copy()
+
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				cfgchange = False
 				if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
@@ -461,6 +510,34 @@ class DbTransfer(object):
 						ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
 					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
 						ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+
+				if self.is_relay:
+					temp_relay_rules = {}
+					for id in self.relay_rule_list:
+						if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] == 1) and self.relay_rule_list[id]['port'] == port:
+							has_higher_priority = False
+							for priority_id in self.relay_rule_list:
+								if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
+									has_higher_priority = True
+									continue
+
+							if has_higher_priority:
+								continue
+
+							temp_relay_rules[id] = self.relay_rule_list[id]
+
+					if port in ServerPool.get_instance().tcp_servers_pool:
+						ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+						ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+
+				else:
+					temp_relay_rules = {}
+
+					if port in ServerPool.get_instance().tcp_servers_pool:
+						ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+						ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
 				if port in ServerPool.get_instance().tcp_servers_pool:
 					relay = ServerPool.get_instance().tcp_servers_pool[port]
@@ -503,7 +580,7 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
-		
+
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
 	@staticmethod

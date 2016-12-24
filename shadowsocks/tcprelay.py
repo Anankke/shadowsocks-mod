@@ -105,6 +105,7 @@ class TCPRelayHandler(object):
         self._config = config
         self._dns_resolver = dns_resolver
         self._current_user_id = 0
+        self._relay_rules = server.relay_rules.copy()
 
         self._bytesSent = 0
         self._timeCreated = time.time()
@@ -314,7 +315,7 @@ class TCPRelayHandler(object):
             return True
         else:
             try:
-                if self._encrypt_correct:
+                if self._encrypt_correct or self._relay_rules != {}:
                     if sock == self._remote_sock:
                         if self._current_user_id != 0 and self._server._config["is_multi_user"] == 1:
                             self._server.mu_server_transfer_ul[self._current_user_id] += len(data)
@@ -457,6 +458,43 @@ class TCPRelayHandler(object):
 
         return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
 
+    def _get_relay_host(self, client_address, ogn_data):
+        for id in self._relay_rules:
+            return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+
+    def _handel_normal_relay(self, client_address, ogn_data):
+        host, port = self._get_relay_host(client_address, ogn_data)
+        self._encrypt_correct = False
+        if port == 0:
+            raise Exception('can not parse header')
+        data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
+        return data + ogn_data
+
+    def _get_mu_relay_host(self, ogn_data):
+        for id in self._relay_rules:
+            if self._relay_rules[id]['user_id'] == self._current_user_id:
+                has_higher_priority = False
+                for priority_id in self._relay_rules:
+                    if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] > self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
+                        has_higher_priority = True
+                        continue
+
+                if has_higher_priority:
+                    continue
+
+                return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+        return (None, None)
+
+    def _handel_mu_relay(self, client_address, ogn_data):
+        host, port = self._get_mu_relay_host(ogn_data)
+        if host == None:
+            return ogn_data
+        self._encrypt_correct = False
+        if port == 0:
+            raise Exception('can not parse header')
+        data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
+        return data + ogn_data
+
     def _handel_protocol_error(self, client_address, ogn_data):
         logging.warn("Protocol ERROR, TCP ogn data %s from %s:%d via port %d" % (binascii.hexlify(ogn_data), client_address[0], client_address[1], self._server._listen_port))
         if client_address[0] not in self._server.wrong_iplist and client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
@@ -467,7 +505,6 @@ class TCPRelayHandler(object):
         if port == 0:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
-        logging.warn("TCP data redir %s:%d %s" % (host, port, binascii.hexlify(data)))
         return data + ogn_data
 
     def _handel_mu_protocol_error(self, client_address, ogn_data):
@@ -570,20 +607,45 @@ class TCPRelayHandler(object):
             if self._is_local:
                 header_result = parse_header(data)
             else:
-                data = pre_parse_header(data)
-                if data is None:
-                    is_error = True
-                    data = self._handel_protocol_error(self._client_address, ogn_data)
-                header_result = parse_header(data)
-                if header_result is not None:
-                    try:
-                        common.to_str(header_result[1])
-                    except Exception as e:
-                        header_result = None
-                if header_result is None:
-                    is_error = True
-                    data = self._handel_protocol_error(self._client_address, ogn_data)
+                if self._server._config["is_multi_user"] == 0:
+                    if self._relay_rules != {}:
+                        is_relay = True
+                    else:
+                        is_relay = False
+                else:
+                    is_relay = self.is_match_relay_rule_mu()
+                if self._relay_rules != {} and is_relay:
+                    if self._server._config["is_multi_user"] == 0:
+                        data = self._handel_normal_relay(self._client_address, ogn_data)
+                    else:
+                        data = self._handel_mu_relay(self._client_address, ogn_data)
                     header_result = parse_header(data)
+                    if header_result is not None:
+                        try:
+                            common.to_str(header_result[1])
+                        except Exception as e:
+                            header_result = None
+                    if header_result is None:
+                        is_error = True
+                        if self._server._config["is_multi_user"] == 0:
+                            data = self._handel_protocol_error(self._client_address, ogn_data)
+                        else:
+                            data = self._handel_mu_protocol_error(self._client_address, ogn_data)
+                        header_result = parse_header(data)
+                else:
+                    data = pre_parse_header(data)
+                    if data is None:
+                        data = self._handel_protocol_error(self._client_address, ogn_data)
+                    header_result = parse_header(data)
+                    if header_result is not None:
+                        try:
+                            common.to_str(header_result[1])
+                        except Exception as e:
+                            header_result = None
+                    if header_result is None:
+                        is_error = True
+                        data = self._handel_protocol_error(self._client_address, ogn_data)
+                        header_result = parse_header(data)
             connecttype, remote_addr, remote_port, header_length = header_result
             if self._server._connect_hex_data == False :
                 common.connect_log('%s connecting %s:%d from %s:%d via port %d' %
@@ -639,7 +701,7 @@ class TCPRelayHandler(object):
 
                 if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                     del self._server.wrong_iplist[self._client_address[0]]
-            
+
             self._remote_address = (common.to_str(remote_addr), remote_port)
             self._remote_udp = (connecttype != 0)
             # pause reading
@@ -832,6 +894,13 @@ class TCPRelayHandler(object):
                     logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
         self.destroy()
 
+    def is_match_relay_rule_mu(self):
+        host, port = self._get_mu_relay_host('')
+        if host == None:
+            return False
+        else:
+            return True
+
     def _on_local_read(self):
         # handle all local read events and dispatch them to methods for
         # each stage
@@ -850,7 +919,10 @@ class TCPRelayHandler(object):
             self.destroy()
             return
         ogn_data = data
-        if not is_local:
+
+        is_relay = self.is_match_relay_rule_mu()
+        if not is_local and ((self._server._config["is_multi_user"] == 0 and self._relay_rules == {}) or \
+            (self._server._config["is_multi_user"] == 1 and ((self._current_user_id == 0 or is_relay == False) or self._relay_rules == {}))):
             if self._encryptor is not None:
                 if self._encrypt_correct:
                     try:
@@ -861,13 +933,15 @@ class TCPRelayHandler(object):
                         self.destroy()
                         return
                     host = ''
+                    need_sendback = False
                     if obfs_decode[2]:
-                        data = self._obfs.server_encode(b'')
+                        host_name = ''
                         if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
                             if self._server._config["obfs"] == "tls1.2_ticket_auth":
                                 if(len(obfs_decode) > 3):
                                     host = obfs_decode[3] + ":" + str(self._server._listen_port)
-                        self._write_to_sock(data, self._local_sock)
+                                    host_name = obfs_decode[3]
+                        need_sendback = True
                     if obfs_decode[1]:
                         if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
                             if self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post":
@@ -903,11 +977,16 @@ class TCPRelayHandler(object):
                                   (self._client_address[0], self._client_address[1], self._server._listen_port))
                             is_Failed = True
 
+                    is_relay = self.is_match_relay_rule_mu()
+
+                    if not is_relay:
+                        if need_sendback:
+                            data_sendback = self._obfs.server_encode(b'')
+                            self._write_to_sock(data_sendback, self._local_sock)
+
                     try:
                         data, sendback = self._protocol.server_post_decrypt(data)
-                        if is_Failed == True:
-                            data = self._handel_mu_protocol_error(self._client_address, ogn_data)
-                        if sendback:
+                        if sendback and not is_relay:
                             backdata = self._protocol.server_pre_encrypt(b'')
                             backdata = self._encryptor.encrypt(backdata)
                             backdata = self._obfs.server_encode(backdata)
@@ -924,6 +1003,12 @@ class TCPRelayHandler(object):
                         shell.print_exception(e)
                         logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
                         self.destroy()
+
+                    if is_Failed == True:
+                        data = self._handel_mu_protocol_error(self._client_address, ogn_data)
+
+                    if is_relay:
+                        data = ogn_data
             else:
                 return
             if not data:
@@ -1176,6 +1261,8 @@ class TCPRelay(object):
         self.is_cleaning_wrong_iplist = False
         self.detect_log_list = []
         self.mu_detect_log_list = {}
+
+        self.relay_rules = self._config['relay_rules'].copy();
         if 'users_table' in self._config:
             self.multi_user_host_table = {}
             self.multi_user_table = self._config['users_table']
@@ -1449,6 +1536,11 @@ class TCPRelay(object):
         self.is_cleaning_detect_log = True
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
+
+    def push_relay_rules(self, rules):
+        self.is_pushing_relay_rules = True
+        self.relay_rules = rules.copy()
+        self.is_pushing_relay_rules = False
 
     def mu_connected_detect_log_list_clean(self):
         self.is_cleaning_mu_detect_log_list = True
