@@ -158,7 +158,7 @@ class TCPRelayHandler(object):
         server_info.tcp_mss = 1460
         self._protocol.set_server_info(server_info)
 
-        self._redir_list = config.get('redirect', ["*-0.0.0.0:0"])
+        self._redir_list = config.get('redirect', ["*#0.0.0.0:0"])
         self._bind = config.get('out_bind', '')
         self._bindv6 = config.get('out_bindv6', '')
         self._ignore_bind_list = config.get('ignore_bind', [])
@@ -364,99 +364,78 @@ class TCPRelayHandler(object):
                 logging.error('write_all_to_sock:unknown socket from %s:%d' % (self._client_address[0], self._client_address[1]))
         return True
 
-    def _get_mu_redirect_host(self, client_address, ogn_data):
-        host_list = self._redir_list or ["*-0.0.0.0:0"]
-        hash_code = binascii.crc32(ogn_data)
-        addrs = socket.getaddrinfo(client_address[0], client_address[1], 0, socket.SOCK_STREAM, socket.SOL_TCP)
-        af, socktype, proto, canonname, sa = addrs[0]
-        address_bytes = common.inet_pton(af, sa[0])
-        if len(address_bytes) == 16:
-            addr = struct.unpack('>Q', address_bytes[8:])[0]
-        if len(address_bytes) == 4:
-            addr = struct.unpack('>I', address_bytes)[0]
-        else:
-            addr = 0
-
-        host_port = []
-        match_port = False
-        if type(host_list) != list:
-            host_list = host_list.split(",")
-        for host in host_list:
-            items_sum = common.to_str(host).rsplit('-', 1)
-            items_match = common.to_str(items_sum[0]).rsplit(':', 1)
-            items = common.to_str(items_sum[1]).rsplit(':', 1)
-            if len(items_match) > 1:
-                if self._server._listen_port != int(items_match[1]):
-                    continue
-            if items_match[0] != "*" and common.match_regex(items_match[0], ogn_data) == False:
-                continue
-            if len(items) > 1:
-                try:
-                    port = int(items[1])
-                    if port == self._server._listen_port:
-                        match_port = True
-                    host_port.append((items[0], port))
-                except:
-                    pass
-            else:
-                host_port.append((items_sum[1], 80))
-            break
-
-        if match_port:
-            last_host_port = host_port
-            host_port = []
-            for host in last_host_port:
-                if host[1] == self._server._listen_port:
-                    host_port.append(host)
-
-        return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
-
     def _get_redirect_host(self, client_address, ogn_data):
-        host_list = self._redir_list or ["0.0.0.0:0"]
-        hash_code = binascii.crc32(ogn_data)
-        addrs = socket.getaddrinfo(client_address[0], client_address[1], 0, socket.SOCK_STREAM, socket.SOL_TCP)
-        af, socktype, proto, canonname, sa = addrs[0]
-        address_bytes = common.inet_pton(af, sa[0])
-        if len(address_bytes) == 16:
-            addr = struct.unpack('>Q', address_bytes[8:])[0]
-        if len(address_bytes) == 4:
-            addr = struct.unpack('>I', address_bytes)[0]
-        else:
-            addr = 0
+        host_list = self._redir_list or ["*#0.0.0.0:0"]
 
-        host_port = []
-        match_port = False
         if type(host_list) != list:
-            host_list = host_list.split(",")
-        for host in host_list:
-            items_sum = common.to_str(host).rsplit('-', 1)
-            items_match = common.to_str(items_sum[0]).rsplit(':', 1)
-            items = common.to_str(items_sum[1]).rsplit(':', 1)
-            if len(items_match) > 1:
-                if self._server._listen_port != int(items_match[1]):
-                    continue
-            if not items_sum[0] == '*':
-                continue
-            if len(items) > 1:
-                try:
-                    port = int(items[1])
-                    if port == self._server._listen_port:
-                        match_port = True
-                    host_port.append((items[0], port))
-                except:
-                    pass
+            host_list = [host_list]
+
+        items_sum = common.to_str(host_list[0]).rsplit('#', 1)
+        if len(items_sum) < 2:
+            hash_code = binascii.crc32(ogn_data)
+            addrs = socket.getaddrinfo(client_address[0], client_address[1], 0, socket.SOCK_STREAM, socket.SOL_TCP)
+            af, socktype, proto, canonname, sa = addrs[0]
+            address_bytes = common.inet_pton(af, sa[0])
+            if af == socket.AF_INET6:
+                addr = struct.unpack('>Q', address_bytes[8:])[0]
+            elif af == socket.AF_INET:
+                addr = struct.unpack('>I', address_bytes)[0]
             else:
-                host_port.append((host, 80))
-            break
+                addr = 0
 
-        if match_port:
-            last_host_port = host_port
             host_port = []
-            for host in last_host_port:
-                if host[1] == self._server._listen_port:
-                    host_port.append(host)
+            match_port = False
+            for host in host_list:
+                items = common.to_str(host).rsplit(':', 1)
+                if len(items) > 1:
+                    try:
+                        port = int(items[1])
+                        if port == self._server._listen_port:
+                            match_port = True
+                        host_port.append((items[0], port))
+                    except:
+                        pass
+                else:
+                    host_port.append((host, 80))
 
-        return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
+            if match_port:
+                last_host_port = host_port
+                host_port = []
+                for host in last_host_port:
+                    if host[1] == self._server._listen_port:
+                        host_port.append(host)
+
+            return host_port[((hash_code & 0xffffffff) + addr) % len(host_port)]
+
+        else:
+            host_port = []
+            for host in host_list:
+                items_sum = common.to_str(host).rsplit('#', 1)
+                items_match = common.to_str(items_sum[0]).rsplit(':', 1)
+                items = common.to_str(items_sum[1]).rsplit(':', 1)
+                if len(items_match) > 1:
+                    if self._server._listen_port != int(items_match[1]):
+                        continue
+                match_port = 0
+                if len(items_match) > 1:
+                    if items_match[1] != "*":
+                        try:
+                            match_port = int(items_match[1])
+                        except:
+                            pass
+                if items_match[0] != "*" and common.match_regex(items_match[0], ogn_data) == False and \
+                not (match_port == self._server._listen_port or match_port == 0):
+                    continue
+                if len(items) > 1:
+                    try:
+                        port = int(items[1])
+                        return (items[0], port)
+                    except:
+                        pass
+                else:
+                    return (items[0], 80)
+
+            return ("0.0.0.0", 0)
 
     def _get_relay_host(self, client_address, ogn_data):
         for id in self._relay_rules:
@@ -505,6 +484,7 @@ class TCPRelayHandler(object):
         if port == 0:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
+        logging.warn("TCP data redir %s:%d %s" % (host, port, binascii.hexlify(data)))
         return data + ogn_data
 
     def _handel_mu_protocol_error(self, client_address, ogn_data):
@@ -513,11 +493,11 @@ class TCPRelayHandler(object):
             self._server.wrong_iplist[client_address[0]] = time.time()
         self._encrypt_correct = False
         #create redirect or disconnect by hash code
-        host, port = self._get_mu_redirect_host(client_address, ogn_data)
+        host, port = self._get_redirect_host(client_address, ogn_data)
         if port == 0:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
-        logging.warn("TCP data redir %s:%d %s" % (host, port, binascii.hexlify(data)))
+        logging.warn("TCP data mu redir %s:%d %s" % (host, port, binascii.hexlify(data)))
         return data + ogn_data
 
     def _handle_stage_connecting(self, data):
@@ -904,115 +884,121 @@ class TCPRelayHandler(object):
     def _on_local_read(self):
         # handle all local read events and dispatch them to methods for
         # each stage
-        if not self._local_sock:
-            return
-        is_local = self._is_local
-        is_Failed = False
-        data = None
         try:
-            data = self._local_sock.recv(BUF_SIZE)
-        except (OSError, IOError) as e:
-            if eventloop.errno_from_exception(e) in \
-                    (errno.ETIMEDOUT, errno.EAGAIN, errno.EWOULDBLOCK):
+            if not self._local_sock:
                 return
-        if not data:
-            self.destroy()
-            return
-        ogn_data = data
-
-        is_relay = self.is_match_relay_rule_mu()
-        if not is_local and ((self._server._config["is_multi_user"] == 0 and self._relay_rules == {}) or \
-            (self._server._config["is_multi_user"] == 1 and ((self._current_user_id == 0 or is_relay == False) or self._relay_rules == {}))):
-            if self._encryptor is not None:
-                if self._encrypt_correct:
-                    try:
-                        obfs_decode = self._obfs.server_decode(data)
-                    except Exception as e:
-                        shell.print_exception(e)
-                        logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
-                        self.destroy()
-                        return
-                    host = ''
-                    need_sendback = False
-                    if obfs_decode[2]:
-                        host_name = ''
-                        if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                            if self._server._config["obfs"] == "tls1.2_ticket_auth":
-                                if(len(obfs_decode) > 3):
-                                    host = obfs_decode[3] + ":" + str(self._server._listen_port)
-                                    host_name = obfs_decode[3]
-                        need_sendback = True
-                    if obfs_decode[1]:
-                        if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                            if self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post":
-                                if(len(obfs_decode) > 3):
-                                    host = obfs_decode[3]
-                        if not self._protocol.obfs.server_info.recv_iv:
-                            iv_len = len(self._protocol.obfs.server_info.iv)
-                            self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
-                        data = self._encryptor.decrypt(obfs_decode[0])
-                    else:
-                        data = obfs_decode[0]
-
-                    if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                        try:
-                            host_list = host.split(":",2)
-                            host_name = host_list[0]
-                            if host_name in self._server.multi_user_host_table:
-                                self._current_user_id = int(self._server.multi_user_host_table[host_name])
-                                if self._current_user_id not in self._server.mu_server_transfer_ul:
-                                    self._server.mu_server_transfer_ul[self._current_user_id] = 0
-                                if self._current_user_id not in self._server.mu_server_transfer_dl:
-                                    self._server.mu_server_transfer_dl[self._current_user_id] = 0
-                                if self._current_user_id not in self._server.mu_connected_iplist:
-                                    self._server.mu_connected_iplist[self._current_user_id] = []
-                                if self._current_user_id not in self._server.mu_detect_log_list:
-                                    self._server.mu_detect_log_list[self._current_user_id] = []
-                            else:
-                                logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                  (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
-                                is_Failed = True
-                        except Exception as e:
-                            logging.error('The mu hostname is error,so The connection has been rejected, when connect from %s:%d via port %d' %
-                                  (self._client_address[0], self._client_address[1], self._server._listen_port))
-                            is_Failed = True
-
-                    is_relay = self.is_match_relay_rule_mu()
-
-                    if not is_relay:
-                        if need_sendback:
-                            data_sendback = self._obfs.server_encode(b'')
-                            self._write_to_sock(data_sendback, self._local_sock)
-
-                    try:
-                        data, sendback = self._protocol.server_post_decrypt(data)
-                        if sendback and not is_relay:
-                            backdata = self._protocol.server_pre_encrypt(b'')
-                            backdata = self._encryptor.encrypt(backdata)
-                            backdata = self._obfs.server_encode(backdata)
-                            try:
-                                self._write_to_sock(backdata, self._local_sock)
-                            except Exception as e:
-                                shell.print_exception(e)
-                                if self._config['verbose']:
-                                    traceback.print_exc()
-                                logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
-                                self.destroy()
-                                return
-                    except Exception as e:
-                        shell.print_exception(e)
-                        logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
-                        self.destroy()
-
-                    if is_Failed == True:
-                        data = self._handel_mu_protocol_error(self._client_address, ogn_data)
-
-                    if is_relay:
-                        data = ogn_data
-            else:
-                return
+            is_local = self._is_local
+            is_Failed = False
+            data = None
+            try:
+                data = self._local_sock.recv(BUF_SIZE)
+            except (OSError, IOError) as e:
+                if eventloop.errno_from_exception(e) in \
+                        (errno.ETIMEDOUT, errno.EAGAIN, errno.EWOULDBLOCK):
+                    return
             if not data:
+                self.destroy()
                 return
+            ogn_data = data
+
+            is_relay = self.is_match_relay_rule_mu()
+            if not is_local and ((self._server._config["is_multi_user"] == 0 and self._relay_rules == {}) or \
+                (self._server._config["is_multi_user"] == 1 and ((self._current_user_id == 0 or is_relay == False) or self._relay_rules == {}))):
+                if self._encryptor is not None:
+                    if self._encrypt_correct:
+                        host = ''
+                        try:
+                            obfs_decode = self._obfs.server_decode(data)
+                        except Exception as e:
+                            shell.print_exception(e)
+                            logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
+                            self.destroy()
+                            return
+                        need_sendback = False
+                        if obfs_decode[2]:
+                            host_name = ''
+                            if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                                if self._server._config["obfs"] == "tls1.2_ticket_auth":
+                                    if(len(obfs_decode) > 3):
+                                        host = obfs_decode[3] + ":" + str(self._server._listen_port)
+                                        host_name = obfs_decode[3]
+                            need_sendback = True
+                        if obfs_decode[1]:
+                            if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                                if self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post":
+                                    if(len(obfs_decode) > 3):
+                                        host = obfs_decode[3]
+                            if not self._protocol.obfs.server_info.recv_iv:
+                                iv_len = len(self._protocol.obfs.server_info.iv)
+                                self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
+                            data = self._encryptor.decrypt(obfs_decode[0])
+                        else:
+                            data = obfs_decode[0]
+
+                        if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
+                            try:
+                                host_list = host.split(":",2)
+                                host_name = host_list[0]
+                                if host_name in self._server.multi_user_host_table:
+                                    self._current_user_id = int(self._server.multi_user_host_table[host_name])
+                                    if self._current_user_id not in self._server.mu_server_transfer_ul:
+                                        self._server.mu_server_transfer_ul[self._current_user_id] = 0
+                                    if self._current_user_id not in self._server.mu_server_transfer_dl:
+                                        self._server.mu_server_transfer_dl[self._current_user_id] = 0
+                                    if self._current_user_id not in self._server.mu_connected_iplist:
+                                        self._server.mu_connected_iplist[self._current_user_id] = []
+                                    if self._current_user_id not in self._server.mu_detect_log_list:
+                                        self._server.mu_detect_log_list[self._current_user_id] = []
+                                else:
+                                    logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                      (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
+                                    is_Failed = True
+                            except Exception as e:
+                                logging.error('The mu hostname is error,so The connection has been rejected, when connect from %s:%d via port %d' %
+                                      (self._client_address[0], self._client_address[1], self._server._listen_port))
+                                is_Failed = True
+
+                        is_relay = self.is_match_relay_rule_mu()
+
+                        if not is_relay:
+                            if need_sendback:
+                                data_sendback = self._obfs.server_encode(b'')
+                                self._write_to_sock(data_sendback, self._local_sock)
+
+                        try:
+                            data, sendback = self._protocol.server_post_decrypt(data)
+                            if sendback and not is_relay:
+                                backdata = self._protocol.server_pre_encrypt(b'')
+                                backdata = self._encryptor.encrypt(backdata)
+                                backdata = self._obfs.server_encode(backdata)
+                                try:
+                                    self._write_to_sock(backdata, self._local_sock)
+                                except Exception as e:
+                                    shell.print_exception(e)
+                                    if self._config['verbose']:
+                                        traceback.print_exc()
+                                    logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
+                                    self.destroy()
+                                    return
+                        except Exception as e:
+                            shell.print_exception(e)
+                            logging.error("exception from %s:%d" % (self._client_address[0], self._client_address[1]))
+                            self.destroy()
+
+                        if is_Failed == True:
+                            data = self._handel_mu_protocol_error(self._client_address, ogn_data)
+
+                        if is_relay:
+                            data = ogn_data
+                else:
+                    return
+                if not data:
+                    return
+        except Exception as e:
+            self._log_error(e)
+            if self._config['verbose']:
+                traceback.print_exc()
+            self.destroy()
         if self._stage == STAGE_STREAM:
             if self._is_local:
                 if self._encryptor is not None:
@@ -1031,6 +1017,7 @@ class TCPRelayHandler(object):
         elif (is_local and self._stage == STAGE_ADDR) or \
                 (not is_local and self._stage == STAGE_INIT):
             self._handle_stage_addr(ogn_data, data)
+
 
     def _on_remote_read(self, is_remote_sock):
 
