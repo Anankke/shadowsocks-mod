@@ -38,6 +38,7 @@ class DbTransfer(object):
 		self.is_relay = False
 
 		self.relay_rule_list = {}
+		self.node_ip_list = []
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -118,7 +119,6 @@ class DbTransfer(object):
 				cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
 				cur.close()
 
-
 		deny_str = ""
 		if platform.system() == 'Linux' and get_config().ANTISSATTACK == 1 :
 			wrong_iplist = ServerPool.get_instance().get_servers_wrong()
@@ -139,8 +139,12 @@ class DbTransfer(object):
 					else:
 						continue
 
-					if str(realip) == str(server_ip):
+					if str(realip).find(str(server_ip)) != -1:
 						continue
+
+					for node_ip in self.node_ip_list:
+						if str(realip).find(node_ip) != -1:
+							continue
 
 					cur = conn.cursor()
 					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
@@ -273,6 +277,15 @@ class DbTransfer(object):
 			rows.append(d)
 		cur.close()
 
+		#读取节点IP
+		#SELECT * FROM `ss_node`  where `node_ip` != ''
+		self.node_ip_list = []
+		cur = conn.cursor()
+		cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
+		for r in cur.fetchall():
+			self.node_ip_list.append(str(r[0]))
+		cur.close()
+
 		#读取审计规则,数据包匹配部分
 		keys_detect = ['id','regex']
 
@@ -309,6 +322,8 @@ class DbTransfer(object):
 		for id in deleted_id_list:
 			del self.detect_text_list[id]
 
+		cur.close()
+
 
 		cur = conn.cursor()
 		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 2")
@@ -343,6 +358,8 @@ class DbTransfer(object):
 		for id in deleted_id_list:
 			del self.detect_hex_list[id]
 
+		cur.close()
+
 		#读取中转规则，如果是中转节点的话
 
 		if self.is_relay:
@@ -362,7 +379,8 @@ class DbTransfer(object):
 				d['priority'] = long(r[4])
 				self.relay_rule_list[d['id']] = d
 
-		cur.close()
+			cur.close()
+
 		conn.close()
 		return rows
 

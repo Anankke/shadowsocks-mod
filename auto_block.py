@@ -63,8 +63,8 @@ def auto_block_thread():
 			for line in real_deny_list:
 				if get_ip(line) and line.find('#') != 0:
 					ip = get_ip(line)
-
-					if ip == server_ip:
+					
+					if str(ip).find(str(server_ip)) != -1:
 						i = 0
 
 						for line in deny_lines:
@@ -80,6 +80,24 @@ def auto_block_thread():
 						deny_file.close()
 
 						continue
+
+					for node_ip in self.node_ip_list:
+						if str(ip).find(node_ip) != -1:
+							i = 0
+
+							for line in deny_lines:
+								if line.find(ip) != -1:
+									del deny_lines[i]
+								i = i + 1
+
+							deny_file = file("/etc/hosts.deny", "w+")
+							fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
+							for line in deny_lines:
+								deny_file.write(line)
+							deny_file.write("\n")
+							deny_file.close()
+
+							continue
 
 					cur = conn.cursor()
 					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
