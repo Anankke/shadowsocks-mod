@@ -548,6 +548,10 @@ class DbTransfer(object):
 						ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
 					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
 						ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().udp_servers_pool:
+						ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
+						ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
 				else:
 					temp_relay_rules = {}
@@ -556,6 +560,10 @@ class DbTransfer(object):
 						ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
 					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
 						ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().udp_servers_pool:
+						ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
+					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
+						ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
 				if port in ServerPool.get_instance().tcp_servers_pool:
 					relay = ServerPool.get_instance().tcp_servers_pool[port]

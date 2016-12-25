@@ -569,11 +569,3 @@ class ServerPool(object):
 
 	def push_uid_port_table(self,table):
 		self.uid_port_table = table
-
-	def push_relay_rule(self, port, relay_rules):
-		port = int(port)
-		if port in self.tcp_servers_pool:
-			self.tcp_servers_pool[port].push_relay_rules(relay_rules)
-		if port in self.tcp_ipv6_servers_pool:
-			self.tcp_ipv6_servers_pool[port].push_relay_rules(relay_rules)
-		return ret

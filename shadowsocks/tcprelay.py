@@ -1250,6 +1250,7 @@ class TCPRelay(object):
         self.mu_detect_log_list = {}
 
         self.relay_rules = self._config['relay_rules'].copy();
+        self.is_pushing_relay_rules = False
         if 'users_table' in self._config:
             self.multi_user_host_table = {}
             self.multi_user_table = self._config['users_table']
