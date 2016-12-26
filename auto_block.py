@@ -49,8 +49,17 @@ def auto_block_thread():
 				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
 			conn.autocommit(True)
-
-
+			
+			#读取节点IP
+			#SELECT * FROM `ss_node`  where `node_ip` != ''
+			node_ip_list = []
+			cur = conn.cursor()
+			cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
+			for r in cur.fetchall():
+				node_ip_list.append(str(r[0]))
+			cur.close()
+			
+			
 			deny_file = open('/etc/hosts.deny')
 			fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 			deny_lines = deny_file.readlines()
@@ -81,7 +90,7 @@ def auto_block_thread():
 
 						continue
 
-					for node_ip in self.node_ip_list:
+					for node_ip in node_ip_list:
 						if str(ip).find(node_ip) != -1:
 							i = 0
 
