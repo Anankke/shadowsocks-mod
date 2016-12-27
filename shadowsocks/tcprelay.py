@@ -500,6 +500,7 @@ class TCPRelayHandler(object):
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         logging.warn("TCP data mu redir %s:%d %s" % (host, port, binascii.hexlify(data)))
+        self._is_redirect = True
         return data + ogn_data
 
     def _handle_stage_connecting(self, data):
