@@ -500,6 +500,7 @@ class TCPRelayHandler(object):
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         logging.warn("TCP data mu redir %s:%d %s" % (host, port, binascii.hexlify(data)))
+        self._is_redirect = True
         return data + ogn_data
 
     def _handle_stage_connecting(self, data):
@@ -746,7 +747,7 @@ class TCPRelayHandler(object):
             raise Exception("getaddrinfo failed for %s:%d" % (ip, port))
         af, socktype, proto, canonname, sa = addrs[0]
 
-        if not self._remote_udp and self._is_redirect == False:
+        if not self._remote_udp and not self._is_redirect:
             if self._server._config["is_multi_user"] == 1 and self._current_user_id != 0:
                 if self._server.multi_user_table[self._current_user_id]['_forbidden_iplist']:
                     if common.to_str(sa[0]) in self._server.multi_user_table[self._current_user_id]['_forbidden_iplist']:
