@@ -106,6 +106,7 @@ class TCPRelayHandler(object):
         self._dns_resolver = dns_resolver
         self._current_user_id = 0
         self._relay_rules = server.relay_rules.copy()
+        self._is_relay = True
 
         self._bytesSent = 0
         self._timeCreated = time.time()
@@ -316,7 +317,7 @@ class TCPRelayHandler(object):
             return True
         else:
             try:
-                if self._encrypt_correct or self._relay_rules != {}:
+                if self._encrypt_correct or self._is_relay:
                     if sock == self._remote_sock:
                         if self._current_user_id != 0 and self._server._config["is_multi_user"] == 1:
                             self._server.mu_server_transfer_ul[self._current_user_id] += len(data)
@@ -473,6 +474,7 @@ class TCPRelayHandler(object):
         if port == 0:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
+        self._is_relay = True
         return data + ogn_data
 
     def _handel_protocol_error(self, client_address, ogn_data):
