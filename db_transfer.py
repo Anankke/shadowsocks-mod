@@ -406,7 +406,7 @@ class DbTransfer(object):
 		md5_users = {}
 
 		for row in rows:
-			if row['is_multi_user'] == 1:
+			if row['is_multi_user'] != 0:
 				continue
 
 			md5_users[row['id']] = row.copy()
@@ -497,7 +497,7 @@ class DbTransfer(object):
 			if self.is_relay:
 				temp_relay_rules = {}
 				for id in self.relay_rule_list:
-					if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] == 1) and self.relay_rule_list[id]['port'] == port:
+					if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] != 0) and self.relay_rule_list[id]['port'] == port:
 						has_higher_priority = False
 						for priority_id in self.relay_rule_list:
 							if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
@@ -519,7 +519,7 @@ class DbTransfer(object):
 				cfgchange = False
 				if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
 					cfgchange = True
-				if row['is_multi_user'] == 1:
+				if row['is_multi_user'] != 0:
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
 					if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
@@ -532,7 +532,7 @@ class DbTransfer(object):
 				if self.is_relay:
 					temp_relay_rules = {}
 					for id in self.relay_rule_list:
-						if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] == 1) and self.relay_rule_list[id]['port'] == port:
+						if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] != 0) and self.relay_rule_list[id]['port'] == port:
 							has_higher_priority = False
 							for priority_id in self.relay_rule_list:
 								if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:

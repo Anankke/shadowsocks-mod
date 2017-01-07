@@ -1604,13 +1604,13 @@ class auth_aes128_sha1(auth_base):
     def server_udp_post_decrypt(self, buf):
         uid = struct.unpack('<I', buf[-8:-4])[0]
         if uid in self.server_info.users and self.server_info.is_multi_user == 2:
-            self.user_key = self.hashfunc(self.server_info.users[uid]['passwd']).digest()
+            user_key = self.hashfunc(self.server_info.users[uid]['passwd']).digest()
         else:
             uid = None
             if self.server_info.is_multi_user != 2:
-                self.user_key = self.server_info.key
+                user_key = self.server_info.key
             else:
-                self.user_key = self.server_info.recv_iv
-        if hmac.new(self.user_key, buf[:-4], self.hashfunc).digest()[:4] != buf[-4:]:
+                user_key = self.server_info.recv_iv
+        if hmac.new(user_key, buf[:-4], self.hashfunc).digest()[:4] != buf[-4:]:
             return (b'', None)
         return (buf[:-8], uid)

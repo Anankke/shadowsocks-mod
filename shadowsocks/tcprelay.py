@@ -182,6 +182,8 @@ class TCPRelayHandler(object):
         self._downstream_status = WAIT_STATUS_INIT
         self._remote_address = None
 
+        self._header_buf = []
+
 
         if is_local:
             self._chosen_server = self._get_a_server()
@@ -338,7 +340,7 @@ class TCPRelayHandler(object):
             try:
                 if self._encrypt_correct or self._is_relay:
                     if sock == self._remote_sock:
-                        if self._current_user_id != 0 and self._server._config["is_multi_user"] == 1:
+                        if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
                             self._server.mu_server_transfer_ul[self._current_user_id] += len(data)
                         else:
                             self._server.server_transfer_ul += len(data)
@@ -731,6 +733,11 @@ class TCPRelayHandler(object):
                                            self._handle_dns_resolved)
             else:
                 if len(data) > header_length:
+                    if self._header_buf != []:
+                        is_relay = self.is_match_relay_rule_mu()
+                        if is_relay:
+                            self._write_to_sock(self._header_buf ,self._remote_sock)
+                            self._header_buf = []
                     self._data_to_write_to_remote.append(data[header_length:])
                 # notice here may go into _handle_dns_resolved directly
                 self._dns_resolver.resolve(remote_addr,
@@ -984,13 +991,6 @@ class TCPRelayHandler(object):
                                       (self._client_address[0], self._client_address[1], self._server._listen_port))
                                 is_Failed = True
 
-                        is_relay = self.is_match_relay_rule_mu()
-
-                        if not is_relay:
-                            if need_sendback:
-                                data_sendback = self._obfs.server_encode(b'')
-                                self._write_to_sock(data_sendback, self._local_sock)
-
                         try:
                             data, sendback = self._protocol.server_post_decrypt(data)
 
@@ -998,6 +998,15 @@ class TCPRelayHandler(object):
                                 logging.error('The port is multi user in single port only , but the key remote provided is error or empty, so The connection has been rejected, when connect from %s:%d via port %d' %
                                       (self._client_address[0], self._client_address[1], self._server._listen_port))
                                 is_Failed = True
+
+                            if self._server._config["is_multi_user"] == 2 and self._current_user_id == 0 and ogn_data:
+                                self._header_buf = ogn_data[:]
+
+                            is_relay = self.is_match_relay_rule_mu()
+
+                            if not is_relay and need_sendback:
+                                    data_sendback = self._obfs.server_encode(b'')
+                                    self._write_to_sock(data_sendback, self._local_sock)
 
                             if sendback and not is_relay:
                                 backdata = self._protocol.server_pre_encrypt(b'')
@@ -1306,7 +1315,7 @@ class TCPRelay(object):
         else:
             self._disconnect_ipset = None
 
-        if config["is_multi_user"] == 1:
+        if config["is_multi_user"] != 0:
             for id in self.multi_user_table:
                 if self.multi_user_table[id]['forbidden_ip'] != None:
                     self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(self.multi_user_table[id]['forbidden_ip']))
