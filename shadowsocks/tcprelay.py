@@ -669,10 +669,8 @@ class TCPRelayHandler(object):
                     for id in self._server._config["detect_text_list"]:
                         if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
                             if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
-                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
-                                    templist = self._server.mu_detect_log_list[self._current_user_id]
-                                    templist.append(id)
-                                    self._server.mu_detect_log_list[self._current_user_id] = templist
+                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.mu_detect_log_list[self._current_user_id]:
+                                    self._server.mu_detect_log_list[self._current_user_id].append(id)
                             else:
                                 if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
                                     self._server.detect_log_list.append(id)
@@ -684,10 +682,8 @@ class TCPRelayHandler(object):
                     for id in self._server._config["detect_hex_list"]:
                         if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
                             if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
-                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.detect_log_list:
-                                    templist = self._server.mu_detect_log_list[self._current_user_id]
-                                    templist.append(id)
-                                    self._server.mu_detect_log_list[self._current_user_id] = templist
+                                if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.mu_detect_log_list[self._current_user_id]:
+                                    self._server.mu_detect_log_list[self._current_user_id].append(id)
                             else:
                                 if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
                                     self._server.detect_log_list.append(id)
@@ -701,9 +697,7 @@ class TCPRelayHandler(object):
 
                 if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
                     if self._client_address[0] not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:
-                        templist = self._server.mu_connected_iplist[self._current_user_id]
-                        templist.append(self._client_address[0])
-                        self._server.mu_connected_iplist[self._current_user_id] = templist
+                        self._server.mu_connected_iplist[self._current_user_id].append(self._client_address[0])
 
 
                 if self._client_address[0]  in self._server.wrong_iplist and self._client_address[0] != 0 and self._server.is_cleaning_wrong_iplist == False:

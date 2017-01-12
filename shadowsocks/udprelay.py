@@ -1218,9 +1218,7 @@ class UDPRelay(object):
                             self.mu_detect_log_list[uid] = []
 
                         if r_addr not in self.mu_connected_iplist[uid]:
-                            templist = self.mu_connected_iplist[uid]
-                            templist.append(r_addr)
-                            self.mu_connected_iplist[uid] = templist
+                            self.mu_connected_iplist[uid].append(r_addr)
 
                     else:
                         raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
@@ -1315,10 +1313,8 @@ class UDPRelay(object):
                 for id in self._config["detect_text_list"]:
                     if common.match_regex(self._config["detect_text_list"][id]['regex'],common.to_str(data)):
                         if self._config['is_multi_user'] == 2 and uid != 0:
-                            if self.is_cleaning_mu_detect_log_list == False and id not in self.detect_log_list:
-                                templist = self.mu_detect_log_list[uid]
-                                templist.append(id)
-                                self.mu_detect_log_list[uid] = templist
+                            if self.is_cleaning_mu_detect_log_list == False and id not in self.mu_detect_log_list[uid]:
+                                self.mu_detect_log_list[uid].append(id)
                         else:
                             if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
                                 self.detect_log_list.append(id)
@@ -1330,10 +1326,8 @@ class UDPRelay(object):
                 for id in self._config["detect_hex_list"]:
                     if common.match_regex(self._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
                         if self._config['is_multi_user'] == 2 and uid != 0:
-                            if self.is_cleaning_mu_detect_log_list == False and id not in self.detect_log_list:
-                                templist = self.mu_detect_log_list[uid]
-                                templist.append(id)
-                                self.mu_detect_log_list[uid] = templist
+                            if self.is_cleaning_mu_detect_log_list == False and id not in self.mu_detect_log_list[uid]:
+                                self.mu_detect_log_list[uid].append(id)
                         else:
                             if self.is_cleaning_detect_log == False and id not in self.detect_log_list:
                                 self.detect_log_list.append(id)
