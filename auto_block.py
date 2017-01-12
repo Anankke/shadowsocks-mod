@@ -8,14 +8,12 @@ import os
 import configloader
 import importloader
 import gnupg
-import thread
 import cymysql
-import commands
 import socket
 import re
 import platform
 import fcntl
-from shadowsocks import common
+from shadowsocks import common, shell
 
 
 def get_ip(text):
@@ -49,7 +47,7 @@ def auto_block_thread():
 				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
 											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
 			conn.autocommit(True)
-			
+
 			#读取节点IP
 			#SELECT * FROM `ss_node`  where `node_ip` != ''
 			node_ip_list = []
@@ -58,8 +56,8 @@ def auto_block_thread():
 			for r in cur.fetchall():
 				node_ip_list.append(str(r[0]))
 			cur.close()
-			
-			
+
+
 			deny_file = open('/etc/hosts.deny')
 			fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 			deny_lines = deny_file.readlines()
@@ -72,7 +70,7 @@ def auto_block_thread():
 			for line in real_deny_list:
 				if get_ip(line) and line.find('#') != 0:
 					ip = get_ip(line)
-					
+
 					if str(ip).find(str(server_ip)) != -1:
 						i = 0
 
@@ -81,7 +79,7 @@ def auto_block_thread():
 								del deny_lines[i]
 							i = i + 1
 
-						deny_file = file("/etc/hosts.deny", "w+")
+						deny_file = open("/etc/hosts.deny", "w+")
 						fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 						for line in deny_lines:
 							deny_file.write(line)
@@ -99,7 +97,7 @@ def auto_block_thread():
 									del deny_lines[i]
 								i = i + 1
 
-							deny_file = file("/etc/hosts.deny", "w+")
+							deny_file = open("/etc/hosts.deny", "w+")
 							fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 							for line in deny_lines:
 								deny_file.write(line)
@@ -201,14 +199,15 @@ def auto_block_thread():
 						logging.info("Unblock ip:" + str(ip))
 				i = i + 1
 
-			deny_file = file("/etc/hosts.deny", "w+")
+			deny_file = open("/etc/hosts.deny", "w+")
 			fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 			for line in deny_lines:
 				deny_file.write(line)
 			deny_file.write("\n")
 			deny_file.close()
 
-		except BaseException:
+		except Exception:
+			shell.print_exception(e)
 			logging.error("Auto block thread error")
 
 		start_line = file_len("/etc/hosts.deny")

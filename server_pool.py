@@ -27,6 +27,7 @@ import time
 from shadowsocks import shell, eventloop, tcprelay, udprelay, asyncdns, common
 import threading
 import sys
+import traceback
 from socket import *
 from configloader import load_config, get_config
 
@@ -150,6 +151,8 @@ class ServerPool(object):
 							ipv6_ok = True
 					except Exception as e:
 						logging.warn("IPV6 %s " % (e,))
+						shell.print_exception(e)
+						traceback.print_exc()
 
 			if 'server' in self.config:
 				if port in self.tcp_servers_pool:
@@ -176,6 +179,8 @@ class ServerPool(object):
 					except Exception as e:
 						if not ipv6_ok:
 							logging.warn("IPV4 %s " % (e,))
+							shell.print_exception(e)
+							traceback.print_exc()
 		else:
 			self.dns_resolver_pool[port] = self.dns_resolver = asyncdns.DNSResolver()
 			self.eventloop_pool[port] = eventloop.EventLoop()

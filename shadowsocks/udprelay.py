@@ -1072,6 +1072,7 @@ class UDPRelay(object):
             self._server.mu_detect_log_list[self._current_user_id] = []
 
     def add_transfer_u(self, user, transfer):
+        logging.info("u %d %d"%(user, transfer))
         if user is None:
             self.server_transfer_ul += transfer
         else:
@@ -1080,6 +1081,7 @@ class UDPRelay(object):
             self.mu_server_transfer_ul[user] += transfer
 
     def add_transfer_d(self, user, transfer):
+        logging.info("d %d %d"%(user, transfer))
         if user is None:
             self.server_transfer_dl += transfer
         else:

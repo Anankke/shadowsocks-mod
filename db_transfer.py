@@ -295,7 +295,7 @@ class DbTransfer(object):
 		exist_id_list = []
 
 		for r in cur.fetchall():
-			id = long(r[0])
+			id = int(r[0])
 			exist_id_list.append(id)
 			if r[0] not in self.detect_text_list:
 				d = {}
@@ -331,7 +331,7 @@ class DbTransfer(object):
 		exist_id_list = []
 
 		for r in cur.fetchall():
-			id = long(r[0])
+			id = int(r[0])
 			exist_id_list.append(id)
 			if r[0] not in self.detect_hex_list:
 				d = {}
@@ -372,11 +372,11 @@ class DbTransfer(object):
 
 			for r in cur.fetchall():
 				d = {}
-				d['id'] = long(r[0])
-				d['user_id'] = long(r[1])
+				d['id'] = int(r[0])
+				d['user_id'] = int(r[1])
 				d['dist_ip'] = str(r[2])
 				d['port'] = int(r[3])
-				d['priority'] = long(r[4])
+				d['priority'] = int(r[4])
 				self.relay_rule_list[d['id']] = d
 
 			cur.close()
@@ -581,6 +581,7 @@ class DbTransfer(object):
 				if cfgchange:
 					logging.info('db stop server at port [%s] reason: config changed!' % (port))
 					ServerPool.get_instance().cb_del_server(port)
+					del self.last_update_transfer[port]
 					new_servers[port] = (passwd, cfg)
 			elif ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
@@ -596,6 +597,7 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
+				del self.last_update_transfer[port]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
@@ -606,6 +608,7 @@ class DbTransfer(object):
 				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
 				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
 				ServerPool.get_instance().new_server(port, cfg)
+				self.last_update_transfer[port] = [ 0, 0 ]
 
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
 
