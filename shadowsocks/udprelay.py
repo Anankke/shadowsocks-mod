@@ -1078,7 +1078,8 @@ class UDPRelay(object):
         else:
             if user not in self.mu_server_transfer_ul:
                 self.mu_server_transfer_ul[user] = 0
-            self.mu_server_transfer_ul[user] += transfer
+            self.mu_server_transfer_ul[user] += transfer + self.server_transfer_ul
+            self.server_transfer_ul = 0
 
     def add_transfer_d(self, user, transfer):
         logging.info("d %d %d"%(user, transfer))
@@ -1087,7 +1088,8 @@ class UDPRelay(object):
         else:
             if user not in self.mu_server_transfer_dl:
                 self.mu_server_transfer_dl[user] = 0
-            self.mu_server_transfer_dl[user] += transfer
+            self.mu_server_transfer_dl[user] += transfer + self.server_transfer_dl
+            self.server_transfer_dl = 0
 
     def _close_client_pair(self, client_pair):
         client, uid = client_pair

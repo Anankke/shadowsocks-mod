@@ -340,10 +340,7 @@ class TCPRelayHandler(object):
             try:
                 if self._encrypt_correct or self._is_relay:
                     if sock == self._remote_sock:
-                        if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
-                            self._server.mu_server_transfer_ul[self._current_user_id] += len(data)
-                        else:
-                            self._server.server_transfer_ul += len(data)
+                        self._server.add_transfer_u(self._current_user_id, len(data))
                         self._update_activity(len(data))
                 if data:
                     l = len(data)
@@ -967,15 +964,7 @@ class TCPRelayHandler(object):
                                 host_list = host.split(":",2)
                                 host_name = host_list[0]
                                 if host_name in self._server.multi_user_host_table:
-                                    self._current_user_id = int(self._server.multi_user_host_table[host_name])
-                                    if self._current_user_id not in self._server.mu_server_transfer_ul:
-                                        self._server.mu_server_transfer_ul[self._current_user_id] = 0
-                                    if self._current_user_id not in self._server.mu_server_transfer_dl:
-                                        self._server.mu_server_transfer_dl[self._current_user_id] = 0
-                                    if self._current_user_id not in self._server.mu_connected_iplist:
-                                        self._server.mu_connected_iplist[self._current_user_id] = []
-                                    if self._current_user_id not in self._server.mu_detect_log_list:
-                                        self._server.mu_detect_log_list[self._current_user_id] = []
+                                    self._update_user(self._server.multi_user_host_table[host_name])
                                 else:
                                     logging.error('The host:%s md5 is mismatch,so The connection has been rejected, when connect from %s:%d via port %d' %
                                       (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
@@ -1115,10 +1104,7 @@ class TCPRelayHandler(object):
                     data = self._encryptor.encrypt(data)
                     data = self._obfs.server_encode(data)
             self._update_activity(len(data))
-            if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
-                self._server.mu_server_transfer_dl[self._current_user_id] += len(data)
-            else:
-                self._server.server_transfer_dl += len(data)
+            self._server.add_transfer_d(self._current_user_id, len(data))
         else:
             return
         try:
@@ -1397,6 +1383,24 @@ class TCPRelay(object):
     def add_connection(self, val):
         self.server_connections += val
         logging.debug('server port %5d connections = %d' % (self._listen_port, self.server_connections,))
+
+    def add_transfer_u(self, user, transfer):
+        if (user is None or user == 0) and self._config["is_multi_user"] == 0:
+            self.server_transfer_ul += transfer
+        else:
+            if user not in self.mu_server_transfer_ul:
+                self.mu_server_transfer_ul[user] = 0
+            self.mu_server_transfer_ul[user] += transfer + self.server_transfer_ul
+            self.server_transfer_ul = 0
+
+    def add_transfer_d(self, user, transfer):
+        if (user is None or user == 0) and self._config["is_multi_user"] == 0:
+            self.server_transfer_dl += transfer
+        else:
+            if user not in self.mu_server_transfer_dl:
+                self.mu_server_transfer_dl[user] = 0
+            self.mu_server_transfer_dl[user] += transfer + self.server_transfer_dl
+            self.server_transfer_dl = 0
 
     def update_stat(self, port, stat_dict, val):
         newval = stat_dict.get(0, 0) + val
