@@ -142,10 +142,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] != 1:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
-							udp_server.add_to_loop(self.loop)
-							self.udp_ipv6_servers_pool.update({port: udp_server})
+
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.loop)
+						self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -171,10 +171,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] != 1:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
-							udp_server.add_to_loop(self.loop)
-							self.udp_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
+						udp_server.add_to_loop(self.loop)
+						self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:
@@ -208,10 +207,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] != 1:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
-							udp_server.add_to_loop(self.eventloop_pool[port])
-							self.udp_ipv6_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -235,10 +233,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] != 1:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
-							udp_server.add_to_loop(self.eventloop_pool[port])
-							self.udp_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:

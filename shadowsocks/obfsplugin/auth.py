@@ -1507,11 +1507,11 @@ class auth_aes128_sha1(auth_base):
                 return self.not_match_return(self.recv_buf)
 
             uid = struct.unpack('<I', buf[7:11])[0]
-            if uid in self.server_info.users and self.server_info.is_multi_user == 2:
+            if uid in self.server_info.users and self.server_info.is_multi_user != 0:
                 self.user_key = self.hashfunc(self.server_info.users[uid]['passwd']).digest()
                 self.server_info.update_user_func(uid)
             else:
-                if not self.server_info.users and self.server_info.is_multi_user != 2:
+                if not self.server_info.users and self.server_info.is_multi_user == 0:
                     self.user_key = self.server_info.key
                 else:
                     self.user_key = self.server_info.recv_iv
@@ -1619,11 +1619,11 @@ class auth_aes128_sha1(auth_base):
 
     def server_udp_post_decrypt(self, buf):
         uid = struct.unpack('<I', buf[-8:-4])[0]
-        if uid in self.server_info.users and self.server_info.is_multi_user == 2:
+        if uid in self.server_info.users and self.server_info.is_multi_user != 0:
             user_key = self.hashfunc(self.server_info.users[uid]['passwd']).digest()
         else:
             uid = None
-            if self.server_info.is_multi_user != 2:
+            if self.server_info.is_multi_user == 0:
                 user_key = self.server_info.key
             else:
                 user_key = self.server_info.recv_iv

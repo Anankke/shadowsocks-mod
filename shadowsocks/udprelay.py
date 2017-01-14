@@ -1163,6 +1163,32 @@ class UDPRelay(object):
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         return data + ogn_data
 
+    def _get_mu_relay_host(self, ogn_data):
+        for id in self._relay_rules:
+            if self._relay_rules[id]['user_id'] == self._current_user_id:
+                has_higher_priority = False
+                for priority_id in self._relay_rules:
+                    if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] > self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
+                        has_higher_priority = True
+                        continue
+
+                if has_higher_priority:
+                    continue
+
+                return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+        return (None, None)
+
+    def _handel_mu_relay(self, client_address, ogn_data):
+        host, port = self._get_mu_relay_host(ogn_data)
+        if host == None:
+            return ogn_data
+        self._encrypt_correct = False
+        if port == 0:
+            raise Exception('can not parse header')
+        data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
+        self._is_relay = True
+        return data + ogn_data
+
     def _socket_bind_addr(self, sock, af):
         bind_addr = ''
         if self._bind and af == socket.AF_INET:
@@ -1239,7 +1265,10 @@ class UDPRelay(object):
                     return
                     #return self._handle_tcp_over_udp(data, r_addr)
             else:
-                data = self._handel_normal_relay(r_addr, ogn_data)
+                if self._config["is_multi_user"] == 0:
+                    data = self._handel_normal_relay(r_addr, ogn_data)
+                else:
+                    data = self._handel_mu_relay(self._client_address, ogn_data)
 
         try:
             header_result = parse_header(data)
