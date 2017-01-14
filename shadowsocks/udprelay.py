@@ -1218,11 +1218,11 @@ class UDPRelay(object):
                             self.mu_detect_log_list[uid] = []
 
                         if r_addr not in self.mu_connected_iplist[uid]:
-                            self.mu_connected_iplist[uid].append(r_addr)
+                            self.mu_connected_iplist[uid].append(r_addr[0])
 
                     else:
                         raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
-                          (host_name, self._client_address[0], self._client_address[1], self._server._listen_port))
+                          (host_name, r_addr[0], r_addr[1], self._server._listen_port))
 
 
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
