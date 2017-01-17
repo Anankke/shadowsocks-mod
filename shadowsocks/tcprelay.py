@@ -476,7 +476,7 @@ class TCPRelayHandler(object):
             if self._relay_rules[id]['user_id'] == self._current_user_id:
                 has_higher_priority = False
                 for priority_id in self._relay_rules:
-                    if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] != self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
+                    if ((self._relay_rules[priority_id]['priority'] > self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] != self._relay_rules[priority_id]['id']) and (self._relay_rules[priority_id]['priority'] == self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] > self._relay_rules[priority_id]['id'])) and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
                         has_higher_priority = True
                         continue
 
