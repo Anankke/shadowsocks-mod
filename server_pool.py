@@ -341,6 +341,28 @@ class ServerPool(object):
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = [0,0]
 				ret[self.uid_port_table[id]][1] += tempdict[id]
+		if port in self.udp_servers_pool:
+			tempdict = self.udp_servers_pool[port].mu_server_transfer_ul
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][0] += tempdict[id]
+			tempdict = self.udp_servers_pool[port].mu_server_transfer_dl
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][1] += tempdict[id]
+		if port in self.udp_ipv6_servers_pool:
+			tempdict = self.udp_ipv6_servers_pool[port].mu_server_transfer_ul
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][0] += tempdict[id]
+			tempdict = self.udp_ipv6_servers_pool[port].mu_server_transfer_dl
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][1] += tempdict[id]
 		return ret
 
 	def get_servers_transfer(self):

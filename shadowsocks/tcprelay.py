@@ -1103,8 +1103,8 @@ class TCPRelayHandler(object):
                     data = self._protocol.server_pre_encrypt(data)
                     data = self._encryptor.encrypt(data)
                     data = self._obfs.server_encode(data)
-            self._update_activity(len(data))
-            self._server.add_transfer_d(self._current_user_id, len(data))
+                    self._update_activity(len(data))
+                    self._server.add_transfer_d(self._current_user_id, len(data))
         else:
             return
         try:
