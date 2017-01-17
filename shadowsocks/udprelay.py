@@ -977,7 +977,6 @@ class UDPRelay(object):
         self.mu_server_transfer_dl = {}
         self.mu_connected_iplist = {}
         self.mu_detect_log_list = {}
-        self._current_user_id = 0
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self._protocol = obfs.obfs(config['protocol'])
@@ -1060,19 +1059,8 @@ class UDPRelay(object):
         logging.debug('chosen server: %s:%d', server, server_port)
         return server, server_port
 
-    def _update_user(self, user):
-        self._current_user_id = int(user)
-        if self._current_user_id not in self._server.mu_server_transfer_ul:
-            self._server.mu_server_transfer_ul[self._current_user_id] = 0
-        if self._current_user_id not in self._server.mu_server_transfer_dl:
-            self._server.mu_server_transfer_dl[self._current_user_id] = 0
-        if self._current_user_id not in self._server.mu_connected_iplist:
-            self._server.mu_connected_iplist[self._current_user_id] = []
-        if self._current_user_id not in self._server.mu_detect_log_list:
-            self._server.mu_detect_log_list[self._current_user_id] = []
-
     def add_transfer_u(self, user, transfer):
-        if (user is None or user == 0) and self._config['is_multi_user'] == 0:
+        if user is None or user == 0:
             self.server_transfer_ul += transfer
         else:
             if user not in self.mu_server_transfer_ul:
@@ -1081,7 +1069,7 @@ class UDPRelay(object):
             self.server_transfer_ul = 0
 
     def add_transfer_d(self, user, transfer):
-        if (user is None or user == 0) and self._config['is_multi_user'] == 0:
+        if user is None or user == 0:
             self.server_transfer_dl += transfer
         else:
             if user not in self.mu_server_transfer_dl:
@@ -1163,9 +1151,9 @@ class UDPRelay(object):
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         return data + ogn_data
 
-    def _get_mu_relay_host(self, ogn_data):
+    def _get_mu_relay_host(self, ogn_data, uid):
         for id in self._relay_rules:
-            if self._relay_rules[id]['user_id'] == self._current_user_id:
+            if self._relay_rules[id]['user_id'] == uid:
                 has_higher_priority = False
                 for priority_id in self._relay_rules:
                     if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] != self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
@@ -1178,8 +1166,8 @@ class UDPRelay(object):
                 return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
         return (None, None)
 
-    def _handel_mu_relay(self, client_address, ogn_data):
-        host, port = self._get_mu_relay_host(ogn_data)
+    def _handel_mu_relay(self, client_address, ogn_data, uid):
+        host, port = self._get_mu_relay_host(ogn_data, uid)
         if host == None:
             return ogn_data
         self._encrypt_correct = False
@@ -1232,7 +1220,7 @@ class UDPRelay(object):
                 self._protocol.obfs.server_info.recv_iv = ref_iv[0]
                 data, uid = self._protocol.server_udp_post_decrypt(data)
 
-                if self._config['is_multi_user'] == 2 and data:
+                if self._config['is_multi_user'] != 0 and data:
                     if uid:
                         if uid not in self.mu_server_transfer_ul:
                             self.mu_server_transfer_ul[uid] = 0
@@ -1248,7 +1236,7 @@ class UDPRelay(object):
 
                     else:
                         raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
-                          (host_name, r_addr[0], r_addr[1], self._server._listen_port))
+                          (host_name, r_addr[0], r_addr[1], self._listen_port))
 
 
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
@@ -1268,7 +1256,14 @@ class UDPRelay(object):
                 if self._config["is_multi_user"] == 0:
                     data = self._handel_normal_relay(r_addr, ogn_data)
                 else:
-                    data = self._handel_mu_relay(r_addr, ogn_data)
+                    data = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 0, data, ref_iv)
+                    # decrypt data
+                    if not data:
+                        logging.debug('UDP handle_server: data is empty after decrypt')
+                        return
+                    self._protocol.obfs.server_info.recv_iv = ref_iv[0]
+                    data, uid = self._protocol.server_udp_post_decrypt(data)
+                    data = self._handel_mu_relay(r_addr, ogn_data, uid)
 
         try:
             header_result = parse_header(data)
@@ -1341,7 +1336,7 @@ class UDPRelay(object):
             if 'detect_text_list' in self._config:
                 for id in self._config["detect_text_list"]:
                     if common.match_regex(self._config["detect_text_list"][id]['regex'],common.to_str(data)):
-                        if self._config['is_multi_user'] == 2 and uid != 0:
+                        if self._config['is_multi_user'] != 0 and uid != 0:
                             if self.is_cleaning_mu_detect_log_list == False and id not in self.mu_detect_log_list[uid]:
                                 self.mu_detect_log_list[uid].append(id)
                         else:
@@ -1354,7 +1349,7 @@ class UDPRelay(object):
             if 'detect_hex_list' in self._config:
                 for id in self._config["detect_hex_list"]:
                     if common.match_regex(self._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
-                        if self._config['is_multi_user'] == 2 and uid != 0:
+                        if self._config['is_multi_user'] != 0 and uid != 0:
                             if self.is_cleaning_mu_detect_log_list == False and id not in self.mu_detect_log_list[uid]:
                                 self.mu_detect_log_list[uid].append(id)
                         else:
