@@ -1168,7 +1168,7 @@ class UDPRelay(object):
             if self._relay_rules[id]['user_id'] == self._current_user_id:
                 has_higher_priority = False
                 for priority_id in self._relay_rules:
-                    if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] > self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
+                    if self._relay_rules[priority_id]['priority'] >= self._relay_rules[id]['priority'] and self._relay_rules[priority_id]['id'] != self._relay_rules[id]['id'] and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
                         has_higher_priority = True
                         continue
 
@@ -1268,7 +1268,7 @@ class UDPRelay(object):
                 if self._config["is_multi_user"] == 0:
                     data = self._handel_normal_relay(r_addr, ogn_data)
                 else:
-                    data = self._handel_mu_relay(self._client_address, ogn_data)
+                    data = self._handel_mu_relay(r_addr, ogn_data)
 
         try:
             header_result = parse_header(data)

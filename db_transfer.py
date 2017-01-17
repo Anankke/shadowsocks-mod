@@ -500,7 +500,7 @@ class DbTransfer(object):
 					if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] != 0) and self.relay_rule_list[id]['port'] == port:
 						has_higher_priority = False
 						for priority_id in self.relay_rule_list:
-							if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
+							if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] != self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
 								has_higher_priority = True
 								continue
 
