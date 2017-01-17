@@ -460,11 +460,12 @@ class TCPRelayHandler(object):
     def _get_relay_host(self, client_address, ogn_data):
         for id in self._relay_rules:
             return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+        return (None, None)
 
     def _handel_normal_relay(self, client_address, ogn_data):
         host, port = self._get_relay_host(client_address, ogn_data)
         self._encrypt_correct = False
-        if port == 0:
+        if port == None:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         self._is_relay = True
@@ -490,7 +491,7 @@ class TCPRelayHandler(object):
         if host == None:
             return ogn_data
         self._encrypt_correct = False
-        if port == 0:
+        if port == None:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         self._is_relay = True

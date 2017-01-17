@@ -1032,10 +1032,7 @@ class UDPRelay(object):
             self._disconnect_ipset = None
 
         self._relay_rules = self._config['relay_rules'].copy();
-        self._is_relay = False
         self._is_pushing_relay_rules = False
-        if self._relay_rules != {}:
-            self._is_relay = True
 
         addrs = socket.getaddrinfo(self._listen_addr, self._listen_port, 0,
                                    socket.SOCK_DGRAM, socket.SOL_UDP)
@@ -1142,11 +1139,12 @@ class UDPRelay(object):
     def _get_relay_host(self, client_address, ogn_data):
         for id in self._relay_rules:
             return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+        return (None, None)
 
     def _handel_normal_relay(self, client_address, ogn_data):
         host, port = self._get_relay_host(client_address, ogn_data)
         self._encrypt_correct = False
-        if port == 0:
+        if port == None:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
         return data + ogn_data
@@ -1171,11 +1169,19 @@ class UDPRelay(object):
         if host == None:
             return ogn_data
         self._encrypt_correct = False
-        if port == 0:
+        if port == None:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + common.to_bytes(host) + struct.pack('>H', port)
-        self._is_relay = True
         return data + ogn_data
+
+    def _is_relay(self, client_address, ogn_data, uid):
+        if self._config['is_multi_user'] == 0:
+            if self._get_relay_host(client_address, ogn_data) == (None, None):
+                return False
+        else:
+            if self._get_mu_relay_host(ogn_data, uid) == (None, None):
+                return False
+        return True
 
     def _socket_bind_addr(self, sock, af):
         bind_addr = ''
@@ -1211,38 +1217,37 @@ class UDPRelay(object):
                 data = data[3:]
         else:
             ref_iv = [0]
-            if not self._is_relay:
-                data = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 0, data, ref_iv)
-                # decrypt data
-                if not data:
-                    logging.debug('UDP handle_server: data is empty after decrypt')
-                    return
-                self._protocol.obfs.server_info.recv_iv = ref_iv[0]
-                data, uid = self._protocol.server_udp_post_decrypt(data)
+            data = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 0, data, ref_iv)
+            # decrypt data
+            if not data:
+                logging.debug('UDP handle_server: data is empty after decrypt')
+                return
+            self._protocol.obfs.server_info.recv_iv = ref_iv[0]
+            data, uid = self._protocol.server_udp_post_decrypt(data)
 
-                if self._config['is_multi_user'] != 0 and data:
-                    if uid:
-                        if uid not in self.mu_server_transfer_ul:
-                            self.mu_server_transfer_ul[uid] = 0
-                        if uid not in self.mu_server_transfer_dl:
-                            self.mu_server_transfer_dl[uid] = 0
-                        if uid not in self.mu_connected_iplist:
-                            self.mu_connected_iplist[uid] = []
-                        if uid not in self.mu_detect_log_list:
-                            self.mu_detect_log_list[uid] = []
+            if self._config['is_multi_user'] != 0 and data:
+                if uid:
+                    if uid not in self.mu_server_transfer_ul:
+                        self.mu_server_transfer_ul[uid] = 0
+                    if uid not in self.mu_server_transfer_dl:
+                        self.mu_server_transfer_dl[uid] = 0
+                    if uid not in self.mu_connected_iplist:
+                        self.mu_connected_iplist[uid] = []
+                    if uid not in self.mu_detect_log_list:
+                        self.mu_detect_log_list[uid] = []
 
-                        if r_addr not in self.mu_connected_iplist[uid]:
-                            self.mu_connected_iplist[uid].append(r_addr[0])
+                    if r_addr not in self.mu_connected_iplist[uid]:
+                        self.mu_connected_iplist[uid].append(r_addr[0])
 
-                    else:
-                        raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
-                          (host_name, r_addr[0], r_addr[1], self._listen_port))
+                else:
+                    raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
+                      (host_name, r_addr[0], r_addr[1], self._listen_port))
 
 
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
         if not self._is_local:
 
-            if not self._is_relay:
+            if not self._is_relay(r_addr, ogn_data, uid):
                 data = pre_parse_header(data)
 
                 data = self._pre_parse_udp_header(data)
@@ -1256,13 +1261,6 @@ class UDPRelay(object):
                 if self._config["is_multi_user"] == 0:
                     data = self._handel_normal_relay(r_addr, ogn_data)
                 else:
-                    data = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 0, data, ref_iv)
-                    # decrypt data
-                    if not data:
-                        logging.debug('UDP handle_server: data is empty after decrypt')
-                        return
-                    self._protocol.obfs.server_info.recv_iv = ref_iv[0]
-                    data, uid = self._protocol.server_udp_post_decrypt(data)
                     data = self._handel_mu_relay(r_addr, ogn_data, uid)
 
         try:
@@ -1479,15 +1477,15 @@ class UDPRelay(object):
             if addrlen > 255:
                 # drop
                 return
-            if self._is_relay:
-                response = data
-            else:
-                data = pack_addr(r_addr[0]) + struct.pack('>H', r_addr[1]) + data
-                ref_iv = [encrypt.encrypt_new_iv(self._method)]
-                self._protocol.obfs.server_info.iv = ref_iv[0]
-                data = self._protocol.server_udp_pre_encrypt(data)
-                response = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 1,
-                                               data, ref_iv)
+
+            origin_data = data[:]
+
+            data = pack_addr(r_addr[0]) + struct.pack('>H', r_addr[1]) + data
+            ref_iv = [encrypt.encrypt_new_iv(self._method)]
+            self._protocol.obfs.server_info.iv = ref_iv[0]
+            data = self._protocol.server_udp_pre_encrypt(data)
+            response = encrypt.encrypt_all_iv(self._protocol.obfs.server_info.key, self._method, 1,
+                                           data, ref_iv)
             if not response:
                 return
         else:
@@ -1512,9 +1510,17 @@ class UDPRelay(object):
             client_dns_pair = self._cache_dns_client.get(key, None)
             if client_pair:
                 client, client_uid = client_pair
+
+                if self._is_relay(r_addr, origin_data, client_uid):
+                    response = origin_data
+
                 self.add_transfer_d(client_uid, len(response))
             elif client_dns_pair:
                 client, client_uid = client_dns_pair
+
+                if self._is_relay(r_addr, origin_data, client_uid):
+                    response = origin_data
+
                 self.add_transfer_d(client_uid, len(response))
             else:
                 self.server_transfer_dl += len(response)
@@ -1726,10 +1732,6 @@ class UDPRelay(object):
     def push_relay_rules(self, rules):
         self._is_pushing_relay_rules = True
         self._relay_rules = rules.copy()
-        if self._relay_rules == {}:
-            self._is_relay = False
-        else:
-            self._is_relay = True
         self._is_pushing_relay_rules = False
 
     def close(self, next_tick=False):
