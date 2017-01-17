@@ -155,7 +155,7 @@ def get_mu_host(id, md5):
 
 
 def get_md5(data):
-    m1 = hashlib.md5(data)
+    m1 = hashlib.md5(data.encode('utf-8'))
     return m1.hexdigest()
 
 def patch_socket():
@@ -278,8 +278,9 @@ class IPNetwork(object):
         self.addrs_str = addrs
         self._network_list_v4 = []
         self._network_list_v6 = []
-        if type(addrs) == str:
-            addrs = addrs.split(',')
+        if type(addrs) != str:
+            addrs = to_str(addrs)
+        addrs = addrs.split(',')
         list(map(self.add_network, addrs))
 
     def add_network(self, addr):

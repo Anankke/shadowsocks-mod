@@ -27,6 +27,7 @@ import time
 from shadowsocks import shell, eventloop, tcprelay, udprelay, asyncdns, common
 import threading
 import sys
+import traceback
 from socket import *
 from configloader import load_config, get_config
 
@@ -141,10 +142,10 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] == 0:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
-							udp_server.add_to_loop(self.loop)
-							self.udp_ipv6_servers_pool.update({port: udp_server})
+
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.loop)
+						self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -168,10 +169,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.loop)
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] == 0:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
-							udp_server.add_to_loop(self.loop)
-							self.udp_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver, False)
+						udp_server.add_to_loop(self.loop)
+						self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:
@@ -203,10 +203,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_ipv6_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] == 0:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
-							udp_server.add_to_loop(self.eventloop_pool[port])
-							self.udp_ipv6_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False, stat_counter=self.stat_counter)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_ipv6_servers_pool.update({port: udp_server})
 
 						if common.to_str(a_config['server_ipv6']) == "::":
 							ipv6_ok = True
@@ -230,10 +229,9 @@ class ServerPool(object):
 						tcp_server.add_to_loop(self.eventloop_pool[port])
 						self.tcp_servers_pool.update({port: tcp_server})
 
-						if a_config['is_multi_user'] == 0:
-							udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
-							udp_server.add_to_loop(self.eventloop_pool[port])
-							self.udp_servers_pool.update({port: udp_server})
+						udp_server = udprelay.UDPRelay(a_config, self.dns_resolver_pool[port], False)
+						udp_server.add_to_loop(self.eventloop_pool[port])
+						self.udp_servers_pool.update({port: udp_server})
 
 					except Exception as e:
 						if not ipv6_ok:
@@ -343,6 +341,28 @@ class ServerPool(object):
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = [0,0]
 				ret[self.uid_port_table[id]][1] += tempdict[id]
+		if port in self.udp_servers_pool:
+			tempdict = self.udp_servers_pool[port].mu_server_transfer_ul
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][0] += tempdict[id]
+			tempdict = self.udp_servers_pool[port].mu_server_transfer_dl
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][1] += tempdict[id]
+		if port in self.udp_ipv6_servers_pool:
+			tempdict = self.udp_ipv6_servers_pool[port].mu_server_transfer_ul
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][0] += tempdict[id]
+			tempdict = self.udp_ipv6_servers_pool[port].mu_server_transfer_dl
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = [0,0]
+				ret[self.uid_port_table[id]][1] += tempdict[id]
 		return ret
 
 	def get_servers_transfer(self):
@@ -418,6 +438,26 @@ class ServerPool(object):
 					tempret.append(ip)
 				ret[self.uid_port_table[id]] = tempret[:]
 			self.tcp_ipv6_servers_pool[port].mu_connected_iplist_clean()
+		if port in self.udp_servers_pool:
+			tempdict = self.udp_servers_pool[port].mu_connected_iplist.copy()
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = []
+				tempret = ret[self.uid_port_table[id]][:]
+				for ip in tempdict[id]:
+					tempret.append(ip)
+				ret[self.uid_port_table[id]] = tempret[:]
+			self.udp_servers_pool[port].mu_connected_iplist_clean()
+		if port in self.udp_ipv6_servers_pool:
+			tempdict = self.udp_ipv6_servers_pool[port].mu_connected_iplist.copy()
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = []
+				tempret = ret[self.uid_port_table[id]][:]
+				for ip in tempdict[id]:
+					tempret.append(ip)
+				ret[self.uid_port_table[id]] = tempret[:]
+			self.udp_ipv6_servers_pool[port].mu_connected_iplist_clean()
 		return ret
 
 	def get_servers_iplist(self):
@@ -514,6 +554,24 @@ class ServerPool(object):
 				ret[self.uid_port_table[id]] = tempret[:]
 		if port in self.tcp_ipv6_servers_pool:
 			tempdict = self.tcp_ipv6_servers_pool[port].mu_detect_log_list.copy()
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = []
+				tempret = ret[self.uid_port_table[id]][:]
+				for itemid in tempdict[id]:
+					tempret.append(itemid)
+				ret[self.uid_port_table[id]] = tempret[:]
+		if port in self.udp_servers_pool:
+			tempdict = self.udp_servers_pool[port].mu_detect_log_list.copy()
+			for id in tempdict:
+				if self.uid_port_table[id] not in ret:
+					ret[self.uid_port_table[id]] = []
+				tempret = ret[self.uid_port_table[id]][:]
+				for itemid in tempdict[id]:
+					tempret.append(itemid)
+				ret[self.uid_port_table[id]] = tempret[:]
+		if port in self.udp_ipv6_servers_pool:
+			tempdict = self.udp_ipv6_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
 				if self.uid_port_table[id] not in ret:
 					ret[self.uid_port_table[id]] = []

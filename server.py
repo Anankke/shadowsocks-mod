@@ -70,6 +70,8 @@ def main():
 			import traceback
 			traceback.print_exc()
 			threadMain.stop()
+			import sys
+			sys.exit()
 
 if __name__ == '__main__':
 	main()
