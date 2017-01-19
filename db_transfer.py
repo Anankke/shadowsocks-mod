@@ -297,17 +297,17 @@ class DbTransfer(object):
 		for r in cur.fetchall():
 			id = int(r[0])
 			exist_id_list.append(id)
-			if r[0] not in self.detect_text_list:
+			if id not in self.detect_text_list:
 				d = {}
 				d['id'] = id
 				d['regex'] = r[1]
 				self.detect_text_list[id] = d
 				self.detect_text_ischanged = True
 			else:
-				if r[1] != self.detect_text_list[r[0]]['regex']:
+				if r[1] != self.detect_text_list[id]['regex']:
 					del self.detect_text_list[id]
 					d = {}
-					d['id'] = r[0]
+					d['id'] = id
 					d['regex'] = r[1]
 					self.detect_text_list[id] = d
 					self.detect_text_ischanged = True
@@ -581,7 +581,8 @@ class DbTransfer(object):
 				if cfgchange:
 					logging.info('db stop server at port [%s] reason: config changed!' % (port))
 					ServerPool.get_instance().cb_del_server(port)
-					del self.last_update_transfer[port]
+					if port in self.last_update_transfer:
+						del self.last_update_transfer[port]
 					new_servers[port] = (passwd, cfg)
 			elif ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
@@ -597,7 +598,8 @@ class DbTransfer(object):
 			else:
 				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
 				ServerPool.get_instance().cb_del_server(row['port'])
-				del self.last_update_transfer[port]
+				if port in self.last_update_transfer:
+					del self.last_update_transfer[port]
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
