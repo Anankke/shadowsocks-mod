@@ -665,7 +665,7 @@ class TCPRelayHandler(object):
             if is_error == False:
                 if 'detect_text_list' in self._server._config:
                     for id in self._server._config["detect_text_list"]:
-                        if common.match_regex(self._server._config["detect_text_list"][id]['regex'],common.to_str(data)):
+                        if common.match_regex(self._server._config["detect_text_list"][id]['regex'], common.to_str(data)):
                             if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
                                 if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.mu_detect_log_list[self._current_user_id]:
                                     self._server.mu_detect_log_list[self._current_user_id].append(id)
@@ -678,7 +678,7 @@ class TCPRelayHandler(object):
                                     self._client_address[0], self._client_address[1], self._server._listen_port))
                 if 'detect_hex_list' in self._server._config:
                     for id in self._server._config["detect_hex_list"]:
-                        if common.match_regex(self._server._config["detect_hex_list"][id]['regex'],binascii.hexlify(data)):
+                        if common.match_regex(self._server._config["detect_hex_list"][id]['regex'], binascii.hexlify(data)):
                             if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
                                 if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.mu_detect_log_list[self._current_user_id]:
                                     self._server.mu_detect_log_list[self._current_user_id].append(id)
@@ -943,16 +943,16 @@ class TCPRelayHandler(object):
                         if obfs_decode[2]:
                             host_name = ''
                             if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                                if self._server._config["obfs"] == "tls1.2_ticket_auth":
+                                if self._server._config["obfs"] == b"tls1.2_ticket_auth":
                                     if(len(obfs_decode) > 3):
-                                        host = obfs_decode[3] + ":" + str(self._server._listen_port)
+                                        host = obfs_decode[3].decode('utf-8') + ":" + str(self._server._listen_port)
                                         host_name = obfs_decode[3]
                             need_sendback = True
                         if obfs_decode[1]:
                             if self._server._config["is_multi_user"] == 1 and self._current_user_id == 0:
-                                if self._server._config["obfs"] == "http_simple" or self._server._config["obfs"] == "http_post":
+                                if self._server._config["obfs"] == b"http_simple" or self._server._config["obfs"] == b"http_post":
                                     if(len(obfs_decode) > 3):
-                                        host = obfs_decode[3]
+                                        host = obfs_decode[3].decode('utf-8')
                             if not self._protocol.obfs.server_info.recv_iv:
                                 iv_len = len(self._protocol.obfs.server_info.iv)
                                 self._protocol.obfs.server_info.recv_iv = obfs_decode[0][:iv_len]
