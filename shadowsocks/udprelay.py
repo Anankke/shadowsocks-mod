@@ -1710,6 +1710,12 @@ class UDPRelay(object):
             del self.mu_detect_log_list[id][:]
         self.is_cleaning_mu_detect_log_list = False
 
+    def reset_single_multi_user_traffic(self, user_id):
+        if user_id in self.mu_server_transfer_ul:
+            self.mu_server_transfer_ul[user_id] = 0
+        if user_id in self.mu_server_transfer_dl:
+            self.mu_server_transfer_dl[user_id] = 0
+
     def modify_multi_user_table(self, new_table):
         self.multi_user_table = new_table.copy()
         self.multi_user_host_table = {}
