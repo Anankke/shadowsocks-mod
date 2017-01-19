@@ -39,6 +39,7 @@ class DbTransfer(object):
 
 		self.relay_rule_list = {}
 		self.node_ip_list = []
+		self.mu_port_list = []
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -297,17 +298,17 @@ class DbTransfer(object):
 		for r in cur.fetchall():
 			id = int(r[0])
 			exist_id_list.append(id)
-			if r[0] not in self.detect_text_list:
+			if id not in self.detect_text_list:
 				d = {}
 				d['id'] = id
 				d['regex'] = r[1]
 				self.detect_text_list[id] = d
 				self.detect_text_ischanged = True
 			else:
-				if r[1] != self.detect_text_list[r[0]]['regex']:
+				if r[1] != self.detect_text_list[id]['regex']:
 					del self.detect_text_list[id]
 					d = {}
-					d['id'] = r[0]
+					d['id'] = id
 					d['regex'] = r[1]
 					self.detect_text_list[id] = d
 					self.detect_text_ischanged = True
@@ -437,6 +438,8 @@ class DbTransfer(object):
 					pass
 				i += 1
 
+		self.mu_port_list = []
+
 		for row in rows:
 			port = row['port']
 			user_id = row['id']
@@ -493,6 +496,7 @@ class DbTransfer(object):
 
 			if cfg['is_multi_user'] != 0:
 				cfg['users_table'] = md5_users.copy()
+				self.mu_port_list.append(port)
 
 			if self.is_relay:
 				temp_relay_rules = {}
@@ -579,38 +583,49 @@ class DbTransfer(object):
 							break;
 				#config changed
 				if cfgchange:
-					logging.info('db stop server at port [%s] reason: config changed!' % (port))
-					ServerPool.get_instance().cb_del_server(port)
-					del self.last_update_transfer[port]
+					self.del_server(port, "config changed")
 					new_servers[port] = (passwd, cfg)
 			elif ServerPool.get_instance().server_run_status(port) is False:
 				#new_servers[port] = passwd
-				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
-				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
-				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
-				ServerPool.get_instance().new_server(port, cfg)
-				self.last_update_transfer[port] = [ 0, 0 ]
+				self.new_server(port, passwd, cfg)
 
 		for row in last_rows:
 			if row['port'] in cur_servers:
 				pass
 			else:
-				logging.info('db stop server at port [%s] reason: port not exist' % (row['port']))
-				ServerPool.get_instance().cb_del_server(row['port'])
-				del self.last_update_transfer[port]
+				self.del_server(row['port'], "port not exist")
 
 		if len(new_servers) > 0:
 			from shadowsocks import eventloop
 			self.event.wait(eventloop.TIMEOUT_PRECISION + eventloop.TIMEOUT_PRECISION / 2)
 			for port in new_servers.keys():
 				passwd, cfg = new_servers[port]
-				protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
-				obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
-				logging.info('db start server at port [%s] pass [%s] protocol [%s] obfs [%s]' % (port, passwd, protocol, obfs))
-				ServerPool.get_instance().new_server(port, cfg)
-				self.last_update_transfer[port] = [ 0, 0 ]
+				self.new_server(port, passwd, cfg)
 
 		ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
+
+	def del_server(self, port, reason):
+		logging.info('db stop server at port [%s] reason: %s!' % (port, reason))
+		ServerPool.get_instance().cb_del_server(port)
+		if port in self.last_update_transfer:
+			del self.last_update_transfer[port]
+
+		for mu_user_port in self.mu_port_list:
+			if mu_user_port in ServerPool.get_instance().tcp_servers_pool:
+				ServerPool.get_instance().tcp_servers_pool[mu_user_port].reset_single_multi_user_traffic(self.port_uid_table[port])
+			if mu_user_port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+				ServerPool.get_instance().tcp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(self.port_uid_table[port])
+			if mu_user_port in ServerPool.get_instance().udp_servers_pool:
+				ServerPool.get_instance().udp_servers_pool[mu_user_port].reset_single_multi_user_traffic(self.port_uid_table[port])
+			if mu_user_port in ServerPool.get_instance().udp_ipv6_servers_pool:
+				ServerPool.get_instance().udp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(self.port_uid_table[port])
+
+	def new_server(self, port, passwd, cfg):
+		protocol = cfg.get('protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
+		method = cfg.get('method', ServerPool.get_instance().config.get('method', 'None'))
+		obfs = cfg.get('obfs', ServerPool.get_instance().config.get('obfs', 'plain'))
+		logging.info('db start server at port [%s] pass [%s] protocol [%s] method [%s] obfs [%s]' % (port, passwd, protocol, method, obfs))
+		ServerPool.get_instance().new_server(port, cfg)
 
 	@staticmethod
 	def del_servers():
