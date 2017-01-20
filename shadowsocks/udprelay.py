@@ -969,6 +969,8 @@ class UDPRelay(object):
         self.is_cleaning_connected_iplist = False
         self.is_cleaning_wrong_iplist = False
         self.is_cleaning_detect_log = False
+        self.is_cleaning_mu_detect_log_list = False
+        self.is_cleaning_mu_connected_iplist = False
 
         if 'users_table' in self._config:
             self.multi_user_table = self._config['users_table']
@@ -1704,7 +1706,7 @@ class UDPRelay(object):
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
 
-    def mu_connected_detect_log_list_clean(self):
+    def mu_detect_log_list_clean(self):
         self.is_cleaning_mu_detect_log_list = True
         for id in self.mu_detect_log_list:
             del self.mu_detect_log_list[id][:]

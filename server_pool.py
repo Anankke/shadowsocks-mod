@@ -552,6 +552,7 @@ class ServerPool(object):
 				for itemid in tempdict[id]:
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
+			self.tcp_servers_pool[port].mu_detect_log_list_clean()
 		if port in self.tcp_ipv6_servers_pool:
 			tempdict = self.tcp_ipv6_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
@@ -561,6 +562,7 @@ class ServerPool(object):
 				for itemid in tempdict[id]:
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
+			self.tcp_ipv6_servers_pool[port].mu_detect_log_list_clean()
 		if port in self.udp_servers_pool:
 			tempdict = self.udp_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
@@ -570,6 +572,7 @@ class ServerPool(object):
 				for itemid in tempdict[id]:
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
+			self.udp_servers_pool[port].mu_detect_log_list_clean()
 		if port in self.udp_ipv6_servers_pool:
 			tempdict = self.udp_ipv6_servers_pool[port].mu_detect_log_list.copy()
 			for id in tempdict:
@@ -579,6 +582,7 @@ class ServerPool(object):
 				for itemid in tempdict[id]:
 					tempret.append(itemid)
 				ret[self.uid_port_table[id]] = tempret[:]
+			self.udp_ipv6_servers_pool[port].mu_detect_log_list_clean()
 		return ret
 
 
