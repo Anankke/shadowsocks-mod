@@ -206,7 +206,7 @@ def auto_block_thread():
 			deny_file.write("\n")
 			deny_file.close()
 
-		except Exception:
+		except Exception as e:
 			shell.print_exception(e)
 			logging.error("Auto block thread error")
 
