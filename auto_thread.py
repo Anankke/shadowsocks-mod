@@ -92,6 +92,6 @@ def auto_thread():
 
 			conn.commit()
 			conn.close()
-		except Exception:
+		except Exception as e:
 			shell.print_exception(e)
 			logging.error("Auto exec thread error")
