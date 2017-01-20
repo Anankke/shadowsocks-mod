@@ -1570,7 +1570,7 @@ class TCPRelay(object):
         self.relay_rules = rules.copy()
         self.is_pushing_relay_rules = False
 
-    def mu_connected_detect_log_list_clean(self):
+    def mu_detect_log_list_clean(self):
         self.is_cleaning_mu_detect_log_list = True
         for id in self.mu_detect_log_list:
             del self.mu_detect_log_list[id][:]
