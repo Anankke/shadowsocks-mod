@@ -496,12 +496,12 @@ class DbTransfer(object):
 			if get_config().MULTI_THREAD == 0:
 				cfg['node_speedlimit'] = 0.00
 
-			cfg['detect_text_list'] = self.detect_text_list.copy()
-			cfg['detect_hex_list'] = self.detect_hex_list.copy()
-
 			if cfg['is_multi_user'] != 0:
 				cfg['users_table'] = md5_users.copy()
 				self.mu_port_list.append(port)
+				
+			cfg['detect_hex_list'] = self.detect_hex_list.copy()
+			cfg['detect_text_list'] = self.detect_text_list.copy()
 
 			if self.is_relay:
 				temp_relay_rules = {}
@@ -528,6 +528,20 @@ class DbTransfer(object):
 				cfgchange = False
 				if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
 					cfgchange = True
+				
+				if port in ServerPool.get_instance().tcp_servers_pool:
+					ServerPool.get_instance().tcp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+					ServerPool.get_instance().tcp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+				if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
+					ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+					ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+				if port in ServerPool.get_instance().udp_servers_pool:
+					ServerPool.get_instance().udp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+					ServerPool.get_instance().udp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+				if port in ServerPool.get_instance().udp_ipv6_servers_pool:
+					ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+					ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+				
 				if row['is_multi_user'] != 0:
 					if port in ServerPool.get_instance().tcp_servers_pool:
 						ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
