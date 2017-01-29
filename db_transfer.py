@@ -503,13 +503,13 @@ class DbTransfer(object):
 			cfg['detect_hex_list'] = self.detect_hex_list.copy()
 			cfg['detect_text_list'] = self.detect_text_list.copy()
 
-			if self.is_relay:
+			if self.is_relay and row['is_multi_user'] != 2:
 				temp_relay_rules = {}
 				for id in self.relay_rule_list:
-					if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] != 0) and self.relay_rule_list[id]['port'] == port:
+					if ((self.relay_rule_list[id]['user_id'] == user_id or self.relay_rule_list[id]['user_id'] == 0) or row['is_multi_user'] != 0) and (self.relay_rule_list[id]['port'] == 0 or self.relay_rule_list[id]['port'] == port):
 						has_higher_priority = False
 						for priority_id in self.relay_rule_list:
-							if ((self.relay_rule_list[priority_id]['priority'] > self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] != self.relay_rule_list[priority_id]['id']) and (self.relay_rule_list[priority_id]['priority'] == self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] > self.relay_rule_list[priority_id]['id'])) and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
+							if ((self.relay_rule_list[priority_id]['priority'] > self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] != self.relay_rule_list[priority_id]['id']) or (self.relay_rule_list[priority_id]['priority'] == self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] > self.relay_rule_list[priority_id]['id'])) and (self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] or self.relay_rule_list[priority_id]['user_id'] == 0) and (self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port'] or self.relay_rule_list[priority_id]['port'] == 0):
 								has_higher_priority = True
 								continue
 
@@ -552,13 +552,13 @@ class DbTransfer(object):
 					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
 						ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
 
-				if self.is_relay:
+				if self.is_relay and row['is_multi_user'] != 2:
 					temp_relay_rules = {}
 					for id in self.relay_rule_list:
-						if (self.relay_rule_list[id]['user_id'] == user_id or row['is_multi_user'] != 0) and self.relay_rule_list[id]['port'] == port:
+						if ((self.relay_rule_list[id]['user_id'] == user_id or self.relay_rule_list[id]['user_id'] == 0) or row['is_multi_user'] != 0) and (self.relay_rule_list[id]['port'] == 0 or self.relay_rule_list[id]['port'] == port):
 							has_higher_priority = False
 							for priority_id in self.relay_rule_list:
-								if self.relay_rule_list[priority_id]['priority'] >= self.relay_rule_list[id]['priority'] and self.relay_rule_list[priority_id]['id'] > self.relay_rule_list[id]['id'] and self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] and self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port']:
+								if ((self.relay_rule_list[priority_id]['priority'] > self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] != self.relay_rule_list[priority_id]['id']) or (self.relay_rule_list[priority_id]['priority'] == self.relay_rule_list[id]['priority'] and self.relay_rule_list[id]['id'] > self.relay_rule_list[priority_id]['id'])) and (self.relay_rule_list[id]['user_id'] == self.relay_rule_list[priority_id]['user_id'] or self.relay_rule_list[priority_id]['user_id'] == 0) and (self.relay_rule_list[id]['port'] == self.relay_rule_list[priority_id]['port'] or self.relay_rule_list[priority_id]['port'] == 0):
 									has_higher_priority = True
 									continue
 

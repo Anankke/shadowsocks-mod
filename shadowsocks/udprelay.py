@@ -1145,7 +1145,11 @@ class UDPRelay(object):
 
     def _get_relay_host(self, client_address, ogn_data):
         for id in self._relay_rules:
-            return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+            if self._relay_rules[id]['port'] == 0:
+                port = self._listen_port
+            else:
+                port = self._relay_rules[id]['port']
+            return (self._relay_rules[id]['dist_ip'], int(port))
         return (None, None)
 
     def _handel_normal_relay(self, client_address, ogn_data):
@@ -1157,18 +1161,27 @@ class UDPRelay(object):
         return data + ogn_data
 
     def _get_mu_relay_host(self, ogn_data, uid):
+        
+        if self._current_user_id == 0:
+            return (None, None)
+        
         for id in self._relay_rules:
-            if self._relay_rules[id]['user_id'] == uid:
+            if (self._relay_rules[id]['user_id'] == 0 and uid != 0) or self._relay_rules[id]['user_id'] == uid:
                 has_higher_priority = False
                 for priority_id in self._relay_rules:
-                    if ((self._relay_rules[priority_id]['priority'] > self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] != self._relay_rules[priority_id]['id']) and (self._relay_rules[priority_id]['priority'] == self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] > self._relay_rules[priority_id]['id'])) and self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id']:
+                    if ((self._relay_rules[priority_id]['priority'] > self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] != self._relay_rules[priority_id]['id']) or (self._relay_rules[priority_id]['priority'] == self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] > self._relay_rules[priority_id]['id'])) and (self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id'] or self._relay_rules[id]['user_id'] == 0 or self._relay_rules[priority_id]['user_id'] == 0):
                         has_higher_priority = True
                         continue
 
                 if has_higher_priority:
                     continue
+                
+                if self._relay_rules[id]['port'] == 0:
+                    port = self._listen_port
+                else:
+                    port = self._relay_rules[id]['port']
 
-                return (self._relay_rules[id]['dist_ip'], int(self._relay_rules[id]['port']))
+                return (self._relay_rules[id]['dist_ip'], int(port))
         return (None, None)
 
     def _handel_mu_relay(self, client_address, ogn_data, uid):
