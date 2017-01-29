@@ -143,9 +143,14 @@ class DbTransfer(object):
 					if str(realip).find(str(server_ip)) != -1:
 						continue
 
+					has_match_node = False
 					for node_ip in self.node_ip_list:
 						if str(realip).find(node_ip) != -1:
+							has_match_node = True
 							continue
+					
+					if has_match_node:
+						continue
 
 					cur = conn.cursor()
 					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")

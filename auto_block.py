@@ -88,6 +88,7 @@ def auto_block_thread():
 
 						continue
 
+					has_match_node = False
 					for node_ip in node_ip_list:
 						if str(ip).find(node_ip) != -1:
 							i = 0
@@ -104,7 +105,11 @@ def auto_block_thread():
 							deny_file.write("\n")
 							deny_file.close()
 
+							has_match_node = True
 							continue
+							
+					if has_match_node:
+						continue
 
 					cur = conn.cursor()
 					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
