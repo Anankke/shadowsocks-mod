@@ -721,8 +721,8 @@ class TCPRelayHandler(object):
                         return
                     connecttype, remote_addr, remote_port, header_length = header_result
 
-                    if common.to_str(addr[0]) not in self._server.connected_iplist and addr[0] != 0 and self._server.is_cleaning_connected_iplist == False:
-                        self._server.connected_iplist.append(common.to_str(addr[0]))
+                    if common.get_ip_md5(addr[0], self._server._config['ip_md5_salt']) not in self._server.connected_iplist and addr[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                        self._server.connected_iplist.append(common.get_ip_md5(addr[0], self._server._config['ip_md5_salt']))
 
                     if common.to_str(addr[0]) in self._server.wrong_iplist and addr[0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                         del self._server.wrong_iplist[common.to_str(addr[0])]
@@ -1034,7 +1034,7 @@ class UDPRelay(object):
         else:
             self._forbidden_portset = None
         if 'disconnect_ip' in config:
-            self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
+            self._disconnect_ipset = config['disconnect_ip'].split(',')
         else:
             self._disconnect_ipset = None
 
@@ -1256,8 +1256,8 @@ class UDPRelay(object):
                     if uid not in self.mu_detect_log_list:
                         self.mu_detect_log_list[uid] = []
 
-                    if r_addr not in self.mu_connected_iplist[uid]:
-                        self.mu_connected_iplist[uid].append(r_addr[0])
+                    if common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']) not in self.mu_connected_iplist[uid]:
+                        self.mu_connected_iplist[uid].append(common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']))
 
                 else:
                     raise Exception('This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
@@ -1388,8 +1388,8 @@ class UDPRelay(object):
             if self._config['is_multi_user'] != 2:
                 if common.to_str(r_addr[0]) in self.wrong_iplist and r_addr[0] != 0 and self.is_cleaning_wrong_iplist == False:
                     del self.wrong_iplist[common.to_str(r_addr[0])]
-                if common.to_str(r_addr[0]) not in self.connected_iplist and r_addr[0] != 0 and self.is_cleaning_connected_iplist == False:
-                    self.connected_iplist.append(common.to_str(r_addr[0]))
+                if common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']) not in self.connected_iplist and r_addr[0] != 0 and self.is_cleaning_connected_iplist == False:
+                    self.connected_iplist.append(common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']))
         else:
             client, client_uid = client_pair
 
@@ -1757,9 +1757,9 @@ class UDPRelay(object):
             else:
                 self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(""))
             if self.multi_user_table[id]['disconnect_ip'] != None:
-                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(self.multi_user_table[id]['disconnect_ip']))
+                self.multi_user_table[id]['_disconnect_ipset'] = str(self.multi_user_table[id]['disconnect_ip']).split(',')
             else:
-                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(str(""))
+                self.multi_user_table[id]['_disconnect_ipset'] = None
             if self.multi_user_table[id]['forbidden_port'] != None:
                 self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(self.multi_user_table[id]['forbidden_port']))
             else:
