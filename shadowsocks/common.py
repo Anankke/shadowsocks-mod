@@ -158,6 +158,10 @@ def get_md5(data):
     m1 = hashlib.md5(data.encode('utf-8'))
     return m1.hexdigest()
 
+def get_ip_md5(data, salt):
+    m1 = hashlib.md5(data.encode('utf-8') + salt.encode('utf-8'))
+    return m1.hexdigest()
+
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):
         socket.inet_pton = inet_pton

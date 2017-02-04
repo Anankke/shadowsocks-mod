@@ -504,6 +504,8 @@ class DbTransfer(object):
 				
 			cfg['detect_hex_list'] = self.detect_hex_list.copy()
 			cfg['detect_text_list'] = self.detect_text_list.copy()
+			
+			cfg['ip_md5_salt'] = get_config().IP_MD5_SALT
 
 			if self.is_relay and row['is_multi_user'] != 2 and row['protocol'] in self.relay_able_protocol_list:
 				temp_relay_rules = {}
