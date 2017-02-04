@@ -40,8 +40,6 @@ class DbTransfer(object):
 		self.relay_rule_list = {}
 		self.node_ip_list = []
 		self.mu_port_list = []
-		
-		self.relay_able_protocol_list = ['auth_aes128_md5', 'auth_aes128_sha1']
 
 	def update_all_user(self, dt_transfer):
 		import cymysql
@@ -507,7 +505,7 @@ class DbTransfer(object):
 			
 			cfg['ip_md5_salt'] = get_config().IP_MD5_SALT
 
-			if self.is_relay and row['is_multi_user'] != 2 and row['protocol'] in self.relay_able_protocol_list:
+			if self.is_relay and row['is_multi_user'] != 2:
 				temp_relay_rules = {}
 				for id in self.relay_rule_list:
 					if ((self.relay_rule_list[id]['user_id'] == user_id or self.relay_rule_list[id]['user_id'] == 0) or row['is_multi_user'] != 0) and (self.relay_rule_list[id]['port'] == 0 or self.relay_rule_list[id]['port'] == port):
@@ -556,7 +554,7 @@ class DbTransfer(object):
 					if port in ServerPool.get_instance().udp_ipv6_servers_pool:
 						ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
 
-				if self.is_relay and row['is_multi_user'] != 2 and row['protocol'] in self.relay_able_protocol_list:
+				if self.is_relay and row['is_multi_user'] != 2:
 					temp_relay_rules = {}
 					for id in self.relay_rule_list:
 						if ((self.relay_rule_list[id]['user_id'] == user_id or self.relay_rule_list[id]['user_id'] == 0) or row['is_multi_user'] != 0) and (self.relay_rule_list[id]['port'] == 0 or self.relay_rule_list[id]['port'] == port):
