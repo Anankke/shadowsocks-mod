@@ -1162,7 +1162,7 @@ class UDPRelay(object):
 
     def _get_mu_relay_host(self, ogn_data, uid):
 
-        if self._current_user_id == 0:
+        if uid == 0:
             return (None, None)
 
         for id in self._relay_rules:
