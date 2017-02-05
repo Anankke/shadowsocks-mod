@@ -979,7 +979,7 @@ class UDPRelay(object):
         self.mu_server_transfer_dl = {}
         self.mu_connected_iplist = {}
         self.mu_detect_log_list = {}
-        
+
         self.is_pushing_detect_hex_list = False
         self.is_pushing_detect_text_list = False
         self.detect_hex_list = self._config['detect_hex_list'].copy()
@@ -1161,10 +1161,10 @@ class UDPRelay(object):
         return data + ogn_data
 
     def _get_mu_relay_host(self, ogn_data, uid):
-        
+
         if self._current_user_id == 0:
             return (None, None)
-        
+
         for id in self._relay_rules:
             if (self._relay_rules[id]['user_id'] == 0 and uid != 0) or self._relay_rules[id]['user_id'] == uid:
                 has_higher_priority = False
@@ -1175,7 +1175,7 @@ class UDPRelay(object):
 
                 if has_higher_priority:
                     continue
-                
+
                 if self._relay_rules[id]['port'] == 0:
                     port = self._listen_port
                 else:
@@ -1735,7 +1735,7 @@ class UDPRelay(object):
             self.mu_server_transfer_ul[user_id] = 0
         if user_id in self.mu_server_transfer_dl:
             self.mu_server_transfer_dl[user_id] = 0
-    
+
     def modify_detect_text_list(self, new_list):
         self.is_pushing_detect_text_list = True
         self.detect_text_list = new_list.copy()

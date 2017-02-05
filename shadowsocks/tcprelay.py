@@ -476,10 +476,10 @@ class TCPRelayHandler(object):
         return data + ogn_data
 
     def _get_mu_relay_host(self, ogn_data):
-        
+
         if self._current_user_id == 0:
             return (None, None)
-        
+
         for id in self._relay_rules:
             if (self._relay_rules[id]['user_id'] == 0 and self._current_user_id != 0) or self._relay_rules[id]['user_id'] == self._current_user_id:
                 has_higher_priority = False
@@ -490,12 +490,12 @@ class TCPRelayHandler(object):
 
                 if has_higher_priority:
                     continue
-                
+
                 if self._relay_rules[id]['port'] == 0:
                     port = self._server._listen_port
                 else:
                     port = self._relay_rules[id]['port']
-                
+
                 return (self._relay_rules[id]['dist_ip'], int(port))
         return (None, None)
 
@@ -1295,7 +1295,7 @@ class TCPRelay(object):
 
         self.is_cleaning_detect_log = False
         self.is_cleaning_mu_detect_log_list = False
-        
+
         self.is_pushing_detect_hex_list = False
         self.is_pushing_detect_text_list = False
         self.detect_hex_list = self._config['detect_hex_list'].copy()
@@ -1611,7 +1611,7 @@ class TCPRelay(object):
             else:
                 self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(str(""))
             if self.multi_user_table[id]['disconnect_ip'] != None:
-                self.multi_user_table[id]['_disconnect_ipset'] = str(self.multi_user_table[id]['disconnect_ip']).str(",")
+                self.multi_user_table[id]['_disconnect_ipset'] = str(self.multi_user_table[id]['disconnect_ip']).split(",")
             else:
                 self.multi_user_table[id]['_disconnect_ipset'] = None
             if self.multi_user_table[id]['forbidden_port'] != None:
