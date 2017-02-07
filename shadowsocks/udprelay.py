@@ -1169,7 +1169,7 @@ class UDPRelay(object):
             if (self._relay_rules[id]['user_id'] == 0 and uid != 0) or self._relay_rules[id]['user_id'] == uid:
                 has_higher_priority = False
                 for priority_id in self._relay_rules:
-                    if ((self._relay_rules[priority_id]['priority'] > self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] != self._relay_rules[priority_id]['id']) or (self._relay_rules[priority_id]['priority'] == self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] > self._relay_rules[priority_id]['id'])) and (self._relay_rules[id]['user_id'] == self._relay_rules[priority_id]['user_id'] or self._relay_rules[id]['user_id'] == 0 or self._relay_rules[priority_id]['user_id'] == 0):
+                    if ((self._relay_rules[priority_id]['priority'] > self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] != self._relay_rules[priority_id]['id']) or (self._relay_rules[priority_id]['priority'] == self._relay_rules[id]['priority'] and self._relay_rules[id]['id'] > self._relay_rules[priority_id]['id'])) and (self._relay_rules[priority_id]['user_id'] == uid or self._relay_rules[priority_id]['user_id'] == 0):
                         has_higher_priority = True
                         continue
 
