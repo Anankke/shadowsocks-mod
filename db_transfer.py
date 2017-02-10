@@ -518,6 +518,9 @@ class DbTransfer(object):
 						if has_higher_priority:
 							continue
 
+						if self.relay_rule_list[id]['dist_ip'] == '0.0.0.0':
+							continue
+
 						temp_relay_rules[id] = self.relay_rule_list[id]
 
 				cfg['relay_rules'] = temp_relay_rules.copy()
@@ -565,6 +568,9 @@ class DbTransfer(object):
 									continue
 
 							if has_higher_priority:
+								continue
+
+							if self.relay_rule_list[id]['dist_ip'] == '0.0.0.0':
 								continue
 
 							temp_relay_rules[id] = self.relay_rule_list[id]
