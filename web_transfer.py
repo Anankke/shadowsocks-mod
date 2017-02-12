@@ -14,12 +14,13 @@ import importloader
 import platform
 import datetime
 import fcntl
+import webapi_utils
 
 
 switchrule = None
 db_instance = None
 
-class DbTransfer(object):
+class WebTransfer(object):
 	def __init__(self):
 		import threading
 		self.last_update_transfer = {}
@@ -30,10 +31,9 @@ class DbTransfer(object):
 		self.traffic_rate = 0.0
 
 		self.detect_text_list = {}
-		self.detect_text_ischanged = False
 
 		self.detect_hex_list = {}
-		self.detect_hex_ischanged = False
+
 		self.mu_only = False
 		self.is_relay = False
 
@@ -42,85 +42,37 @@ class DbTransfer(object):
 		self.mu_port_list = []
 
 	def update_all_user(self, dt_transfer):
-		import cymysql
 		update_transfer = {}
-
-		query_head = 'UPDATE user'
-		query_sub_when = ''
-		query_sub_when2 = ''
-		query_sub_in = None
 
 		alive_user_count = 0
 		bandwidth_thistime = 0
 
-		if get_config().MYSQL_SSL_ENABLE == 1:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
-		else:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
-
-		conn.autocommit(True)
-
+		data = []
 		for id in dt_transfer.keys():
 			if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
 				continue
-
-			query_sub_when += ' WHEN %s THEN u+%s' % (id, dt_transfer[id][0] * self.traffic_rate)
-			query_sub_when2 += ' WHEN %s THEN d+%s' % (id, dt_transfer[id][1] * self.traffic_rate)
+			data.append({'u': dt_transfer[id][0] * self.traffic_rate, 'd': dt_transfer[id][1] * self.traffic_rate, 'user_id': self.port_uid_table[id]})
 			update_transfer[id] = dt_transfer[id]
+		webapi_utils.postApi('users/traffic', {'node_id': get_config().NODE_ID}, {'data': data})
 
-			alive_user_count = alive_user_count + 1
-
-			cur = conn.cursor()
-			cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" + str(self.port_uid_table[id]) + "', '" + str(dt_transfer[id][0]) +"', '" + str(dt_transfer[id][1]) + "', '" + str(get_config().NODE_ID) + "', '" + str(self.traffic_rate) + "', '" + self.trafficShow((dt_transfer[id][0]+dt_transfer[id][1]) * self.traffic_rate) + "', unix_timestamp()); ")
-			cur.close()
-
-
-			bandwidth_thistime = bandwidth_thistime + ((dt_transfer[id][0] + dt_transfer[id][1]) * self.traffic_rate)
-
-			if query_sub_in is not None:
-				query_sub_in += ',%s' % id
-			else:
-				query_sub_in = '%s' % id
-		if query_sub_when != '':
-			query_sql = query_head + ' SET u = CASE port' + query_sub_when + \
-						' END, d = CASE port' + query_sub_when2 + \
-						' END, t = unix_timestamp() ' + \
-						' WHERE port IN (%s)' % query_sub_in
-
-			cur = conn.cursor()
-			cur.execute(query_sql)
-			cur.close()
-
-		cur = conn.cursor()
-		cur.execute("UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + str(bandwidth_thistime) + "' WHERE `id` = " +  str(get_config().NODE_ID) + " ; ")
-		cur.close()
-
-		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
-		cur.close()
-
-
-		cur = conn.cursor()
-		cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
-		cur.close()
+		webapi_utils.postApi('nodes/%d/info'%(get_config().NODE_ID), {'node_id': get_config().NODE_ID}, {'uptime': str(self.uptime()), 'load': str(self.load())})
 
 		online_iplist = ServerPool.get_instance().get_servers_iplist()
-		for id in online_iplist.keys():
+		data = []
+		for port in online_iplist.keys():
 			for ip in online_iplist[id]:
-				cur = conn.cursor()
-				cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
-				cur.close()
+				data.append({'ip': ip, 'user_id': self.port_uid_table[id]})
+		webapi_utils.postApi('users/aliveip', {'node_id': get_config().NODE_ID}, {'data': data})
 
 		detect_log_list = ServerPool.get_instance().get_servers_detect_log()
+		data = []
 		for port in detect_log_list.keys():
 			for rule_id in detect_log_list[port]:
-				cur = conn.cursor()
-				cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
-				cur.close()
+				data.append({'list_id': rule_id, 'user_id': self.port_uid_table[id]})
+		webapi_utils.postApi('users/detectlog', {'node_id': get_config().NODE_ID}, {'data': data})
 
 		deny_str = ""
+		data = []
 		if platform.system() == 'Linux' and get_config().ANTISSATTACK == 1 :
 			wrong_iplist = ServerPool.get_instance().get_servers_wrong()
 			server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
@@ -152,18 +104,8 @@ class DbTransfer(object):
 					if has_match_node:
 						continue
 
-					cur = conn.cursor()
-					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'")
-					rows = cur.fetchone()
-					cur.close()
-
-
-					if rows != None:
-						continue
 					if get_config().CLOUDSAFE == 1:
-						cur = conn.cursor()
-						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(get_config().NODE_ID) + "', '" + str(realip) + "', unix_timestamp())")
-						cur.close()
+						data.append({'ip': realip})
 					else:
 						if is_ipv6 == False:
 							os.system('route add -host %s gw 127.0.0.1' % str(realip))
@@ -178,7 +120,7 @@ class DbTransfer(object):
 					fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
 					deny_file.write(deny_str + "\n")
 					deny_file.close()
-		conn.close()
+			webapi_utils.postApi('func/block_ip', {'node_id': get_config().NODE_ID}, {'data': data})
 		return update_transfer
 
 	def uptime(self):
@@ -187,7 +129,7 @@ class DbTransfer(object):
 
 	def load(self):
 		import os
-		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0][:-2]
+		return os.popen("cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0]
 
 	def trafficShow(self,Traffic):
 		if Traffic < 1024 :
@@ -228,166 +170,65 @@ class DbTransfer(object):
 		self.update_all_user(dt_transfer)
 
 	def pull_db_all_user(self):
-		import cymysql
-		#数据库所有用户信息
-		try:
-			switchrule = importloader.load('switchrule')
-			keys = switchrule.getKeys()
-		except Exception as e:
-			keys = ['id' , 'port', 'u', 'd', 'transfer_enable', 'passwd', 'enable' ,'method','protocol','protocol_param','obfs','obfs_param','node_speedlimit','forbidden_ip','forbidden_port','disconnect_ip','is_multi_user']
 
-		if get_config().MYSQL_SSL_ENABLE == 1:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8',ssl={'ca':get_config().MYSQL_SSL_CA,'cert':get_config().MYSQL_SSL_CERT,'key':get_config().MYSQL_SSL_KEY})
-		else:
-			conn = cymysql.connect(host=get_config().MYSQL_HOST, port=get_config().MYSQL_PORT, user=get_config().MYSQL_USER,
-										passwd=get_config().MYSQL_PASS, db=get_config().MYSQL_DB, charset='utf8')
-		conn.autocommit(True)
-
-		cur = conn.cursor()
-
-		cur.execute("SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort` FROM ss_node where `id`='" + str(get_config().NODE_ID) + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)")
-		nodeinfo = cur.fetchone()
+		nodeinfo = webapi_utils.getApi('nodes/%d/info'%(get_config().NODE_ID))
 
 		if nodeinfo == None :
 			rows = []
-			cur.close()
-			conn.commit()
-			conn.close()
 			return rows
 
-		cur.close()
+		self.node_speedlimit = nodeinfo['node_speedlimit']
+		self.traffic_rate = nodeinfo['traffic_rate']
 
-		self.node_speedlimit = float(nodeinfo[2])
-		self.traffic_rate = float(nodeinfo[3])
+		self.mu_only = nodeinfo['mu_only']
 
-		self.mu_only = int(nodeinfo[4])
-
-		if nodeinfo[5] == 10:
+		if nodeinfo['sort'] == 10:
 			self.is_relay = True
 		else:
 			self.is_relay = False
 
-		if nodeinfo[0] == 0 :
-			node_group_sql = ""
-		else:
-			node_group_sql = "AND `node_group`=" + str(nodeinfo[0])
-
-		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys) + " FROM user WHERE `class`>="+ str(nodeinfo[1]) + " " + node_group_sql + " AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
-		rows = []
-		for r in cur.fetchall():
-			d = {}
-			for column in range(len(keys)):
-				d[keys[column]] = r[column]
-			rows.append(d)
-		cur.close()
+		data = webapi_utils.getApi('users', {'node_id': get_config().NODE_ID})
+		rows = data
 
 		#读取节点IP
 		#SELECT * FROM `ss_node`  where `node_ip` != ''
 		self.node_ip_list = []
-		cur = conn.cursor()
-		cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
-		for r in cur.fetchall():
-			self.node_ip_list.append(str(r[0]))
-		cur.close()
+		data = webapi_utils.getApi('nodes')
+		for node in data:
+			self.node_ip_list.append(node['node_ip'])
 
 		#读取审计规则,数据包匹配部分
-		keys_detect = ['id','regex']
 
-		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 1")
-
-		exist_id_list = []
-
-		for r in cur.fetchall():
-			id = int(r[0])
-			exist_id_list.append(id)
-			if id not in self.detect_text_list:
-				d = {}
-				d['id'] = id
-				d['regex'] = r[1]
-				self.detect_text_list[id] = d
-				self.detect_text_ischanged = True
+		self.detect_text_list = {}
+		self.detect_hex_list = {}
+		data = webapi_utils.getApi('func/detect_rules')
+		for rule in data:
+			d = {}
+			d['id'] = rule['id']
+			d['regex'] = str(rule['regex'])
+			logging.info("%d %s"%(d['id'], d['regex']))
+			if rule['type'] == 1:
+				self.detect_text_list[rule['id']] = d.copy()
 			else:
-				if r[1] != self.detect_text_list[id]['regex']:
-					del self.detect_text_list[id]
-					d = {}
-					d['id'] = id
-					d['regex'] = r[1]
-					self.detect_text_list[id] = d
-					self.detect_text_ischanged = True
-
-		deleted_id_list = []
-		for id in self.detect_text_list:
-			if id not in exist_id_list:
-				deleted_id_list.append(id)
-				self.detect_text_ischanged = True
-
-
-		for id in deleted_id_list:
-			del self.detect_text_list[id]
-
-		cur.close()
-
-
-		cur = conn.cursor()
-		cur.execute("SELECT " + ','.join(keys_detect) + " FROM detect_list where `type` = 2")
-
-		exist_id_list = []
-
-		for r in cur.fetchall():
-			id = int(r[0])
-			exist_id_list.append(id)
-			if r[0] not in self.detect_hex_list:
-				d = {}
-				d['id'] = id
-				d['regex'] = r[1]
-				self.detect_hex_list[id] = d
-				self.detect_hex_ischanged = True
-			else:
-				if r[1] != self.detect_hex_list[r[0]]['regex']:
-					del self.detect_hex_list[id]
-					d = {}
-					d['id'] = r[0]
-					d['regex'] = r[1]
-					self.detect_hex_list[id] = d
-					self.detect_hex_ischanged = True
-
-		deleted_id_list = []
-		for id in self.detect_hex_list:
-			if id not in exist_id_list:
-				deleted_id_list.append(id)
-				self.detect_hex_ischanged = True
-
-
-		for id in deleted_id_list:
-			del self.detect_hex_list[id]
-
-		cur.close()
+				self.detect_hex_list[rule['id']] = d.copy()
 
 		#读取中转规则，如果是中转节点的话
 
 		if self.is_relay:
 			self.relay_rule_list = {}
 
-			keys_detect = ['id', 'user_id', 'dist_ip', 'port', 'priority']
-
-			cur = conn.cursor()
-			cur.execute("SELECT " + ','.join(keys_detect) + " FROM relay where `source_node_id` = 0 or `source_node_id` = " + str(get_config().NODE_ID))
-
-			for r in cur.fetchall():
+			data = webapi_utils.getApi('func/relay_rules', {'node_id': get_config().NODE_ID})
+			for rule in data:
+				for key in rule:
+					logging.info("%s %s"%(key, rule[key]))
 				d = {}
-				d['id'] = int(r[0])
-				d['user_id'] = int(r[1])
-				d['dist_ip'] = str(r[2])
-				d['port'] = int(r[3])
-				d['priority'] = int(r[4])
-				self.relay_rule_list[d['id']] = d
+				d['id'] = rule['id']
+				d['user_id'] = rule['user_id']
+				d['dist_ip'] = str(rule['dist_ip'])
+				d['port'] = rule['port']
+				d['priority'] = rule['priority']
+				self.relay_rule_list[d['id']] = d.copy()
 
-			cur.close()
-
-		conn.close()
 		return rows
 
 	def cmp(self, val1, val2):
@@ -531,8 +372,6 @@ class DbTransfer(object):
 
 			if ServerPool.get_instance().server_is_run(port) > 0:
 				cfgchange = False
-				if self.detect_text_ischanged == True or self.detect_hex_ischanged == True:
-					cfgchange = True
 
 				if port in ServerPool.get_instance().tcp_servers_pool:
 					ServerPool.get_instance().tcp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
@@ -688,8 +527,6 @@ class DbTransfer(object):
 					db_instance.push_db_all_user()
 					rows = db_instance.pull_db_all_user()
 					db_instance.del_server_out_of_bound_safe(last_rows, rows)
-					db_instance.detect_text_ischanged = False
-					db_instance.detect_hex_ischanged = False
 					last_rows = rows
 				except Exception as e:
 					trace = traceback.format_exc()

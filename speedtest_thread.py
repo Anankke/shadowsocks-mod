@@ -9,7 +9,6 @@ import configloader
 import importloader
 from speedtest import speedtest
 from shadowsocks import common, shell
-import cymysql
 
 
 def speedtest_thread():
@@ -75,17 +74,22 @@ def speedtest_thread():
 			speedtest_cm.upload()
 			CMUpSpeed = str(round((results_cm.upload / 1000 / 1000), 2)) + " Mbit/s"
 
-			if configloader.get_config().MYSQL_SSL_ENABLE == 1:
-				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
-											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8',ssl={'ca':configloader.get_config().MYSQL_SSL_CA,'cert':configloader.get_config().MYSQL_SSL_CERT,'key':configloader.get_config().MYSQL_SSL_KEY})
+			if configloader.get_config().API_INTERFACE == 'modwebapi':
+				import webapi_utils
+				webapi_utils.postApi('func/speedtest', {'node_id': configloader.get_config().NODE_ID}, {'data': [{'telecomping': CTPing, 'telecomeupload': CTUpSpeed, 'telecomedownload': CTDLSpeed, 'unicomping': CUPing, 'unicomupload': CUUpSpeed, 'unicomdownload': CUDLSpeed, 'cmccping': CMPing, 'cmccupload': CMUpSpeed, 'cmccdownload': CMDLSpeed}]})
 			else:
-				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
-											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
-			conn.autocommit(True)
-			cur = conn.cursor()
-			cur.execute("INSERT INTO `speedtest` (`id`, `nodeid`, `datetime`, `telecomping`, `telecomeupload`, `telecomedownload`, `unicomping`, `unicomupload`, `unicomdownload`, `cmccping`, `cmccupload`, `cmccdownload`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', unix_timestamp(), '" + CTPing + "', '" + CTDLSpeed + "', '" + CTUpSpeed + "', '" + CUPing + "', '" + CUDLSpeed + "', '" + CUUpSpeed + "', '" + CMPing + "', '" + CMDLSpeed + "', '" + CMUpSpeed + "')")
-			cur.close()
-			conn.close()
+				import cymysql
+				if configloader.get_config().MYSQL_SSL_ENABLE == 1:
+					conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
+												passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8',ssl={'ca':configloader.get_config().MYSQL_SSL_CA,'cert':configloader.get_config().MYSQL_SSL_CERT,'key':configloader.get_config().MYSQL_SSL_KEY})
+				else:
+					conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
+												passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
+				conn.autocommit(True)
+				cur = conn.cursor()
+				cur.execute("INSERT INTO `speedtest` (`id`, `nodeid`, `datetime`, `telecomping`, `telecomeupload`, `telecomedownload`, `unicomping`, `unicomupload`, `unicomdownload`, `cmccping`, `cmccupload`, `cmccdownload`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', unix_timestamp(), '" + CTPing + "', '" + CTUpSpeed + "', '" + CTDLSpeed + "', '" + CUPing + "', '" + CUUpSpeed + "', '" + CUDLSpeed + "', '" + CMPing + "', '" + CMUpSpeed + "', '" + CMDLSpeed + "')")
+				cur.close()
+				conn.close()
 
 			logging.info("Speedtest finished")
 		except Exception as e:

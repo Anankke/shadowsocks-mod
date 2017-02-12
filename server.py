@@ -26,6 +26,7 @@ if __name__ == '__main__':
 
 import server_pool
 import db_transfer
+import web_transfer
 import speedtest_thread
 import auto_thread
 import auto_block
@@ -48,8 +49,8 @@ def main():
 	if False:
 		db_transfer.DbTransfer.thread_db()
 	else:
-		if get_config().API_INTERFACE == 'mudbjson':
-			threadMain = MainThread(db_transfer.MuJsonTransfer)
+		if get_config().API_INTERFACE == 'modwebapi':
+			threadMain = MainThread(web_transfer.WebTransfer)
 		else:
 			threadMain = MainThread(db_transfer.DbTransfer)
 		threadMain.start()

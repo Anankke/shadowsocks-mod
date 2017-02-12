@@ -7,8 +7,6 @@ import sys
 import os
 import configloader
 import importloader
-import gnupg
-import cymysql
 import socket
 import re
 import platform
@@ -40,22 +38,35 @@ def auto_block_thread():
 		try:
 			server_ip = socket.gethostbyname(configloader.get_config().MYSQL_HOST)
 
-			if configloader.get_config().MYSQL_SSL_ENABLE == 1:
-				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
-											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8',ssl={'ca':configloader.get_config().MYSQL_SSL_CA,'cert':configloader.get_config().MYSQL_SSL_CERT,'key':configloader.get_config().MYSQL_SSL_KEY})
-			else:
-				conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
-											passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
-			conn.autocommit(True)
+			if configloader.get_config().API_INTERFACE == 'modwebapi':
+				import webapi_utils
+				data = webapi_utils.getApi('users', {'node_id': configloader.get_config().NODE_ID})
+				rows = data
 
-			#读取节点IP
-			#SELECT * FROM `ss_node`  where `node_ip` != ''
-			node_ip_list = []
-			cur = conn.cursor()
-			cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
-			for r in cur.fetchall():
-				node_ip_list.append(str(r[0]))
-			cur.close()
+				#读取节点IP
+				#SELECT * FROM `ss_node`  where `node_ip` != ''
+				node_ip_list = []
+				data = webapi_utils.getApi('nodes')
+				for node in data:
+					node_ip_list.append(node['node_ip'])
+			else:
+				import cymysql
+				if configloader.get_config().MYSQL_SSL_ENABLE == 1:
+					conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
+												passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8',ssl={'ca':configloader.get_config().MYSQL_SSL_CA,'cert':configloader.get_config().MYSQL_SSL_CERT,'key':configloader.get_config().MYSQL_SSL_KEY})
+				else:
+					conn = cymysql.connect(host=configloader.get_config().MYSQL_HOST, port=configloader.get_config().MYSQL_PORT, user=configloader.get_config().MYSQL_USER,
+												passwd=configloader.get_config().MYSQL_PASS, db=configloader.get_config().MYSQL_DB, charset='utf8')
+				conn.autocommit(True)
+
+				#读取节点IP
+				#SELECT * FROM `ss_node`  where `node_ip` != ''
+				node_ip_list = []
+				cur = conn.cursor()
+				cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
+				for r in cur.fetchall():
+					node_ip_list.append(str(r[0]))
+				cur.close()
 
 
 			deny_file = open('/etc/hosts.deny')
@@ -67,6 +78,7 @@ def auto_block_thread():
 			real_deny_list = deny_lines[start_line:]
 
 			denyed_ip_list = []
+			data = []
 			for line in real_deny_list:
 				if get_ip(line) and line.find('#') != 0:
 					ip = get_ip(line)
@@ -107,37 +119,51 @@ def auto_block_thread():
 
 							has_match_node = True
 							continue
-							
+
 					if has_match_node:
 						continue
 
-					cur = conn.cursor()
-					cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
-					rows = cur.fetchone()
-					cur.close()
+					if configloader.get_config().API_INTERFACE == 'modwebapi':
+						data.append({'ip': ip})
+						logging.info("Block ip:" + str(ip))
+					else:
+						cur = conn.cursor()
+						cur.execute("SELECT * FROM `blockip` where `ip` = '" + str(ip) + "'")
+						rows = cur.fetchone()
+						cur.close()
 
-					if rows != None:
-						continue
+						if rows != None:
+							continue
 
-					cur = conn.cursor()
-					cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
-					cur.close()
+						cur = conn.cursor()
+						cur.execute("INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + str(configloader.get_config().NODE_ID) + "', '" + str(ip) + "', unix_timestamp())")
+						cur.close()
 
-					logging.info("Block ip:" + str(ip))
+						logging.info("Block ip:" + str(ip))
 
-					denyed_ip_list.append(ip)
+						denyed_ip_list.append(ip)
 
-			cur = conn.cursor()
-			cur.execute("SELECT * FROM `blockip` where `datetime`>unix_timestamp()-60")
-			rows = cur.fetchall()
-			cur.close()
+			if configloader.get_config().API_INTERFACE == 'modwebapi':
+				webapi_utils.postApi('func/block_ip', {'node_id': configloader.get_config().NODE_ID}, {'data': data})
+
+			if configloader.get_config().API_INTERFACE == 'modwebapi':
+				rows = webapi_utils.getApi('func/block_ip')
+			else:
+				cur = conn.cursor()
+				cur.execute("SELECT * FROM `blockip` where `datetime`>unix_timestamp()-60")
+				rows = cur.fetchall()
+				cur.close()
 
 			deny_str = "";
 			deny_str_at = "";
 
 			for row in rows:
-				node = row[1]
-				ip = get_ip(row[2])
+				if configloader.get_config().API_INTERFACE == 'modwebapi':
+					node = row['nodeid']
+					ip = get_ip(row['ip'])
+				else:
+					node = row[1]
+					ip = get_ip(row[2])
 
 				if ip != None:
 
@@ -176,13 +202,14 @@ def auto_block_thread():
 
 
 
-
-			cur = conn.cursor()
-			cur.execute("SELECT * FROM `unblockip` where `datetime`>unix_timestamp()-60")
-			rows = cur.fetchall()
-			cur.close()
-
-			conn.close()
+			if configloader.get_config().API_INTERFACE == 'modwebapi':
+				rows = webapi_utils.getApi('func/unblock_ip')
+			else:
+				cur = conn.cursor()
+				cur.execute("SELECT * FROM `unblockip` where `datetime`>unix_timestamp()-60")
+				rows = cur.fetchall()
+				cur.close()
+				conn.close()
 
 			deny_file = open('/etc/hosts.deny')
 			fcntl.flock(deny_file.fileno(),fcntl.LOCK_EX)
@@ -193,7 +220,10 @@ def auto_block_thread():
 
 			for line in deny_lines:
 				for row in rows:
-					ip = str(row[1])
+					if configloader.get_config().API_INTERFACE == 'modwebapi':
+						ip = str(row['ip'])
+					else:
+						ip = str(row[1])
 					if line.find(ip) != -1:
 						del deny_lines[i]
 						if common.is_ip(ip) != False:
