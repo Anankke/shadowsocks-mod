@@ -27,6 +27,8 @@ import binascii
 import traceback
 import random
 import platform
+import threading
+from collections import deque
 
 from shadowsocks import encrypt, obfs, eventloop, shell, common
 from shadowsocks.common import pre_parse_header, parse_header, IPNetwork, PortRange
@@ -92,6 +94,30 @@ WAIT_STATUS_READWRITING = WAIT_STATUS_READING | WAIT_STATUS_WRITING
 BUF_SIZE = 32 * 1024
 UDP_MAX_BUF_SIZE = 65536
 
+class SpeedTester(object):
+    def __init__(self, max_speed = 0):
+        self.max_speed = max_speed
+        self.timeout = 3
+        self._cache = deque()
+        self.sum_len = 0
+
+    def add(self, data_len):
+        if self.max_speed > 0:
+            self._cache.append((time.time(), data_len))
+            self.sum_len += data_len
+
+    def isExceed(self):
+        if self.max_speed > 0:
+            if self.sum_len > 0:
+                if self._cache[0][0] + self.timeout < time.time():
+                    self.sum_len -= self._cache[0][1]
+                    self._cache.popleft()
+            if self.sum_len > 0:
+                t = max(time.time() - self._cache[0][0], 0.1)
+                speed = (self.sum_len - self._cache[0][1]) / (time.time() - self._cache[0][0])
+                return speed >= self.max_speed
+        return False
+
 class TCPRelayHandler(object):
     def __init__(self, server, fd_to_handlers, loop, local_sock, config,
                  dns_resolver, is_local):
@@ -107,9 +133,6 @@ class TCPRelayHandler(object):
         self._current_user_id = 0
         self._relay_rules = server.relay_rules.copy()
         self._is_relay = False
-
-        self._bytesSent = 0
-        self._timeCreated = time.time()
 
         self._client_address = local_sock.getpeername()[:2]
         self._accept_address = local_sock.getsockname()[:2]
@@ -196,6 +219,8 @@ class TCPRelayHandler(object):
         self._update_activity()
         self._server.add_connection(1)
         self._server.stat_add(self._client_address[0], 1)
+        self.speed_tester_u = SpeedTester(self._server.bandwidth)
+        self.speed_tester_d = SpeedTester(self._server.bandwidth)
 
     def __hash__(self):
         # default __hash__ is id / 16
@@ -273,15 +298,6 @@ class TCPRelayHandler(object):
         if not sock:
             return False
         logging.debug("_write_to_sock %s %s %s" % (self._remote_sock, sock, self._remote_udp))
-
-
-        if self._server.bandwidth > 0:
-            now = time.time()
-            connectionDuration = now - self._timeCreated
-            self._bytesSent += len(data)
-            requiredDuration = self._bytesSent / self._server.bandwidth
-            time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-
 
         uncomplete = False
         if self._remote_udp and sock == self._remote_sock:
@@ -947,6 +963,8 @@ class TCPRelayHandler(object):
             if not data:
                 self.destroy()
                 return
+
+            self.speed_tester_u.add(len(data))
             ogn_data = data
 
             is_relay = self.is_match_relay_rule_mu()
@@ -1099,6 +1117,8 @@ class TCPRelayHandler(object):
         if not data:
             self.destroy()
             return
+
+        self.speed_tester_d.add(len(data))
         if self._encryptor is not None:
             if self._is_local:
                 try:
@@ -1180,37 +1200,45 @@ class TCPRelayHandler(object):
 
     def handle_event(self, sock, event):
         # handle all events in this handler and dispatch them to methods
-        self._bytesSent = 0
-        self._timeCreated = time.time()
-
+        handle = False
         if self._stage == STAGE_DESTROYED:
             logging.debug('ignore handle_event: destroyed')
-            return
+            return True
         # order is important
         if sock == self._remote_sock or sock == self._remote_sock_v6:
             if event & eventloop.POLL_ERR:
+                handle = True
                 self._on_remote_error()
                 if self._stage == STAGE_DESTROYED:
-                    return
+                    return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                self._on_remote_read(sock == self._remote_sock)
-                if self._stage == STAGE_DESTROYED:
-                    return
+                if not self.speed_tester_d.isExceed():
+                    handle = True
+                    self._on_remote_read(sock == self._remote_sock)
+                    if self._stage == STAGE_DESTROYED:
+                        return True
             if event & eventloop.POLL_OUT:
+                handle = True
                 self._on_remote_write()
         elif sock == self._local_sock:
             if event & eventloop.POLL_ERR:
+                handle = True
                 self._on_local_error()
                 if self._stage == STAGE_DESTROYED:
-                    return
+                    return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                self._on_local_read()
-                if self._stage == STAGE_DESTROYED:
-                    return
+                if not self.speed_tester_u.isExceed():
+                    handle = True
+                    self._on_local_read()
+                    if self._stage == STAGE_DESTROYED:
+                        return True
             if event & eventloop.POLL_OUT:
+                handle = True
                 self._on_local_write()
         else:
             logging.warn('unknown socket from %s:%d' % (self._client_address[0], self._client_address[1]))
+
+        return handle
 
     def _log_error(self, e):
         logging.error('%s when handling connection from %s:%d' %
@@ -1340,8 +1368,6 @@ class TCPRelay(object):
                 else:
                     self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(""))
 
-
-        self.latency = 0
         if 'node_speedlimit' not in config:
             self.bandwidth = 0
         else:
