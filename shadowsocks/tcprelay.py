@@ -678,7 +678,7 @@ class TCPRelayHandler(object):
             if is_error == False:
                 if not self._server.is_pushing_detect_text_list:
                     for id in self._server.detect_text_list:
-                        if common.match_regex(self._server.detect_text_list[id]['regex'], common.to_str(data)):
+                        if common.match_regex(self._server.detect_text_list[id]['regex'], str(data)):
                             if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
                                 if self._server.is_cleaning_mu_detect_log_list == False and id not in self._server.mu_detect_log_list[self._current_user_id]:
                                     self._server.mu_detect_log_list[self._current_user_id].append(id)
