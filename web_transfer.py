@@ -218,8 +218,6 @@ class WebTransfer(object):
 
 			data = webapi_utils.getApi('func/relay_rules', {'node_id': get_config().NODE_ID})
 			for rule in data:
-				for key in rule:
-					logging.info("%s %s"%(key, rule[key]))
 				d = {}
 				d['id'] = rule['id']
 				d['user_id'] = rule['user_id']
