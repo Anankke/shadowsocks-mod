@@ -963,6 +963,9 @@ class TCPRelayHandler(object):
                 return
 
             self._server.speed_tester_u.add(len(data))
+            if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
+                self._server.mu_speed_tester_u[self._current_user_id].add(len(data))
+
             ogn_data = data
 
             is_relay = self.is_match_relay_rule_mu()
@@ -1117,6 +1120,9 @@ class TCPRelayHandler(object):
             return
 
         self._server.speed_tester_d.add(len(data))
+        if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
+            self._server.mu_speed_tester_d[self._current_user_id].add(len(data))
+
         if self._encryptor is not None:
             if self._is_local:
                 try:
@@ -1210,7 +1216,13 @@ class TCPRelayHandler(object):
                 if self._stage == STAGE_DESTROYED:
                     return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                if not self._server.speed_tester_d.isExceed():
+                is_exceed = False
+                if self._server.speed_tester_d.isExceed():
+                    is_exceed = True
+                if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
+                    if self._server.mu_speed_tester_d[self._current_user_id].isExceed():
+                        is_exceed = True
+                if not is_exceed:
                     handle = True
                     self._on_remote_read(sock == self._remote_sock)
                     if self._stage == STAGE_DESTROYED:
@@ -1225,7 +1237,13 @@ class TCPRelayHandler(object):
                 if self._stage == STAGE_DESTROYED:
                     return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                if not self._server.speed_tester_u.isExceed():
+                is_exceed = False
+                if self._server.speed_tester_u.isExceed():
+                    is_exceed = True
+                if self._current_user_id != 0 and self._server._config["is_multi_user"] != 0:
+                    if self._server.mu_speed_tester_u[self._current_user_id].isExceed():
+                        is_exceed = True
+                if not is_exceed:
                     handle = True
                     self._on_local_read()
                     if self._stage == STAGE_DESTROYED:
@@ -1321,13 +1339,25 @@ class TCPRelay(object):
         self.detect_log_list = []
         self.mu_detect_log_list = {}
 
+        self.mu_speed_tester_u = {}
+        self.mu_speed_tester_d = {}
+
         self.relay_rules = self._config['relay_rules'].copy();
         self.is_pushing_relay_rules = False
         if 'users_table' in self._config:
             self.multi_user_host_table = {}
             self.multi_user_table = self._config['users_table']
+
             for id in self.multi_user_table:
                 self.multi_user_host_table[common.get_mu_host(id, self.multi_user_table[id]['md5'])] = id
+
+                if 'node_speedlimit' not in self.multi_user_table[id]:
+                    bandwidth = 0
+                else:
+                    bandwidth = float(self.multi_user_table[id]['node_speedlimit']) * 128
+
+                self.mu_speed_tester_u[id] = SpeedTester(bandwidth)
+                self.mu_speed_tester_d[id] = SpeedTester(bandwidth)
 
         self.is_cleaning_detect_log = False
         self.is_cleaning_mu_detect_log_list = False
@@ -1655,6 +1685,14 @@ class TCPRelay(object):
                 self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(self.multi_user_table[id]['forbidden_port']))
             else:
                 self.multi_user_table[id]['_forbidden_portset'] = PortRange(str(""))
+
+            if 'node_speedlimit' not in self.multi_user_table[id]:
+                bandwidth = 0
+            else:
+                bandwidth = float(self.multi_user_table[id]['node_speedlimit']) * 128
+
+            self.mu_speed_tester_u[id] = SpeedTester(bandwidth)
+            self.mu_speed_tester_d[id] = SpeedTester(bandwidth)
 
     def modify_detect_text_list(self, new_list):
         self.is_pushing_detect_text_list = True
