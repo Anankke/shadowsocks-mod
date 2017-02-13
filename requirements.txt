@@ -1,3 +1,5 @@
 cymysql==0.8.9
 requests==2.11.1
 pyOpenSSL==16.2.0
+ndg-httpsclient==0.4.2
+pyasn1==0.2.2
