@@ -206,7 +206,6 @@ class WebTransfer(object):
 			d = {}
 			d['id'] = rule['id']
 			d['regex'] = str(rule['regex'])
-			logging.info("%d %s"%(d['id'], d['regex']))
 			if rule['type'] == 1:
 				self.detect_text_list[rule['id']] = d.copy()
 			else:
@@ -524,6 +523,10 @@ class WebTransfer(object):
 			while True:
 				load_config()
 				try:
+					ping = webapi_utils.getApi('func/ping')
+					if ping == None:
+						logging.error('something wrong with your http api, please check your config and website status and try again later.')
+						continue
 					db_instance.push_db_all_user()
 					rows = db_instance.pull_db_all_user()
 					db_instance.del_server_out_of_bound_safe(last_rows, rows)
