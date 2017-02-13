@@ -60,8 +60,8 @@ class WebTransfer(object):
 		online_iplist = ServerPool.get_instance().get_servers_iplist()
 		data = []
 		for port in online_iplist.keys():
-			for ip in online_iplist[id]:
-				data.append({'ip': ip, 'user_id': self.port_uid_table[id]})
+			for ip in online_iplist[port]:
+				data.append({'ip': ip, 'user_id': self.port_uid_table[port]})
 		webapi_utils.postApi('users/aliveip', {'node_id': get_config().NODE_ID}, {'data': data})
 
 		detect_log_list = ServerPool.get_instance().get_servers_detect_log()
