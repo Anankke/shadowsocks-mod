@@ -7,7 +7,6 @@ SPEEDTEST = 6
 CLOUDSAFE = 1
 ANTISSATTACK = 0
 AUTOEXEC = 0
-MULTI_THREAD = 0
 
 MU_SUFFIX = 'zhaoj.in'
 MU_REGEX = '%5m%id.%suffix'

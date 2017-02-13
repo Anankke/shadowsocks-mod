@@ -283,9 +283,6 @@ class TCPRelayHandler(object):
         self._dns_resolver = dns_resolver
         self._local_id = local_id
 
-        self._bytesSent = 0
-        self._timeCreated = time.time()
-
         self._is_local = is_local
         self._stage = STAGE_INIT
         self._password = config['password']
@@ -385,14 +382,6 @@ class TCPRelayHandler(object):
         # and update the stream to wait for writing
         if not data or not sock:
             return False
-
-        if float(self._server.bandwidth) > 0:
-            now = time.time()
-            connectionDuration = now - self._timeCreated
-            self._bytesSent += len(data)
-            requiredDuration = self._bytesSent / self._server.bandwidth
-            time.sleep(max(requiredDuration - connectionDuration, self._server.latency))
-
 
         uncomplete = False
         retry = 0
@@ -833,8 +822,6 @@ class TCPRelayHandler(object):
                 self.handle_stream_sync_status(addr, cmd, request_id, pack_id, max_send_id, data)
 
     def handle_event(self, sock, event):
-        self._bytesSent = 0
-        self._timeCreated = time.time()
 
         # handle all events in this handler and dispatch them to methods
         handle = False
@@ -1018,12 +1005,6 @@ class UDPRelay(object):
         self._fd_to_handlers = {}
         self._reqid_to_hd = {}
         self._data_to_write_to_server_socket = []
-
-        self.latency = 0
-        if 'node_speedlimit' not in config:
-            self.bandwidth = 0
-        else:
-            self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
 
         self._timeouts = []  # a list for all the handlers
         # we trim the timeouts once a while

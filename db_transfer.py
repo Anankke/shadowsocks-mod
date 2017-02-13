@@ -493,9 +493,6 @@ class DbTransfer(object):
 				logging.error('more than one user use the same port [%s]' % (port,))
 				continue
 
-			if get_config().MULTI_THREAD == 0:
-				cfg['node_speedlimit'] = 0.00
-
 			if cfg['is_multi_user'] != 0:
 				cfg['users_table'] = md5_users.copy()
 				self.mu_port_list.append(port)

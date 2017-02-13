@@ -1371,7 +1371,7 @@ class TCPRelay(object):
         if 'node_speedlimit' not in config:
             self.bandwidth = 0
         else:
-            self.bandwidth = float(config['node_speedlimit']) * 1024 * 1024 / 8
+            self.bandwidth = float(config['node_speedlimit']) * 128
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self.obfs_data = obfs.obfs(config['obfs']).init_data()
