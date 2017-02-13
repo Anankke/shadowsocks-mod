@@ -219,8 +219,6 @@ class TCPRelayHandler(object):
         self._update_activity()
         self._server.add_connection(1)
         self._server.stat_add(self._client_address[0], 1)
-        self.speed_tester_u = SpeedTester(self._server.bandwidth)
-        self.speed_tester_d = SpeedTester(self._server.bandwidth)
 
     def __hash__(self):
         # default __hash__ is id / 16
@@ -964,7 +962,7 @@ class TCPRelayHandler(object):
                 self.destroy()
                 return
 
-            self.speed_tester_u.add(len(data))
+            self._server.speed_tester_u.add(len(data))
             ogn_data = data
 
             is_relay = self.is_match_relay_rule_mu()
@@ -1118,7 +1116,7 @@ class TCPRelayHandler(object):
             self.destroy()
             return
 
-        self.speed_tester_d.add(len(data))
+        self._server.speed_tester_d.add(len(data))
         if self._encryptor is not None:
             if self._is_local:
                 try:
@@ -1212,7 +1210,7 @@ class TCPRelayHandler(object):
                 if self._stage == STAGE_DESTROYED:
                     return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                if not self.speed_tester_d.isExceed():
+                if not self._server.speed_tester_d.isExceed():
                     handle = True
                     self._on_remote_read(sock == self._remote_sock)
                     if self._stage == STAGE_DESTROYED:
@@ -1227,7 +1225,7 @@ class TCPRelayHandler(object):
                 if self._stage == STAGE_DESTROYED:
                     return True
             if event & (eventloop.POLL_IN | eventloop.POLL_HUP):
-                if not self.speed_tester_u.isExceed():
+                if not self._server.speed_tester_u.isExceed():
                     handle = True
                     self._on_local_read()
                     if self._stage == STAGE_DESTROYED:
@@ -1372,6 +1370,9 @@ class TCPRelay(object):
             self.bandwidth = 0
         else:
             self.bandwidth = float(config['node_speedlimit']) * 128
+
+        self.speed_tester_u = SpeedTester(self.bandwidth)
+        self.speed_tester_d = SpeedTester(self.bandwidth)
 
         self.protocol_data = obfs.obfs(config['protocol']).init_data()
         self.obfs_data = obfs.obfs(config['obfs']).init_data()
