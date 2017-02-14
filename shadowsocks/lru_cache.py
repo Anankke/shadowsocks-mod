@@ -23,8 +23,13 @@ import logging
 import time
 
 if __name__ == '__main__':
-    import os, sys, inspect
-    file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
+    import os
+    import sys
+    import inspect
+    file_path = os.path.dirname(
+        os.path.realpath(
+            inspect.getfile(
+                inspect.currentframe())))
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 try:
@@ -41,6 +46,7 @@ except:
 # no metter how large the cache or timeout value is
 
 SWEEP_MAX_ITEMS = 1024
+
 
 class LRUCache(collections.MutableMapping):
     """This class is not thread safe"""
@@ -85,7 +91,7 @@ class LRUCache(collections.MutableMapping):
             for key in self._keys_to_last_time:
                 return key
 
-    def sweep(self, sweep_item_cnt = SWEEP_MAX_ITEMS):
+    def sweep(self, sweep_item_cnt=SWEEP_MAX_ITEMS):
         # O(n - m)
         now = time.time()
         c = 0
@@ -125,6 +131,7 @@ class LRUCache(collections.MutableMapping):
         if c:
             logging.debug('%d keys swept' % c)
         return c < SWEEP_MAX_ITEMS
+
 
 def test():
     c = LRUCache(timeout=0.3)

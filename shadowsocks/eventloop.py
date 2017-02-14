@@ -143,6 +143,7 @@ class SelectLoop(object):
 
 
 class EventLoop(object):
+
     def __init__(self):
         if hasattr(select, 'epoll'):
             self._impl = select.epoll()
@@ -214,7 +215,8 @@ class EventLoop(object):
                 if handler is not None:
                     handler = handler[1]
                     try:
-                        handle = handle or handler.handle_event(sock, fd, event)
+                        handle = handle or handler.handle_event(
+                            sock, fd, event)
                     except (OSError, IOError) as e:
                         shell.print_exception(e)
             now = time.time()

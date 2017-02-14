@@ -290,6 +290,7 @@ class GzipDecodedResponse(GZIP_BASE):
     Largely copied from ``xmlrpclib``/``xmlrpc.client`` and modified
     to work for py2.4-py3
     """
+
     def __init__(self, response):
         # response doesn't support tell() and read(), required by
         # GzipFile
@@ -298,7 +299,7 @@ class GzipDecodedResponse(GZIP_BASE):
                                      'but gzip support is not available')
         IO = BytesIO or StringIO
         self.io = IO()
-        while 1:
+        while True:
             chunk = response.read(1024)
             if len(chunk) == 0:
                 break
@@ -726,7 +727,7 @@ class Speedtest(object):
 
         stream = get_response_stream(uh)
 
-        while 1:
+        while True:
             configxml.append(stream.read(1024))
             if len(configxml[-1]) == 0:
                 break
@@ -838,7 +839,7 @@ class Speedtest(object):
                 stream = get_response_stream(uh)
 
                 serversxml = []
-                while 1:
+                while True:
                     serversxml.append(stream.read(1024))
                     if len(serversxml[-1]) == 0:
                         break

@@ -25,7 +25,10 @@ import signal
 
 if __name__ == '__main__':
     import inspect
-    file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
+    file_path = os.path.dirname(
+        os.path.realpath(
+            inspect.getfile(
+                inspect.currentframe())))
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks import shell, daemon, eventloop, tcprelay, udprelay, \
@@ -46,7 +49,7 @@ def main():
     else:
         config['port_password'] = {}
         server_port = config['server_port']
-        if type(server_port) == list:
+        if isinstance(server_port, list):
             for a_server_port in server_port:
                 config['port_password'][a_server_port] = config['password']
         else:
@@ -78,16 +81,17 @@ def main():
         obfs_param = config.get("obfs_param", '')
         bind = config.get("out_bind", '')
         bindv6 = config.get("out_bindv6", '')
-        if type(password_obfs) == list:
+        if isinstance(password_obfs, list):
             password = password_obfs[0]
             obfs = password_obfs[1]
             if len(password_obfs) > 2:
                 protocol = password_obfs[2]
-        elif type(password_obfs) == dict:
+        elif isinstance(password_obfs, dict):
             password = password_obfs.get('password', config_password)
             method = password_obfs.get('method', method)
             protocol = password_obfs.get('protocol', protocol)
-            protocol_param = password_obfs.get('protocol_param', protocol_param)
+            protocol_param = password_obfs.get(
+                'protocol_param', protocol_param)
             obfs = password_obfs.get('obfs', obfs)
             obfs_param = password_obfs.get('obfs_param', obfs_param)
             bind = password_obfs.get('bind', bind)
@@ -96,11 +100,13 @@ def main():
             password = password_obfs
         a_config = config.copy()
         ipv6_ok = False
-        logging.info("server start with protocol[%s] password [%s] method [%s] obfs [%s] obfs_param [%s]" %
-                (protocol, password, method, obfs, obfs_param))
+        logging.info(
+            "server start with protocol[%s] password [%s] method [%s] obfs [%s] obfs_param [%s]" %
+            (protocol, password, method, obfs, obfs_param))
         if 'server_ipv6' in a_config:
             try:
-                if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][0] == "[" and a_config['server_ipv6'][-1] == "]":
+                if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][
+                        0] == "[" and a_config['server_ipv6'][-1] == "]":
                     a_config['server_ipv6'] = a_config['server_ipv6'][1:-1]
                 a_config['server_port'] = int(port)
                 a_config['password'] = password
@@ -114,8 +120,18 @@ def main():
                 a_config['server'] = a_config['server_ipv6']
                 logging.info("starting server at [%s]:%d" %
                              (a_config['server'], int(port)))
-                tcp_servers.append(tcprelay.TCPRelay(a_config, dns_resolver, False, stat_counter=stat_counter_dict))
-                udp_servers.append(udprelay.UDPRelay(a_config, dns_resolver, False, stat_counter=stat_counter_dict))
+                tcp_servers.append(
+                    tcprelay.TCPRelay(
+                        a_config,
+                        dns_resolver,
+                        False,
+                        stat_counter=stat_counter_dict))
+                udp_servers.append(
+                    udprelay.UDPRelay(
+                        a_config,
+                        dns_resolver,
+                        False,
+                        stat_counter=stat_counter_dict))
                 if a_config['server_ipv6'] == b"::":
                     ipv6_ok = True
             except Exception as e:
@@ -134,8 +150,18 @@ def main():
             a_config['out_bindv6'] = bindv6
             logging.info("starting server at %s:%d" %
                          (a_config['server'], int(port)))
-            tcp_servers.append(tcprelay.TCPRelay(a_config, dns_resolver, False, stat_counter=stat_counter_dict))
-            udp_servers.append(udprelay.UDPRelay(a_config, dns_resolver, False, stat_counter=stat_counter_dict))
+            tcp_servers.append(
+                tcprelay.TCPRelay(
+                    a_config,
+                    dns_resolver,
+                    False,
+                    stat_counter=stat_counter_dict))
+            udp_servers.append(
+                udprelay.UDPRelay(
+                    a_config,
+                    dns_resolver,
+                    False,
+                    stat_counter=stat_counter_dict))
         except Exception as e:
             if not ipv6_ok:
                 shell.print_exception(e)

@@ -21,8 +21,12 @@ import threading
 import os
 
 if __name__ == '__main__':
-	import inspect
-	os.chdir(os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe()))))
+    import inspect
+    os.chdir(
+        os.path.dirname(
+            os.path.realpath(
+                inspect.getfile(
+                    inspect.currentframe()))))
 
 import server_pool
 import db_transfer
@@ -33,52 +37,70 @@ import auto_block
 from shadowsocks import shell
 from configloader import load_config, get_config
 
+
 class MainThread(threading.Thread):
-	def __init__(self, obj):
-		threading.Thread.__init__(self)
-		self.obj = obj
 
-	def run(self):
-		self.obj.thread_db(self.obj)
+    def __init__(self, obj):
+        threading.Thread.__init__(self)
+        self.obj = obj
 
-	def stop(self):
-		self.obj.thread_db_stop()
+    def run(self):
+        self.obj.thread_db(self.obj)
+
+    def stop(self):
+        self.obj.thread_db_stop()
+
 
 def main():
-	shell.check_python()
-	if False:
-		db_transfer.DbTransfer.thread_db()
-	else:
-		if get_config().API_INTERFACE == 'modwebapi':
-			threadMain = MainThread(web_transfer.WebTransfer)
-		else:
-			threadMain = MainThread(db_transfer.DbTransfer)
-		threadMain.start()
+    shell.check_python()
+    if False:
+        db_transfer.DbTransfer.thread_db()
+    else:
+        if get_config().API_INTERFACE == 'modwebapi':
+            threadMain = MainThread(web_transfer.WebTransfer)
+        else:
+            threadMain = MainThread(db_transfer.DbTransfer)
+        threadMain.start()
 
-		threadSpeedtest = threading.Thread(group = None, target = speedtest_thread.speedtest_thread, name = "speedtest", args = (), kwargs = {})
-		threadSpeedtest.start()
+        threadSpeedtest = threading.Thread(
+            group=None,
+            target=speedtest_thread.speedtest_thread,
+            name="speedtest",
+            args=(),
+            kwargs={})
+        threadSpeedtest.start()
 
-		threadAutoexec = threading.Thread(group = None, target = auto_thread.auto_thread, name = "autoexec", args = (), kwargs = {})
-		threadAutoexec.start()
+        threadAutoexec = threading.Thread(
+            group=None,
+            target=auto_thread.auto_thread,
+            name="autoexec",
+            args=(),
+            kwargs={})
+        threadAutoexec.start()
 
-		threadAutoblock = threading.Thread(group = None, target = auto_block.auto_block_thread, name = "autoblock", args = (), kwargs = {})
-		threadAutoblock.start()
+        threadAutoblock = threading.Thread(
+            group=None,
+            target=auto_block.auto_block_thread,
+            name="autoblock",
+            args=(),
+            kwargs={})
+        threadAutoblock.start()
 
-		try:
-			while threadMain.is_alive():
-				time.sleep(10)
-		except (KeyboardInterrupt, IOError, OSError) as e:
-			import traceback
-			traceback.print_exc()
-			threadMain.stop()
-			if threadSpeedtest.is_alive():
-				threadSpeedtest.stop()
-			if threadAutoexec.is_alive():
-				threadAutoexec.stop()
-			if threadAutoblock.is_alive():
-				threadAutoblock.stop()
-			import sys
-			sys.exit()
+        try:
+            while threadMain.is_alive():
+                time.sleep(10)
+        except (KeyboardInterrupt, IOError, OSError) as e:
+            import traceback
+            traceback.print_exc()
+            threadMain.stop()
+            if threadSpeedtest.is_alive():
+                threadSpeedtest.stop()
+            if threadAutoexec.is_alive():
+                threadAutoexec.stop()
+            if threadAutoblock.is_alive():
+                threadAutoblock.stop()
+            import sys
+            sys.exit()
 
 if __name__ == '__main__':
-	main()
+    main()

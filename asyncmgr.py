@@ -33,6 +33,7 @@ from shadowsocks import eventloop
 import server_pool
 import Config
 
+
 class ServerMgr(object):
 
     def __init__(self):
@@ -59,7 +60,7 @@ class ServerMgr(object):
 
     def _handle_data(self, sock):
         data, addr = sock.recvfrom(128)
-        #manage pwd:port:passwd:action
+        # manage pwd:port:passwd:action
         args = data.split(':')
         if len(args) < 4:
             return
@@ -67,7 +68,8 @@ class ServerMgr(object):
             if args[3] == '0':
                 server_pool.ServerPool.get_instance().cb_del_server(args[1])
             elif args[3] == '1':
-                server_pool.ServerPool.get_instance().new_server(args[1], args[2])
+                server_pool.ServerPool.get_instance(
+                ).new_server(args[1], args[2])
 
     def handle_event(self, sock, fd, event):
         if sock != self._sock:

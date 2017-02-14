@@ -25,7 +25,10 @@ import signal
 
 if __name__ == '__main__':
     import inspect
-    file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
+    file_path = os.path.dirname(
+        os.path.realpath(
+            inspect.getfile(
+                inspect.currentframe())))
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks import shell, daemon, eventloop, tcprelay, udprelay, asyncdns
@@ -46,8 +49,13 @@ def main():
         asyncdns.IPV6_CONNECTION_SUPPORT = False
 
     daemon.daemon_exec(config)
-    logging.info("local start with protocol[%s] password [%s] method [%s] obfs [%s] obfs_param [%s]" %
-            (config['protocol'], config['password'], config['method'], config['obfs'], config['obfs_param']))
+    logging.info(
+        "local start with protocol[%s] password [%s] method [%s] obfs [%s] obfs_param [%s]" %
+        (config['protocol'],
+         config['password'],
+         config['method'],
+         config['obfs'],
+         config['obfs_param']))
 
     try:
         logging.info("starting local at %s:%d" %

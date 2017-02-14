@@ -1,8 +1,9 @@
 import collections
 
-################################################################################
-### OrderedDict
-################################################################################
+##########################################################################
+# OrderedDict
+##########################################################################
+
 
 class OrderedDict(dict):
     'Dictionary that remembers insertion order'
@@ -53,14 +54,17 @@ class OrderedDict(dict):
         # removed by updating the links in the predecessor and successor nodes.
         dict_delitem(self, key)
         link_prev, link_next, _ = self.__map.pop(key)
-        link_prev[1] = link_next                        # update link_prev[NEXT]
-        link_next[0] = link_prev                        # update link_next[PREV]
+        # update link_prev[NEXT]
+        link_prev[1] = link_next
+        # update link_next[PREV]
+        link_next[0] = link_prev
 
     def __iter__(self):
         'od.__iter__() <==> iter(od)'
         # Traverse the linked list in order.
         root = self.__root
-        curr = root[1]                                  # start at the first node
+        # start at the first node
+        curr = root[1]
         while curr is not root:
             yield curr[2]                               # yield the curr[KEY]
             curr = curr[1]                              # move to next node
@@ -69,7 +73,8 @@ class OrderedDict(dict):
         'od.__reversed__() <==> reversed(od)'
         # Traverse the linked list in reverse order.
         root = self.__root
-        curr = root[0]                                  # start at the last node
+        # start at the last node
+        curr = root[0]
         while curr is not root:
             yield curr[2]                               # yield the curr[KEY]
             curr = curr[0]                              # move to previous node
@@ -111,7 +116,7 @@ class OrderedDict(dict):
 
     update = collections.MutableMapping.update
 
-    __update = update # let subclasses override update without breaking __init__
+    __update = update  # let subclasses override update without breaking __init__
 
     __marker = object()
 
@@ -211,4 +216,3 @@ class OrderedDict(dict):
     def viewitems(self):
         "od.viewitems() -> a set-like object providing a view on od's items"
         return ItemsView(self)
-

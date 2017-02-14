@@ -33,11 +33,15 @@ method_supported.update(obfs_tls.obfs_map)
 method_supported.update(verify.obfs_map)
 method_supported.update(auth.obfs_map)
 
+
 class server_info(object):
+
     def __init__(self, data):
         self.data = data
 
+
 class obfs(object):
+
     def __init__(self, method):
         method = common.to_str(method)
         self.method = method

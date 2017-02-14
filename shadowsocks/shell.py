@@ -66,6 +66,7 @@ def print_shadowsocks():
             pass
     print('ShadowsocksR %s' % version_str)
 
+
 def log_shadowsocks_version():
     version_str = ''
     try:
@@ -79,11 +80,15 @@ def log_shadowsocks_version():
             pass
     logging.info('ShadowsocksR %s' % version_str)
 
+
 def find_config():
     config_path = 'user-config.json'
     if os.path.exists(config_path):
         return config_path
-    config_path = os.path.join(os.path.dirname(__file__), '../', 'user-config.json')
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        '../',
+        'user-config.json')
     if os.path.exists(config_path):
         return config_path
 
@@ -115,7 +120,7 @@ def check_config(config, is_local):
     if 'local_port' in config:
         config['local_port'] = int(config['local_port'])
 
-    if 'server_port' in config and type(config['server_port']) != list:
+    if 'server_port' in config and not isinstance(config['server_port'], list):
         config['server_port'] = int(config['server_port'])
 
     if config.get('local_address', '') in [b'0.0.0.0']:
@@ -171,7 +176,8 @@ def get_config(is_local):
             logging.info('loading config from %s' % config_path)
             with open(config_path, 'rb') as f:
                 try:
-                    config = parse_json_in_str(remove_comment(f.read().decode('utf8')))
+                    config = parse_json_in_str(
+                        remove_comment(f.read().decode('utf8')))
                 except ValueError as e:
                     logging.error('found an error in config.json: %s',
                                   e.message)
@@ -266,7 +272,7 @@ def get_config(is_local):
     config['forbidden_ip'] = config.get('forbidden_ip', '')
     config['forbidden_port'] = config.get('forbidden_port', '')
     config['disconnect_ip'] = config.get('disconnect_ip', '')
-	
+
     if is_local:
         if config.get('server', None) is None:
             logging.error('server addr not specified')
@@ -297,9 +303,10 @@ def get_config(is_local):
     else:
         level = logging.INFO
     verbose = config['verbose']
-    logging.basicConfig(level=level,
-                        format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        level=level,
+        format='%(asctime)s %(levelname)-8s %(filename)s:%(lineno)s %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S')
 
     check_config(config, is_local)
 
@@ -403,7 +410,9 @@ def _decode_dict(data):
         rv[key] = value
     return rv
 
+
 class JSFormat:
+
     def __init__(self):
         self.state = 0
 
@@ -439,6 +448,7 @@ class JSFormat:
                 self.state = 0
                 return "\n"
         return ""
+
 
 def remove_comment(json):
     fmt = JSFormat()

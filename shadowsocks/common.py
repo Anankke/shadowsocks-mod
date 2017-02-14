@@ -26,8 +26,9 @@ import re
 import hashlib
 from configloader import load_config, get_config
 
+
 def compat_ord(s):
-    if type(s) == int:
+    if isinstance(s, int):
         return s
     return _ord(s)
 
@@ -45,18 +46,20 @@ chr = compat_chr
 
 connect_log = logging.debug
 
+
 def to_bytes(s):
     if bytes != str:
-        if type(s) == str:
+        if isinstance(s, str):
             return s.encode('utf-8')
     return s
 
 
 def to_str(s):
     if bytes != str:
-        if type(s) == bytes:
+        if isinstance(s, bytes):
             return s.decode('utf-8')
     return s
+
 
 def int32(x):
     if x > 0xFFFFFFFF or x < 0:
@@ -68,6 +71,7 @@ def int32(x):
         else:
             return -2147483648
     return x
+
 
 def inet_ntop(family, ipstr):
     if family == socket.AF_INET:
@@ -112,7 +116,7 @@ def inet_pton(family, addr):
 def is_ip(address):
     for family in (socket.AF_INET, socket.AF_INET6):
         try:
-            if type(address) != str:
+            if not isinstance(address, str):
                 address = address.decode('utf8')
             inet_pton(family, address)
             return family
@@ -120,23 +124,28 @@ def is_ip(address):
             pass
     return False
 
+
 def match_ipv4_address(text):
     reip = re.compile(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])')
     for ip in reip.findall(text):
         return ip
     return None
 
+
 def match_ipv6_address(text):
-    reip = re.compile(r'(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])')
+    reip = re.compile(
+        r'(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])')
     for ip in reip.findall(text):
         return ip
     return None
+
 
 def match_regex(regex, text):
     regex = re.compile(regex)
     for item in regex.findall(text):
         return True
     return False
+
 
 def get_mu_host(id, md5):
     regex_text = get_config().MU_REGEX
@@ -158,9 +167,11 @@ def get_md5(data):
     m1 = hashlib.md5(data.encode('utf-8'))
     return m1.hexdigest()
 
+
 def get_ip_md5(data, salt):
     m1 = hashlib.md5(data.encode('utf-8') + salt.encode('utf-8'))
     return m1.hexdigest()
+
 
 def patch_socket():
     if not hasattr(socket, 'inet_pton'):
@@ -192,6 +203,7 @@ def pack_addr(address):
     if len(address) > 255:
         address = address[:255]  # TODO
     return b'\x03' + chr(len(address)) + address
+
 
 def pre_parse_header(data):
     if not data:
@@ -233,6 +245,7 @@ def pre_parse_header(data):
         if data_size < len(ogn_data):
             data += ogn_data[data_size:]
     return data
+
 
 def parse_header(data):
     addrtype = ord(data[0])
@@ -282,7 +295,7 @@ class IPNetwork(object):
         self.addrs_str = addrs
         self._network_list_v4 = []
         self._network_list_v6 = []
-        if type(addrs) != str:
+        if not isinstance(addrs, str):
             addrs = to_str(addrs)
         addrs = addrs.split(',')
         list(map(self.add_network, addrs))
@@ -334,7 +347,9 @@ class IPNetwork(object):
     def __cmp__(self, other):
         return cmp(self.addrs_str, other.addrs_str)
 
+
 class PortRange(object):
+
     def __init__(self, range_str):
         self.range_str = to_str(range_str)
         self.range = set()
@@ -364,6 +379,7 @@ class PortRange(object):
 
     def __cmp__(self, other):
         return cmp(self.range_str, other.range_str)
+
 
 def test_inet_conv():
     ipv4 = b'8.8.4.4'
