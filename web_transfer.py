@@ -205,7 +205,7 @@ class WebTransfer(object):
             'nodes/%d/info' %
             (get_config().NODE_ID))
 
-        if nodeinfo is None:
+        if not nodeinfo:
             rows = []
             return rows
 
@@ -220,6 +220,11 @@ class WebTransfer(object):
             self.is_relay = False
 
         data = webapi_utils.getApi('users', {'node_id': get_config().NODE_ID})
+
+        if not data:
+            rows = []
+            return rows
+
         rows = data
 
         # 读取节点IP

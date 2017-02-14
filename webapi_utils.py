@@ -15,10 +15,10 @@ def getApi(uri, params={}):
             '%s/mod_mu/%s' %
             (get_config().WEBAPI_URL, uri), params=uri_params).json()
         if data['ret'] == 0:
-            return None
+            return []
         return data['data']
     except Exception:
-        return None
+        raise Exception('network issue or server error!')
 
 
 def postApi(uri, params={}, raw_data={}):
@@ -32,7 +32,7 @@ def postApi(uri, params={}, raw_data={}):
             params=uri_params,
             json=raw_data).json()
         if data['ret'] == 0:
-            return None
+            return []
         return data['data']
     except Exception:
-        return None
+        raise Exception('network issue or server error!')
