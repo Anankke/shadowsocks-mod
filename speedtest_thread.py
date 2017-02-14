@@ -12,6 +12,11 @@ from shadowsocks import common, shell
 
 
 def speedtest_thread():
+    if configloader.get_config().API_INTERFACE == 'modwebapi':
+        import webapi_utils
+        global webapi
+        webapi = webapi_utils.WebApi()
+
     hour = configloader.get_config().SPEEDTEST
     if hour == 0:
         return
@@ -92,8 +97,7 @@ def speedtest_thread():
                     2)) + " Mbit/s"
 
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                import webapi_utils
-                webapi_utils.postApi('func/speedtest',
+                webapi.postApi('func/speedtest',
                                      {'node_id': configloader.get_config().NODE_ID},
                                      {'data': [{'telecomping': CTPing,
                                                 'telecomeupload': CTUpSpeed,

@@ -31,6 +31,11 @@ def auto_block_thread():
     if configloader.get_config().CLOUDSAFE == 0 or platform.system() != 'Linux':
         return
 
+    if configloader.get_config().API_INTERFACE == 'modwebapi':
+        import webapi_utils
+        global webapi
+        webapi = webapi_utils.WebApi()
+
     start_line = file_len("/etc/hosts.deny")
 
     while True:
@@ -40,15 +45,14 @@ def auto_block_thread():
                 configloader.get_config().MYSQL_HOST)
 
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                import webapi_utils
-                data = webapi_utils.getApi(
+                data = webapi.getApi(
                     'users', {'node_id': configloader.get_config().NODE_ID})
                 rows = data
 
                 # 读取节点IP
                 # SELECT * FROM `ss_node`  where `node_ip` != ''
                 node_ip_list = []
-                data = webapi_utils.getApi('nodes')
+                data = webapi.getApi('nodes')
                 for node in data:
                     node_ip_list.append(node['node_ip'])
             else:
@@ -167,11 +171,11 @@ def auto_block_thread():
                         denyed_ip_list.append(ip)
 
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                webapi_utils.postApi(
+                webapi.postApi(
                     'func/block_ip', {'node_id': configloader.get_config().NODE_ID}, {'data': data})
 
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                rows = webapi_utils.getApi('func/block_ip')
+                rows = webapi.getApi('func/block_ip')
             else:
                 cur = conn.cursor()
                 cur.execute(
@@ -233,7 +237,7 @@ def auto_block_thread():
                 deny_file.close()
 
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                rows = webapi_utils.getApi('func/unblock_ip')
+                rows = webapi.getApi('func/unblock_ip')
             else:
                 cur = conn.cursor()
                 cur.execute(

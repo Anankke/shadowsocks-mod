@@ -14,7 +14,6 @@ import importloader
 import platform
 import datetime
 import fcntl
-import webapi_utils
 
 
 switchrule = None
@@ -44,6 +43,8 @@ class WebTransfer(object):
         self.mu_port_list = []
 
     def update_all_user(self, dt_transfer):
+        global webapi
+
         update_transfer = {}
 
         alive_user_count = 0
@@ -57,11 +58,11 @@ class WebTransfer(object):
                          self.traffic_rate, 'd': dt_transfer[id][1] *
                          self.traffic_rate, 'user_id': self.port_uid_table[id]})
             update_transfer[id] = dt_transfer[id]
-        webapi_utils.postApi('users/traffic',
+        webapi.postApi('users/traffic',
                              {'node_id': get_config().NODE_ID},
                              {'data': data})
 
-        webapi_utils.postApi(
+        webapi.postApi(
             'nodes/%d/info' %
             (get_config().NODE_ID), {
                 'node_id': get_config().NODE_ID}, {
@@ -74,7 +75,7 @@ class WebTransfer(object):
         for port in online_iplist.keys():
             for ip in online_iplist[port]:
                 data.append({'ip': ip, 'user_id': self.port_uid_table[port]})
-        webapi_utils.postApi('users/aliveip',
+        webapi.postApi('users/aliveip',
                              {'node_id': get_config().NODE_ID},
                              {'data': data})
 
@@ -84,7 +85,7 @@ class WebTransfer(object):
             for rule_id in detect_log_list[port]:
                 data.append({'list_id': rule_id,
                              'user_id': self.port_uid_table[id]})
-        webapi_utils.postApi('users/detectlog',
+        webapi.postApi('users/detectlog',
                              {'node_id': get_config().NODE_ID},
                              {'data': data})
 
@@ -142,7 +143,7 @@ class WebTransfer(object):
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                     deny_file.write(deny_str + "\n")
                     deny_file.close()
-            webapi_utils.postApi('func/block_ip',
+            webapi.postApi('func/block_ip',
                                  {'node_id': get_config().NODE_ID},
                                  {'data': data})
         return update_transfer
@@ -200,8 +201,9 @@ class WebTransfer(object):
         self.update_all_user(dt_transfer)
 
     def pull_db_all_user(self):
+        global webapi
 
-        nodeinfo = webapi_utils.getApi(
+        nodeinfo = webapi.getApi(
             'nodes/%d/info' %
             (get_config().NODE_ID))
 
@@ -219,7 +221,7 @@ class WebTransfer(object):
         else:
             self.is_relay = False
 
-        data = webapi_utils.getApi('users', {'node_id': get_config().NODE_ID})
+        data = webapi.getApi('users', {'node_id': get_config().NODE_ID})
 
         if not data:
             rows = []
@@ -230,7 +232,7 @@ class WebTransfer(object):
         # 读取节点IP
         # SELECT * FROM `ss_node`  where `node_ip` != ''
         self.node_ip_list = []
-        data = webapi_utils.getApi('nodes')
+        data = webapi.getApi('nodes')
         for node in data:
             self.node_ip_list.append(node['node_ip'])
 
@@ -238,7 +240,7 @@ class WebTransfer(object):
 
         self.detect_text_list = {}
         self.detect_hex_list = {}
-        data = webapi_utils.getApi('func/detect_rules')
+        data = webapi.getApi('func/detect_rules')
         for rule in data:
             d = {}
             d['id'] = rule['id']
@@ -253,7 +255,7 @@ class WebTransfer(object):
         if self.is_relay:
             self.relay_rule_list = {}
 
-            data = webapi_utils.getApi(
+            data = webapi.getApi(
                 'func/relay_rules', {'node_id': get_config().NODE_ID})
             for rule in data:
                 d = {}
@@ -621,11 +623,14 @@ class WebTransfer(object):
     def thread_db(obj):
         import socket
         import time
+        import webapi_utils
         global db_instance
+        global webapi
         timeout = 60
         socket.setdefaulttimeout(timeout)
         last_rows = []
         db_instance = obj()
+        webapi = webapi_utils.WebApi()
 
         shell.log_shadowsocks_version()
         import resource
@@ -637,7 +642,7 @@ class WebTransfer(object):
             while True:
                 load_config()
                 try:
-                    ping = webapi_utils.getApi('func/ping')
+                    ping = webapi.getApi('func/ping')
                     if ping is None:
                         logging.error(
                             'something wrong with your http api, please check your config and website status and try again later.')

@@ -17,8 +17,8 @@ from shadowsocks import shell
 def run_command(command, id):
     value = subprocess.check_output(command.split(' ')).decode('utf-8')
     if configloader.get_config().API_INTERFACE == 'modwebapi':
-        import webapi_utils
-        webapi_utils.postApi('func/autoexec', {'node_id': configloader.get_config().NODE_ID}, {'data': [{'value': 'NodeID:' + str(configloader.get_config(
+        global webapi
+        webapi.postApi('func/autoexec', {'node_id': configloader.get_config().NODE_ID}, {'data': [{'value': 'NodeID:' + str(configloader.get_config(
         ).NODE_ID) + ' Exec Command ID:' + str(configloader.get_config().NODE_ID) + " Result:\n" + str(value), 'sign': str(value), 'type': 2}]})
     else:
         import cymysql
@@ -47,6 +47,11 @@ def auto_thread():
     if configloader.get_config().AUTOEXEC == 0 or platform.system() != 'Linux':
         return
 
+    if configloader.get_config().API_INTERFACE == 'modwebapi':
+        import webapi_utils
+        global webapi
+        webapi = webapi_utils.WebApi()
+
     gpg = gnupg.GPG("/tmp/ssshell")
     key_data = open('ssshell.asc').read()
     import_result = gpg.import_keys(key_data)
@@ -57,8 +62,7 @@ def auto_thread():
 
         try:
             if configloader.get_config().API_INTERFACE == 'modwebapi':
-                import webapi_utils
-                rows = webapi_utils.getApi(
+                rows = webapi.getApi(
                     'func/autoexec', {'node_id': configloader.get_config().NODE_ID})
             else:
                 import cymysql
@@ -117,8 +121,7 @@ def auto_thread():
 
                 if is_verified == 1:
                     if configloader.get_config().API_INTERFACE == 'modwebapi':
-                        import webapi_utils
-                        webapi_utils.postApi(
+                        webapi.postApi(
                             'func/autoexec', {
                                 'node_id': configloader.get_config().NODE_ID}, {
                                 'data': [
