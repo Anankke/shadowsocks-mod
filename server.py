@@ -68,6 +68,7 @@ def main():
             name="speedtest",
             args=(),
             kwargs={})
+        threadSpeedtest.daemon = True
         threadSpeedtest.start()
 
         threadAutoexec = threading.Thread(
@@ -76,6 +77,7 @@ def main():
             name="autoexec",
             args=(),
             kwargs={})
+        threadAutoexec.daemon = True
         threadAutoexec.start()
 
         threadAutoblock = threading.Thread(
@@ -84,6 +86,7 @@ def main():
             name="autoblock",
             args=(),
             kwargs={})
+        threadAutoblock.daemon = True
         threadAutoblock.start()
 
         try:
