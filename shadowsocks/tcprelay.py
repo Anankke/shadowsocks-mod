@@ -1704,7 +1704,7 @@ class TCPRelay(object):
             (self._listen_port, self.server_connections,))
 
     def add_transfer_u(self, user, transfer):
-        if (user is None or user == 0) and self._config["is_multi_user"] == 0:
+        if ((user is None or user == 0) and self._config["is_multi_user"] != 0) or self._config["is_multi_user"] == 0:
             self.server_transfer_ul += transfer
         else:
             if user not in self.mu_server_transfer_ul:
@@ -1714,7 +1714,7 @@ class TCPRelay(object):
             self.server_transfer_ul = 0
 
     def add_transfer_d(self, user, transfer):
-        if (user is None or user == 0) and self._config["is_multi_user"] == 0:
+        if ((user is None or user == 0) and self._config["is_multi_user"] != 0) or self._config["is_multi_user"] == 0:
             self.server_transfer_dl += transfer
         else:
             if user not in self.mu_server_transfer_dl:
