@@ -558,8 +558,6 @@ class DbTransfer(object):
                 'forbidden_ip',
                 'forbidden_port',
                 'node_speedlimit',
-                'forbidden_ip',
-                'forbidden_port',
                 'disconnect_ip',
                 'is_multi_user']
 
