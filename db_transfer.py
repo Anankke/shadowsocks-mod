@@ -861,8 +861,7 @@ class DbTransfer(object):
                     trace = traceback.format_exc()
                     logging.error(trace)
                     #logging.warn('db thread except:%s' % e)
-                if db_instance.event.wait(
-                        get_config().MYSQL_UPDATE_TIME) or not db_instance.is_all_thread_alive():
+                if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
                     break
         except KeyboardInterrupt as e:
             pass

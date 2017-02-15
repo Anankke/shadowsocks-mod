@@ -59,8 +59,8 @@ class WebTransfer(object):
                          self.traffic_rate, 'user_id': self.port_uid_table[id]})
             update_transfer[id] = dt_transfer[id]
         webapi.postApi('users/traffic',
-                             {'node_id': get_config().NODE_ID},
-                             {'data': data})
+                       {'node_id': get_config().NODE_ID},
+                       {'data': data})
 
         webapi.postApi(
             'nodes/%d/info' %
@@ -76,8 +76,8 @@ class WebTransfer(object):
             for ip in online_iplist[port]:
                 data.append({'ip': ip, 'user_id': self.port_uid_table[port]})
         webapi.postApi('users/aliveip',
-                             {'node_id': get_config().NODE_ID},
-                             {'data': data})
+                       {'node_id': get_config().NODE_ID},
+                       {'data': data})
 
         detect_log_list = ServerPool.get_instance().get_servers_detect_log()
         data = []
@@ -86,8 +86,8 @@ class WebTransfer(object):
                 data.append({'list_id': rule_id,
                              'user_id': self.port_uid_table[id]})
         webapi.postApi('users/detectlog',
-                             {'node_id': get_config().NODE_ID},
-                             {'data': data})
+                       {'node_id': get_config().NODE_ID},
+                       {'data': data})
 
         deny_str = ""
         data = []
@@ -144,8 +144,8 @@ class WebTransfer(object):
                     deny_file.write(deny_str + "\n")
                     deny_file.close()
             webapi.postApi('func/block_ip',
-                                 {'node_id': get_config().NODE_ID},
-                                 {'data': data})
+                           {'node_id': get_config().NODE_ID},
+                           {'data': data})
         return update_transfer
 
     def uptime(self):
@@ -653,8 +653,7 @@ class WebTransfer(object):
                     trace = traceback.format_exc()
                     logging.error(trace)
                     #logging.warn('db thread except:%s' % e)
-                if db_instance.event.wait(
-                        get_config().MYSQL_UPDATE_TIME) or not db_instance.is_all_thread_alive():
+                if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
                     break
         except KeyboardInterrupt as e:
             pass
