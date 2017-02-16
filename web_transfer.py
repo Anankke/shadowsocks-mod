@@ -54,9 +54,7 @@ class WebTransfer(object):
         for id in dt_transfer.keys():
             if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
                 continue
-            data.append({'u': dt_transfer[id][0] *
-                         self.traffic_rate, 'd': dt_transfer[id][1] *
-                         self.traffic_rate, 'user_id': self.port_uid_table[id]})
+            data.append({'u': dt_transfer[id][0], 'd': dt_transfer[id][1], 'user_id': self.port_uid_table[id]})
             update_transfer[id] = dt_transfer[id]
         webapi.postApi('users/traffic',
                        {'node_id': get_config().NODE_ID},
