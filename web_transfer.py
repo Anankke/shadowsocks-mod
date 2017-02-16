@@ -644,11 +644,11 @@ class WebTransfer(object):
                     if ping is None:
                         logging.error(
                             'something wrong with your http api, please check your config and website status and try again later.')
-                        continue
-                    db_instance.push_db_all_user()
-                    rows = db_instance.pull_db_all_user()
-                    db_instance.del_server_out_of_bound_safe(last_rows, rows)
-                    last_rows = rows
+                    else:
+                        db_instance.push_db_all_user()
+                        rows = db_instance.pull_db_all_user()
+                        db_instance.del_server_out_of_bound_safe(last_rows, rows)
+                        last_rows = rows
                 except Exception as e:
                     trace = traceback.format_exc()
                     logging.error(trace)

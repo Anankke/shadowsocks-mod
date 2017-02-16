@@ -21,7 +21,7 @@ class WebApi(object):
                 params=uri_params,
                 timeout=10).json()
             if data['ret'] == 0:
-                logging.error("request %s error!wrong ret!")
+                logging.error("request %s error!wrong ret!"%(uri))
                 return []
             return data['data']
         except Exception:
@@ -43,7 +43,7 @@ class WebApi(object):
                 json=raw_data,
                 timeout=10).json()
             if data['ret'] == 0:
-                logging.error("request %s error!wrong ret!")
+                logging.error("request %s error!wrong ret!"%(uri))
                 return []
             return data['data']
         except Exception:
