@@ -17,11 +17,17 @@ class WebApi(object):
             uri_params['key'] = get_config().WEBAPI_TOKEN
             data = self.session_pool.get(
                 '%s/mod_mu/%s' %
-                (get_config().WEBAPI_URL, uri), params=uri_params).json()
+                (get_config().WEBAPI_URL, uri),
+                params=uri_params,
+                timeout=10).json()
             if data['ret'] == 0:
+                logging.error("request %s error!wrong ret!")
                 return []
             return data['data']
         except Exception:
+            import traceback
+            trace = traceback.format_exc()
+            logging.error(trace)
             raise Exception('network issue or server error!')
 
 
@@ -34,9 +40,14 @@ class WebApi(object):
                 (get_config().WEBAPI_URL,
                  uri),
                 params=uri_params,
-                json=raw_data).json()
+                json=raw_data,
+                timeout=10).json()
             if data['ret'] == 0:
+                logging.error("request %s error!wrong ret!")
                 return []
             return data['data']
         except Exception:
+            import traceback
+            trace = traceback.format_exc()
+            logging.error(trace)
             raise Exception('network issue or server error!')
