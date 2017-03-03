@@ -43,7 +43,8 @@ class AutoBlock(object):
             node_ip_list = []
             data = webapi.getApi('nodes')
             for node in data:
-                node_ip_list.append(node['node_ip'])
+                temp_list = node['node_ip'].split(',')
+                node_ip_list.append(temp_list[0])
         else:
             import cymysql
             if configloader.get_config().MYSQL_SSL_ENABLE == 1:
@@ -75,7 +76,8 @@ class AutoBlock(object):
             cur.execute(
                 "SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
             for r in cur.fetchall():
-                node_ip_list.append(str(r[0]))
+                temp_list = str(r[0]).split(',')
+                node_ip_list.append(temp_list[0])
             cur.close()
 
         deny_file = open('/etc/hosts.deny')

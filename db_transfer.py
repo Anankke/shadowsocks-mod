@@ -385,7 +385,8 @@ class DbTransfer(object):
         cur = conn.cursor()
         cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
         for r in cur.fetchall():
-            self.node_ip_list.append(str(r[0]))
+            temp_list = str(r[0]).split(',')
+            self.node_ip_list.append(temp_list[0])
         cur.close()
 
         # 读取审计规则,数据包匹配部分

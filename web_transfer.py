@@ -232,7 +232,8 @@ class WebTransfer(object):
         self.node_ip_list = []
         data = webapi.getApi('nodes')
         for node in data:
-            self.node_ip_list.append(node['node_ip'])
+            temp_list = node['node_ip'].split(',')
+            self.node_ip_list.append(temp_list[0])
 
         # 读取审计规则,数据包匹配部分
 
