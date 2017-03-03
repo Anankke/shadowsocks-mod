@@ -1238,7 +1238,7 @@ class UDPRelay(object):
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + \
             common.to_bytes(host) + struct.pack('>H', port)
-        return data + ogn_data
+        return (data + ogn_data, True)
 
     def _get_mu_relay_host(self, ogn_data, uid):
 
@@ -1272,13 +1272,13 @@ class UDPRelay(object):
     def _handel_mu_relay(self, client_address, ogn_data, uid):
         host, port = self._get_mu_relay_host(ogn_data, uid)
         if host is None:
-            return ogn_data
+            return (ogn_data, False)
         self._encrypt_correct = False
         if port is None:
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + \
             common.to_bytes(host) + struct.pack('>H', port)
-        return data + ogn_data
+        return (data + ogn_data, True)
 
     def _is_relay(self, client_address, ogn_data, uid):
         if self._config['is_multi_user'] == 0:
@@ -1289,7 +1289,7 @@ class UDPRelay(object):
                 return False
         return True
 
-    def _socket_bind_addr(self, sock, af):
+    def _socket_bind_addr(self, sock, af, is_relay):
         bind_addr = ''
         if self._bind and af == socket.AF_INET:
             bind_addr = self._bind
@@ -1299,6 +1299,10 @@ class UDPRelay(object):
         bind_addr = bind_addr.replace("::ffff:", "")
         if bind_addr in self._ignore_bind_list:
             bind_addr = None
+
+        if is_relay:
+            bind_addr = None
+
         if bind_addr:
             local_addrs = socket.getaddrinfo(
                 bind_addr, 0, 0, socket.SOCK_STREAM, socket.SOL_TCP)
@@ -1355,6 +1359,8 @@ class UDPRelay(object):
                         'This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
                         (host_name, r_addr[0], r_addr[1], self._listen_port))
 
+        is_relay = False
+
         #logging.info("UDP data %s" % (binascii.hexlify(data),))
         if not self._is_local:
 
@@ -1370,9 +1376,9 @@ class UDPRelay(object):
                     # return self._handle_tcp_over_udp(data, r_addr)
             else:
                 if self._config["is_multi_user"] == 0:
-                    data = self._handel_normal_relay(r_addr, ogn_data)
+                    data, is_relay = self._handel_normal_relay(r_addr, ogn_data)
                 else:
-                    data = self._handel_mu_relay(r_addr, ogn_data, uid)
+                    data, is_relay = self._handel_mu_relay(r_addr, ogn_data, uid)
 
         try:
             header_result = parse_header(data)
@@ -1431,7 +1437,7 @@ class UDPRelay(object):
             client = socket.socket(af, socktype, proto)
             client_uid = uid
             client.setblocking(False)
-            self._socket_bind_addr(client, af)
+            self._socket_bind_addr(client, af, is_relay)
             is_dns = False
             if len(data) > 20 and data[
                     11:19] == b"\x00\x01\x00\x00\x00\x00\x00\x00":
