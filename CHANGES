@@ -1,3 +1,20 @@
+3.1.1 2017-03-25
+- add "New session ticket"
+- ignore bind 10.0.0.0/8 and 192.168.0.0/16 by default
+- improve rand size under auth_aes128_*
+- fix bugs
+
+3.1.0 2017-03-16
+- add "glzjinmod" interface
+- rate limit
+- add additional_ports in config
+
+3.0.4 2017-01-08
+- multi-user in single port
+
+3.0.1 2017-01-03
+- remove auth_aes128_*_compatible
+
 3.0.0 2016-12-23
 - http_simple fix bugs
 - tls1.2_ticket_auth fix bug & defaule time diff set to 86400s
