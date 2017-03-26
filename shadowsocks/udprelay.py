@@ -1357,7 +1357,7 @@ class UDPRelay(object):
                 else:
                     raise Exception(
                         'This port is multi user in single port only,so The connection has been rejected, when connect from %s:%d via port %d' %
-                        (host_name, r_addr[0], r_addr[1], self._listen_port))
+                        (r_addr[0], r_addr[1], self._listen_port))
 
         is_relay = False
 
