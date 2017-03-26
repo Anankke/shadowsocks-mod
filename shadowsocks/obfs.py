@@ -107,5 +107,4 @@ class obfs(object):
         del self.obfs
 
     def get_hostname(self):
-        logging.error(self.obfs.host_name)
         return self.obfs.host_name
