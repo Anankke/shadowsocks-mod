@@ -885,7 +885,7 @@ class TCPRelayHandler(object):
 
         if self._is_relay:
             bind_addr = None
-        
+
         if bind_addr:
             local_addrs = socket.getaddrinfo(
                 bind_addr, 0, 0, socket.SOCK_STREAM, socket.SOL_TCP)
@@ -1156,9 +1156,7 @@ class TCPRelayHandler(object):
                                 if self._server._config[
                                         "obfs"] == b"tls1.2_ticket_auth":
                                     if(len(obfs_decode) > 3):
-                                        host = obfs_decode[3].decode(
-                                            'utf-8') + ":" + str(self._server._listen_port)
-                                        host_name = obfs_decode[3]
+                                        host = obfs_decode[3] + ":" + str(self._server._listen_port)
                             need_sendback = True
                         if obfs_decode[1]:
                             if self._server._config[
@@ -1166,7 +1164,7 @@ class TCPRelayHandler(object):
                                 if self._server._config["obfs"] == b"http_simple" or self._server._config[
                                         "obfs"] == b"http_post":
                                     if(len(obfs_decode) > 3):
-                                        host = obfs_decode[3].decode('utf-8')
+                                        host = obfs_decode[3]
                             if not self._protocol.obfs.server_info.recv_iv:
                                 iv_len = len(
                                     self._protocol.obfs.server_info.iv)

@@ -289,5 +289,6 @@ class tls_ticket_auth(plain.plain):
                 if buf[index:index + 4] == b"\x00\x17\x00\x00":
                     if buf[:index] != '':
                         host_name = buf[:index]
+        host_name = host_name.decode('utf-8')
 
         return (b'', False, True, host_name)
