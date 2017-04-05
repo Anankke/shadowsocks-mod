@@ -561,12 +561,13 @@ class TCPRelayHandler(object):
         return data + ogn_data
 
     def _handel_protocol_error(self, client_address, ogn_data):
-        logging.warn(
-            "Protocol ERROR, TCP ogn data %s from %s:%d via port %d" %
-            (binascii.hexlify(ogn_data),
-             client_address[0],
-             client_address[1],
-             self._server._listen_port))
+        if self._config['redirect_verbose']:
+            logging.warn(
+                "Protocol ERROR, TCP ogn data %s from %s:%d via port %d" %
+                (binascii.hexlify(ogn_data),
+                 client_address[0],
+                 client_address[1],
+                 self._server._listen_port))
         if client_address[0] not in self._server.wrong_iplist and client_address[
                 0] != 0 and self._server.is_cleaning_wrong_iplist == False:
             self._server.wrong_iplist[client_address[0]] = time.time()
@@ -577,19 +578,21 @@ class TCPRelayHandler(object):
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + \
             common.to_bytes(host) + struct.pack('>H', port)
-        logging.warn(
-            "TCP data redir %s:%d %s" %
-            (host, port, binascii.hexlify(data)))
+        if self._config['redirect_verbose']:
+            logging.warn(
+                "TCP data redir %s:%d %s" %
+                (host, port, binascii.hexlify(data)))
         self._is_redirect = True
         return data + ogn_data
 
     def _handel_mu_protocol_error(self, client_address, ogn_data):
-        logging.warn(
-            "Protocol ERROR, TCP ogn data %s from %s:%d via port %d" %
-            (binascii.hexlify(ogn_data),
-             client_address[0],
-             client_address[1],
-             self._server._listen_port))
+        if self._config['redirect_verbose']:
+            logging.warn(
+                "Protocol ERROR, TCP ogn data %s from %s:%d via port %d" %
+                (binascii.hexlify(ogn_data),
+                 client_address[0],
+                 client_address[1],
+                 self._server._listen_port))
         if client_address[0] not in self._server.wrong_iplist and client_address[
                 0] != 0 and self._server.is_cleaning_wrong_iplist == False:
             self._server.wrong_iplist[client_address[0]] = time.time()
@@ -600,9 +603,10 @@ class TCPRelayHandler(object):
             raise Exception('can not parse header')
         data = b"\x03" + common.to_bytes(common.chr(len(host))) + \
             common.to_bytes(host) + struct.pack('>H', port)
-        logging.warn(
-            "TCP data mu redir %s:%d %s" %
-            (host, port, binascii.hexlify(data)))
+        if self._config['redirect_verbose']:
+            logging.warn(
+                "TCP data mu redir %s:%d %s" %
+                (host, port, binascii.hexlify(data)))
         self._is_redirect = True
         return data + ogn_data
 
