@@ -479,18 +479,15 @@ class TCPRelayHandler(object):
                 items_match = common.to_str(items_sum[0]).rsplit(':', 1)
                 items = common.to_str(items_sum[1]).rsplit(':', 1)
                 if len(items_match) > 1:
-                    if self._server._listen_port != int(items_match[1]):
-                        continue
-                match_port = 0
-                if len(items_match) > 1:
                     if items_match[1] != "*":
                         try:
-                            match_port = int(items_match[1])
+                            if self._server._listen_port != int(items_match[1]) and int(items_match[1]) != 0:
+                                continue
                         except:
                             pass
+
                 if items_match[0] != "*" and common.match_regex(
-                        items_match[0], ogn_data) == False and not (
-                        match_port == self._server._listen_port or match_port == 0):
+                        items_match[0], ogn_data) == False:
                     continue
                 if len(items) > 1:
                     try:
