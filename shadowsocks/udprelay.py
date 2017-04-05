@@ -74,9 +74,6 @@ import traceback
 from shadowsocks import encrypt, obfs, eventloop, lru_cache, common, shell
 from shadowsocks.common import pre_parse_header, parse_header, pack_addr, IPNetwork, PortRange
 
-# we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
-TIMEOUTS_CLEAN_SIZE = 512
-
 # for each handler, we have 2 stream directions:
 #    upstream:    from client to server direction
 #                 read local and write to remote
@@ -1079,7 +1076,7 @@ class UDPRelay(object):
         server_info.key_str = common.to_bytes(config['password'])
         server_info.key = encrypt.encrypt_key(self._password, self._method)
         server_info.head_len = 30
-        server_info.tcp_mss = 1440
+        server_info.tcp_mss = 1452
         server_info.buffer_size = BUF_SIZE
         self._protocol.set_server_info(server_info)
 
