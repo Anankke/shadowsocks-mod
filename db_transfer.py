@@ -19,7 +19,6 @@ import fcntl
 switchrule = None
 db_instance = None
 
-
 class DbTransfer(object):
 
     def __init__(self):
@@ -569,7 +568,10 @@ class DbTransfer(object):
             merge_config_keys = ['password'] + read_config_keys
             for name in cfg.keys():
                 if hasattr(cfg[name], 'encode'):
-                    cfg[name] = cfg[name].encode('utf-8')
+                    try:
+						cfg[name] = cfg[name].encode('utf-8')
+					except Exception as e:
+						logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
 
             if 'node_speedlimit' in cfg:
                 if float(
