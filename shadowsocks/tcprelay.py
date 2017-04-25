@@ -139,36 +139,24 @@ class TCPRelayHandler(object):
         self._current_user_id = 0
         self._relay_rules = server.relay_rules.copy()
         self._is_relay = False
+        if not self._create_encryptor(config):
+            return
 
         self._client_address = local_sock.getpeername()[:2]
         self._accept_address = local_sock.getsockname()[:2]
         self._user = None
-        self._tcp_mss = TCP_MSS
+        self._update_tcp_mss(local_sock)
 
         # TCP Relay works as either sslocal or ssserver
         # if is_local, this is sslocal
         self._is_local = is_local
         self._stage = STAGE_INIT
-        try:
-            self._encryptor = encrypt.Encryptor(config['password'],
-                                                config['method'])
-        except Exception:
-            self._stage = STAGE_DESTROYED
-            logging.error(
-                'creater encryptor fail at port %d',
-                server._listen_port)
-            return
+
         self._encrypt_correct = True
         self._obfs = obfs.obfs(config['obfs'])
         self._protocol = obfs.obfs(config['protocol'])
         self._overhead = self._obfs.get_overhead(self._is_local) + self._protocol.get_overhead(self._is_local)
         self._recv_buffer_size = BUF_SIZE - self._overhead
-
-        try:
-            self._tcp_mss = local_sock.getsockopt(socket.SOL_TCP, socket.TCP_MAXSEG)
-            logging.debug("TCP MSS = %d" % (self._tcp_mss,))
-        except:
-            pass
 
         server_info = obfs.server_info(server.obfs_data)
         server_info.host = config['server']
@@ -187,6 +175,7 @@ class TCPRelayHandler(object):
         server_info.head_len = 30
         server_info.tcp_mss = self._tcp_mss
         server_info.buffer_size = self._recv_buffer_size
+        server_info.overhead = self._overhead
         self._obfs.set_server_info(server_info)
 
         server_info = obfs.server_info(server.protocol_data)
@@ -209,6 +198,7 @@ class TCPRelayHandler(object):
         server_info.head_len = 30
         server_info.tcp_mss = self._tcp_mss
         server_info.buffer_size = self._recv_buffer_size
+        server_info.overhead = self._overhead
         self._protocol.set_server_info(server_info)
 
         self._redir_list = config.get('redirect', ["*#0.0.0.0:0"])
@@ -226,18 +216,22 @@ class TCPRelayHandler(object):
         self._remote_address = None
 
         self._header_buf = []
-
+        self._forbidden_iplist = config.get('forbidden_ip', None)
+        self._forbidden_portset = config.get('forbidden_port', None)
         if is_local:
             self._chosen_server = self._get_a_server()
+
         fd_to_handlers[local_sock.fileno()] = self
         local_sock.setblocking(False)
         local_sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
-        loop.add(local_sock, eventloop.POLL_IN | eventloop.POLL_ERR,
-                 self._server)
+        loop.add(local_sock, eventloop.POLL_IN | eventloop.POLL_ERR, self._server)
+
         self.last_activity = 0
         self._update_activity()
         self._server.add_connection(1)
         self._server.stat_add(self._client_address[0], 1)
+
+        self._recv_pack_id = 0
 
     def __hash__(self):
         # default __hash__ is id / 16
@@ -257,6 +251,23 @@ class TCPRelayHandler(object):
             server = random.choice(server)
         logging.debug('chosen server: %s:%d', server, server_port)
         return server, server_port
+
+    def _update_tcp_mss(self, local_sock):
+        self._tcp_mss = TCP_MSS
+        try:
+            self._tcp_mss = local_sock.getsockopt(socket.SOL_TCP, socket.TCP_MAXSEG)
+            logging.debug("TCP MSS = %d" % (self._tcp_mss,))
+        except:
+            pass
+
+    def _create_encryptor(self, config):
+        try:
+            self._encryptor = encrypt.Encryptor(config['password'],
+                                                config['method'])
+            return True
+        except Exception:
+            self._stage = STAGE_DESTROYED
+            logging.error('create encryptor fail at port %d', self._server._listen_port)
 
     def _update_user(self, user):
         self._current_user_id = int(user)
@@ -1339,6 +1350,7 @@ class TCPRelayHandler(object):
                 else:
                     recv_buffer_size = self._get_read_size(self._remote_sock, self._recv_buffer_size)
                 data = self._remote_sock.recv(recv_buffer_size)
+                self._recv_pack_id += 1
         except (OSError, IOError) as e:
             if eventloop.errno_from_exception(e) in (
                     errno.ETIMEDOUT,
@@ -1377,6 +1389,8 @@ class TCPRelayHandler(object):
                 data = self._encryptor.decrypt(obfs_decode[0])
                 try:
                     data = self._protocol.client_post_decrypt(data)
+                    if self._recv_pack_id == 1:
+                        self._tcp_mss = self._protocol.get_server_info().tcp_mss
                 except Exception as e:
                     shell.print_exception(e)
                     logging.error(
