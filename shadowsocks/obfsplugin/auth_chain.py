@@ -470,7 +470,6 @@ class auth_chain_a(auth_base):
             self.last_client_hash = md5data
             uid = struct.unpack('<I', self.recv_buf[12:16])[0] ^ struct.unpack('<I', md5data[8:12])[0]
             self.user_id_num = uid
-            uid = struct.pack('<I', uid)
             if uid in self.server_info.users:
                 self.user_id = uid
                 self.user_key = self.server_info.users[uid]
@@ -611,7 +610,6 @@ class auth_chain_a(auth_base):
         mac_key = self.server_info.key
         md5data = hmac.new(mac_key, buf[-8:-5], self.hashfunc).digest()
         uid = struct.unpack('<I', buf[-5:-1])[0] ^ struct.unpack('<I', md5data[:4])[0]
-        uid = struct.pack('<I', uid)
         if uid in self.server_info.users:
             user_key = self.server_info.users[uid]
         else:
