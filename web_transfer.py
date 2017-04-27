@@ -54,7 +54,8 @@ class WebTransfer(object):
         for id in dt_transfer.keys():
             if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
                 continue
-            data.append({'u': dt_transfer[id][0], 'd': dt_transfer[id][1], 'user_id': self.port_uid_table[id]})
+            data.append({'u': dt_transfer[id][0], 'd': dt_transfer[
+                        id][1], 'user_id': self.port_uid_table[id]})
             update_transfer[id] = dt_transfer[id]
         webapi.postApi('users/traffic',
                        {'node_id': get_config().NODE_ID},
@@ -348,9 +349,9 @@ class WebTransfer(object):
             for name in cfg.keys():
                 if hasattr(cfg[name], 'encode'):
                     try:
-						cfg[name] = cfg[name].encode('utf-8')
-					except Exception as e:
-						logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
+                        cfg[name] = cfg[name].encode('utf-8')
+                    except Exception as e:
+                        logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
 
             if 'node_speedlimit' in cfg:
                 if float(
@@ -541,7 +542,7 @@ class WebTransfer(object):
                     self.del_server(port, "config changed")
                     new_servers[port] = (passwd, cfg)
             elif ServerPool.get_instance().server_run_status(port) is False:
-                #new_servers[port] = passwd
+                # new_servers[port] = passwd
                 self.new_server(port, passwd, cfg)
 
         for row in last_rows:
@@ -654,7 +655,7 @@ class WebTransfer(object):
                 except Exception as e:
                     trace = traceback.format_exc()
                     logging.error(trace)
-                    #logging.warn('db thread except:%s' % e)
+                    # logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
                     break
         except KeyboardInterrupt as e:

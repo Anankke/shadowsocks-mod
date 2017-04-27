@@ -19,6 +19,7 @@ import fcntl
 switchrule = None
 db_instance = None
 
+
 class DbTransfer(object):
 
     def __init__(self):
@@ -568,7 +569,7 @@ class DbTransfer(object):
             merge_config_keys = ['password'] + read_config_keys
             for name in cfg.keys():
                 if hasattr(cfg[name], 'encode'):
-                    try:
+					try:
 						cfg[name] = cfg[name].encode('utf-8')
 					except Exception as e:
 						logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
@@ -763,7 +764,7 @@ class DbTransfer(object):
                     self.del_server(port, "config changed")
                     new_servers[port] = (passwd, cfg)
             elif ServerPool.get_instance().server_run_status(port) is False:
-                #new_servers[port] = passwd
+                # new_servers[port] = passwd
                 self.new_server(port, passwd, cfg)
 
         for row in last_rows:
@@ -863,7 +864,7 @@ class DbTransfer(object):
                 except Exception as e:
                     trace = traceback.format_exc()
                     logging.error(trace)
-                    #logging.warn('db thread except:%s' % e)
+                    # logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
                     break
         except KeyboardInterrupt as e:
