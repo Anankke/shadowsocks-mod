@@ -81,7 +81,7 @@ class plain(object):
     def client_udp_post_decrypt(self, buf):
         return buf
 
-    def server_udp_pre_encrypt(self, buf):
+    def server_udp_pre_encrypt(self, buf, uid):
         return buf
 
     def server_udp_post_decrypt(self, buf):
@@ -101,4 +101,3 @@ class plain(object):
         if head_type == 3:
             return 4 + ord(buf[1])
         return def_value
-

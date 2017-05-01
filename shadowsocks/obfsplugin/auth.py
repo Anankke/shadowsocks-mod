@@ -1215,7 +1215,7 @@ class auth_aes128_sha1(auth_base):
             return b''
         return buf[:-4]
 
-    def server_udp_pre_encrypt(self, buf):
+    def server_udp_pre_encrypt(self, buf, uid):
         user_key = self.server_info.key
         return buf + hmac.new(user_key, buf, self.hashfunc).digest()[:4]
 
