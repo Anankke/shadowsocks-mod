@@ -472,7 +472,7 @@ class auth_chain_a(auth_base):
             self.user_id_num = uid
             if uid in self.server_info.users:
                 self.user_id = uid
-                self.user_key = self.server_info.users[uid]
+                self.user_key = self.server_info.users[uid]['passwd'].encode('utf-8')
                 self.server_info.update_user_func(uid)
             else:
                 self.user_id_num = 0
@@ -590,7 +590,7 @@ class auth_chain_a(auth_base):
 
     def server_udp_pre_encrypt(self, buf, uid):
         if uid in self.server_info.users:
-            user_key = self.server_info.users[uid]
+            user_key = self.server_info.users[uid]['passwd'].encode('utf-8')
         else:
             uid = None
             if not self.server_info.users:
@@ -611,7 +611,7 @@ class auth_chain_a(auth_base):
         md5data = hmac.new(mac_key, buf[-8:-5], self.hashfunc).digest()
         uid = struct.unpack('<I', buf[-5:-1])[0] ^ struct.unpack('<I', md5data[:4])[0]
         if uid in self.server_info.users:
-            user_key = self.server_info.users[uid]
+            user_key = self.server_info.users[uid]['passwd'].encode('utf-8')
         else:
             uid = None
             if not self.server_info.users:
