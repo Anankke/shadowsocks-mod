@@ -351,7 +351,8 @@ class WebTransfer(object):
                     try:
                         cfg[name] = cfg[name].encode('utf-8')
                     except Exception as e:
-                        logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
+                        logging.warning(
+                            'encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
 
             if 'node_speedlimit' in cfg:
                 if float(
@@ -650,7 +651,8 @@ class WebTransfer(object):
                     else:
                         db_instance.push_db_all_user()
                         rows = db_instance.pull_db_all_user()
-                        db_instance.del_server_out_of_bound_safe(last_rows, rows)
+                        db_instance.del_server_out_of_bound_safe(
+                            last_rows, rows)
                         last_rows = rows
                 except Exception as e:
                     trace = traceback.format_exc()
