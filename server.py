@@ -71,7 +71,7 @@ def main():
 
     try:
         while threadMain.is_alive():
-            thread.join(10.0)
+            threadMain.join(10.0)
     except (KeyboardInterrupt, IOError, OSError) as e:
         import traceback
         traceback.print_exc()
