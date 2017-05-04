@@ -27,10 +27,7 @@ import logging
 if __name__ == '__main__':
     import sys
     import inspect
-    file_path = os.path.dirname(
-        os.path.realpath(
-            inspect.getfile(
-                inspect.currentframe())))
+    file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
     sys.path.insert(0, os.path.join(file_path, '../'))
 
 from shadowsocks import common, lru_cache, eventloop, shell
@@ -80,7 +77,6 @@ QTYPE_CNAME = 5
 QTYPE_NS = 2
 QCLASS_IN = 1
 
-
 def detect_ipv6_supprot():
     if 'has_ipv6' in dir(socket):
         try:
@@ -94,7 +90,6 @@ def detect_ipv6_supprot():
     return False
 
 IPV6_CONNECTION_SUPPORT = detect_ipv6_supprot()
-
 
 def build_address(address):
     address = address.strip(b'.')
@@ -257,7 +252,6 @@ def is_valid_hostname(hostname):
 
 
 class DNSResponse(object):
-
     def __init__(self):
         self.hostname = None
         self.questions = []  # each: (addr, type, class)
@@ -303,7 +297,7 @@ class DNSResolver(object):
                             server = parts[0]
                             port = 53
                         if common.is_ip(server) == socket.AF_INET:
-                            if not isinstance(server, str):
+                            if type(server) != str:
                                 server = server.decode('utf8')
                             self._servers.append((server, port))
         except IOError:
@@ -320,7 +314,7 @@ class DNSResolver(object):
                                 if len(parts) >= 2:
                                     server = parts[1]
                                     if common.is_ip(server) == socket.AF_INET:
-                                        if not isinstance(server, str):
+                                        if type(server) != str:
                                             server = server.decode('utf8')
                                         self._servers.append((server, 53))
             except IOError:
@@ -337,6 +331,8 @@ class DNSResolver(object):
             with open(etc_path, 'rb') as f:
                 for line in f.readlines():
                     line = line.strip()
+                    if b"#" in line:
+                        line = line[:line.find(b'#')]
                     parts = line.split()
                     if len(parts) >= 2:
                         ip = parts[0]
@@ -385,8 +381,8 @@ class DNSResolver(object):
                     ip = answer[0]
                     break
             if IPV6_CONNECTION_SUPPORT:
-                if not ip and self._hostname_status.get(
-                        hostname, STATUS_IPV4) == STATUS_IPV6:
+                if not ip and self._hostname_status.get(hostname, STATUS_IPV4) \
+                        == STATUS_IPV6:
                     self._hostname_status[hostname] = STATUS_IPV4
                     self._send_req(hostname, QTYPE_A)
                 else:
@@ -399,8 +395,8 @@ class DNSResolver(object):
                                 self._call_callback(hostname, None)
                                 break
             else:
-                if not ip and self._hostname_status.get(
-                        hostname, STATUS_IPV6) == STATUS_IPV4:
+                if not ip and self._hostname_status.get(hostname, STATUS_IPV6) \
+                        == STATUS_IPV4:
                     self._hostname_status[hostname] = STATUS_IPV6
                     self._send_req(hostname, QTYPE_AAAA)
                 else:
@@ -455,7 +451,7 @@ class DNSResolver(object):
             self._sock.sendto(req, server)
 
     def resolve(self, hostname, callback):
-        if not isinstance(hostname, bytes):
+        if type(hostname) != bytes:
             hostname = hostname.encode('utf8')
         if not hostname:
             callback(None, Exception('empty hostname'))
@@ -475,10 +471,10 @@ class DNSResolver(object):
                 return
             if False:
                 addrs = socket.getaddrinfo(hostname, 0, 0,
-                                           socket.SOCK_DGRAM, socket.SOL_UDP)
+                                       socket.SOCK_DGRAM, socket.SOL_UDP)
                 if addrs:
                     af, socktype, proto, canonname, sa = addrs[0]
-                    logging.debug('DNS resolve %s %s' % (hostname, sa[0]))
+                    logging.debug('DNS resolve %s %s' % (hostname, sa[0]) )
                     self._cache[hostname] = sa[0]
                     callback((hostname, sa[0]), None)
                     return
