@@ -377,7 +377,7 @@ class UDPRelay(object):
 
     def _get_mu_relay_host(self, ogn_data, uid):
 
-        if uid == 0:
+        if not uid:
             return (None, None)
 
         for id in self._relay_rules:
@@ -742,13 +742,13 @@ class UDPRelay(object):
 
         if client_addr:
             if client_uid:
-
-                if self._is_relay(r_addr, origin_data, client_uid):
-                    response = origin_data
-
                 self.add_transfer_d(client_uid, len(response))
             else:
                 self.server_transfer_dl += len(response)
+
+            if self._is_relay(r_addr, origin_data, client_uid):
+                response = origin_data
+
             self.write_to_server_socket(response, client_addr[0])
             if client_dns_pair:
                 logging.debug(
