@@ -321,6 +321,16 @@ class WebTransfer(object):
                     pass
                 i += 1
 
+        if self.mu_only == -1:
+            i = 0
+            while i < len(rows):
+                if rows[i]['is_multi_user'] != 0:
+                    rows.pop(i)
+                    i -= 1
+                else:
+                    pass
+                i += 1
+
         self.mu_port_list = []
 
         for row in rows:
