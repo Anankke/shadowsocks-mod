@@ -645,11 +645,14 @@ class WebTransfer(object):
         webapi = webapi_utils.WebApi()
 
         shell.log_shadowsocks_version()
-        import resource
-        logging.info(
-            'current process RLIMIT_NOFILE resource: soft %d hard %d' %
-            resource.getrlimit(
-                resource.RLIMIT_NOFILE))
+        try:
+            import resource
+            logging.info(
+                'current process RLIMIT_NOFILE resource: soft %d hard %d' %
+                resource.getrlimit(
+                    resource.RLIMIT_NOFILE))
+        except:
+			pass
         try:
             while True:
                 load_config()

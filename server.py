@@ -19,6 +19,7 @@ import time
 import sys
 import threading
 import os
+import logging
 
 if __name__ == '__main__':
     import inspect
@@ -52,6 +53,9 @@ class MainThread(threading.Thread):
 
 
 def main():
+    logging.basicConfig(level=logging.INFO,
+                        format='%(levelname)-s: %(message)s')
+
     shell.check_python()
 
     if get_config().API_INTERFACE == 'modwebapi':
