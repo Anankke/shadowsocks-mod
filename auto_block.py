@@ -106,7 +106,6 @@ class AutoBlock(object):
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                     for line in deny_lines:
                         deny_file.write(line)
-                    deny_file.write("\n")
                     deny_file.close()
 
                     continue
@@ -125,7 +124,6 @@ class AutoBlock(object):
                         fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                         for line in deny_lines:
                             deny_file.write(line)
-                        deny_file.write("\n")
                         deny_file.close()
 
                         has_match_node = True
@@ -218,13 +216,13 @@ class AutoBlock(object):
 
         deny_file = open('/etc/hosts.deny', 'a')
         fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
-        deny_file.write(deny_str + "\n")
+        deny_file.write(deny_str)
         deny_file.close()
 
         if configloader.get_config().ANTISSATTACK == 1 and configloader.get_config().CLOUDSAFE == 1:
             deny_file = open('/etc/hosts.deny', 'a')
             fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
-            deny_file.write(deny_str_at + "\n")
+            deny_file.write(deny_str_at)
             deny_file.close()
 
         if configloader.get_config().API_INTERFACE == 'modwebapi':
@@ -267,7 +265,6 @@ class AutoBlock(object):
         fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
         for line in deny_lines:
             deny_file.write(line)
-        deny_file.write("\n")
         deny_file.close()
 
         self.start_line = self.file_len("/etc/hosts.deny")

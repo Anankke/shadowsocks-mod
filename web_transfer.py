@@ -140,7 +140,7 @@ class WebTransfer(object):
                 if get_config().CLOUDSAFE == 0:
                     deny_file = open('/etc/hosts.deny', 'a')
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
-                    deny_file.write(deny_str + "\n")
+                    deny_file.write(deny_str)
                     deny_file.close()
             webapi.postApi('func/block_ip',
                            {'node_id': get_config().NODE_ID},
