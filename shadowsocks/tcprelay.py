@@ -1542,7 +1542,7 @@ class TCPRelayHandler(object):
             logging.warn('unknown socket from %s:%d' %
                          (self._client_address[0], self._client_address[1]))
             try:
-                self._loop.remove(sock)
+                self._loop.removefd(fd)
             except Exception as e:
                 shell.print_exception(e)
             try:
@@ -1581,7 +1581,7 @@ class TCPRelayHandler(object):
         if self._remote_sock:
             logging.debug('destroying remote')
             try:
-                self._loop.remove(self._remote_sock)
+                self._loop.removefd(self._remote_sock_fd)
             except Exception as e:
                 shell.print_exception(e)
             try:
@@ -1594,7 +1594,7 @@ class TCPRelayHandler(object):
         if self._remote_sock_v6:
             logging.debug('destroying remote_v6')
             try:
-                self._loop.remove(self._remote_sock_v6)
+                self._loop.removefd(self._remotev6_sock_fd)
             except Exception as e:
                 shell.print_exception(e)
             try:
@@ -1607,7 +1607,7 @@ class TCPRelayHandler(object):
         if self._local_sock:
             logging.debug('destroying local')
             try:
-                self._loop.remove(self._local_sock)
+                self._loop.removefd(self._local_sock_fd)
             except Exception as e:
                 shell.print_exception(e)
             try:
@@ -1955,7 +1955,7 @@ class TCPRelay(object):
                     logging.warn('unknown fd')
                     handle = True
                     try:
-                        self._eventloop.remove(sock)
+                        self._eventloop.removefd(fd)
                     except Exception as e:
                         shell.print_exception(e)
                     sock.close()

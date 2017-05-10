@@ -177,6 +177,10 @@ class EventLoop(object):
         del self._fdmap[fd]
         self._impl.unregister(fd)
 
+    def removefd(self, fd):
+        del self._fdmap[fd]
+        self._impl.unregister(fd)
+
     def add_periodic(self, callback):
         self._periodic_callbacks.append(callback)
 
