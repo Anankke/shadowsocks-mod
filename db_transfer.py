@@ -366,11 +366,11 @@ class DbTransfer(object):
         cur = conn.cursor()
         cur.execute("SELECT " +
                     ','.join(keys) +
-                    " FROM user WHERE `class`>=" +
+                    " FROM user WHERE ((`class`>=" +
                     str(nodeinfo[1]) +
                     " " +
                     node_group_sql +
-                    " AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
+                    ") OR `is_admin`=1) AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`")
         rows = []
         for r in cur.fetchall():
             d = {}
