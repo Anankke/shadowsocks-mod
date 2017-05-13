@@ -556,13 +556,17 @@ class UDPRelay(object):
             server_addr, server_port = dest_addr, dest_port
 
         if (addrtype & 7) == 3:
-            handler = UDPAsyncDNSHandler((data, r_addr, uid, header_length))
+            handler = UDPAsyncDNSHandler((data, r_addr, uid, header_length, is_relay))
             handler.resolve(self._dns_resolver, (server_addr, server_port), self._handle_server_dns_resolved)
         else:
-            self._handle_server_dns_resolved((server_addr, server_port), None, server_addr, False, data, r_addr, uid, header_length)
+            self._handle_server_dns_resolved((server_addr, server_port), None, server_addr, False, data, r_addr, uid, header_length, is_relay)
 
 
-    def _handle_server_dns_resolved(self, remote_addr, addrs, server_addr, dns_resolved, data, r_addr, uid, header_length):
+    def _handle_server_dns_resolved(self, remote_addr, addrs, server_addr, dns_resolved, data, r_addr, uid, header_length, is_relay):
+        if uid is None:
+            user_id = self._listen_port
+        else:
+            user_id = uid
         try:
             server_port = remote_addr[1]
             if addrs is None:
@@ -590,7 +594,7 @@ class UDPRelay(object):
                 client = socket.socket(af, socktype, proto)
                 client_uid = uid
                 client.setblocking(False)
-                self._socket_bind_addr(client, af)
+                self._socket_bind_addr(client, af, is_relay)
                 is_dns = False
                 if len(data) > header_length + 13 and data[header_length + 4 : header_length + 12] == b"\x00\x01\x00\x00\x00\x00\x00\x00":
                     is_dns = True
@@ -671,11 +675,6 @@ class UDPRelay(object):
                             0] != 0 and self.is_cleaning_connected_iplist == False:
                         self.connected_iplist.append(common.get_ip_md5(
                             r_addr[0], self._config['ip_md5_salt']))
-
-                if uid is None:
-                    user_id = self._listen_port
-                else:
-                    user_id = struct.unpack('<I', client_uid)[0]
             else:
                 client, client_uid = client_pair
             self._cache.clear(self._udp_cache_size)
@@ -695,7 +694,7 @@ class UDPRelay(object):
                 return
         except Exception as e:
             shell.print_exception(e)
-            logging.error("exception from user %d" % (user_id,))
+            logging.error("exception from user %d" % (uid,))
 
         try:
             client.sendto(data, (server_addr, server_port))
