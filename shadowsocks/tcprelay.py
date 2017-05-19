@@ -857,6 +857,7 @@ class TCPRelayHandler(object):
                             else:
                                 if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
                                     self._server.detect_log_list.append(id)
+                            self._handle_detect_rule_match(remote_port)
                             raise Exception(
                                 'This connection match the regex: id:%d was reject,regex: %s ,%s connecting %s:%d from %s:%d via port %d' %
                                 (self._server.detect_text_list[id]['id'],
@@ -881,6 +882,7 @@ class TCPRelayHandler(object):
                             else:
                                 if self._server.is_cleaning_detect_log == False and id not in self._server.detect_log_list:
                                     self._server.detect_log_list.append(id)
+                            self._handle_detect_rule_match(remote_port)
                             raise Exception(
                                 'This connection match the regex: id:%d was reject,regex: %s ,connecting %s:%d from %s:%d via port %d' %
                                 (self._server.detect_hex_list[id]['id'],
@@ -1206,6 +1208,15 @@ class TCPRelayHandler(object):
         if s > self._tcp_mss:
             return buffer_size - (s - self._tcp_mss)
         return buffer_size
+
+    def _handle_detect_rule_match(self, port):
+        if port == 80:
+            backdata = b'HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: text/html; charset=utf-8\r\n\r\n由于碰撞到审计规则，连接已经中断。'
+            backdata = self._protocol.server_pre_encrypt(backdata)
+            backdata = self._encryptor.encrypt(backdata)
+            backdata = self._obfs.server_encode(backdata)
+            self._write_to_sock(backdata, self._local_sock)
+            self.destroy()
 
     def _on_local_read(self):
         # handle all local read events and dispatch them to methods for
