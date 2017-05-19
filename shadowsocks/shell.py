@@ -100,6 +100,25 @@ def find_config():
         return config_path
     return None
 
+def find_custom_detect():
+    config_path = 'user-detect.html'
+    if os.path.exists(config_path):
+        return config_path
+    config_path = os.path.join(
+        os.path.dirname(__file__),
+        '../',
+        'user-detect.html')
+    if os.path.exists(config_path):
+        return config_path
+
+    config_path = 'detect.html'
+    if os.path.exists(config_path):
+        return config_path
+    config_path = os.path.join(os.path.dirname(__file__), '../', 'detect.html')
+    if os.path.exists(config_path):
+        return config_path
+    return None
+
 
 def check_config(config, is_local):
     if config.get('daemon', None) == 'stop':
@@ -179,6 +198,13 @@ def get_config(is_local):
         else:
             config = {}
 
+        if config.get('friendly_detect', 0):
+            detect_path = find_custom_detect()
+            config['detect_block_html'] = ''
+            with open(detect_path, 'rb') as f:
+                config['detect_block_html'] = bytes(f.read())
+
+
         v_count = 0
         for key, value in optlist:
             if key == '-p':
@@ -257,6 +283,7 @@ def get_config(is_local):
     config['udp_cache'] = int(config.get('udp_cache', 64))
     config['fast_open'] = config.get('fast_open', False)
     config['workers'] = config.get('workers', 1)
+    config['friendly_detect'] = config.get('friendly_detect', 0)
     config['pid-file'] = config.get('pid-file', '/var/run/shadowsocksr.pid')
     config['log-file'] = config.get('log-file', '/var/log/shadowsocksr.log')
     config['verbose'] = config.get('verbose', False)

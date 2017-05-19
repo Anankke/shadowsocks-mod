@@ -1210,8 +1210,8 @@ class TCPRelayHandler(object):
         return buffer_size
 
     def _handle_detect_rule_match(self, port):
-        if port == 80:
-            backdata = b'HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: text/html; charset=utf-8\r\n\r\n由于碰撞到审计规则，连接已经中断。'
+        if port == 80 and self._config['friendly_detect']:
+            backdata = b'HTTP/1.0 200 OK\r\nConnection: close\r\nContent-Type: text/html; charset=utf-8\r\n\r\n' + self._config['detect_block_html']
             backdata = self._protocol.server_pre_encrypt(backdata)
             backdata = self._encryptor.encrypt(backdata)
             backdata = self._obfs.server_encode(backdata)
