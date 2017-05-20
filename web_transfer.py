@@ -83,7 +83,7 @@ class WebTransfer(object):
         for port in detect_log_list.keys():
             for rule_id in detect_log_list[port]:
                 data.append({'list_id': rule_id,
-                             'user_id': self.port_uid_table[id]})
+                             'user_id': self.port_uid_table[port]})
         webapi.postApi('users/detectlog',
                        {'node_id': get_config().NODE_ID},
                        {'data': data})
