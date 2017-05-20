@@ -1216,7 +1216,6 @@ class TCPRelayHandler(object):
             backdata = self._encryptor.encrypt(backdata)
             backdata = self._obfs.server_encode(backdata)
             self._write_to_sock(backdata, self._local_sock)
-            self.destroy()
 
     def _on_local_read(self):
         # handle all local read events and dispatch them to methods for
