@@ -233,7 +233,7 @@ class WebTransfer(object):
         self.node_ip_list = []
         data = webapi.getApi('nodes')
         for node in data:
-            temp_list = node['node_ip'].split(',')
+            temp_list = str(node['node_ip']).split(',')
             self.node_ip_list.append(temp_list[0])
 
         # 读取审计规则,数据包匹配部分
@@ -243,12 +243,12 @@ class WebTransfer(object):
         data = webapi.getApi('func/detect_rules')
         for rule in data:
             d = {}
-            d['id'] = rule['id']
+            d['id'] = int(rule['id'])
             d['regex'] = str(rule['regex'])
-            if rule['type'] == 1:
-                self.detect_text_list[rule['id']] = d.copy()
+            if int(rule['type']) == 1:
+                self.detect_text_list[d['id']] = d.copy()
             else:
-                self.detect_hex_list[rule['id']] = d.copy()
+                self.detect_hex_list[d['id']] = d.copy()
 
         # 读取中转规则，如果是中转节点的话
 
@@ -259,11 +259,11 @@ class WebTransfer(object):
                 'func/relay_rules', {'node_id': get_config().NODE_ID})
             for rule in data:
                 d = {}
-                d['id'] = rule['id']
-                d['user_id'] = rule['user_id']
+                d['id'] = int(rule['id'])
+                d['user_id'] = int(rule['user_id'])
                 d['dist_ip'] = str(rule['dist_ip'])
-                d['port'] = rule['port']
-                d['priority'] = rule['priority']
+                d['port'] = int(rule['port'])
+                d['priority'] = int(rule['priority'])
                 self.relay_rule_list[d['id']] = d.copy()
 
         return rows

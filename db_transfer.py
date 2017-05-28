@@ -404,7 +404,7 @@ class DbTransfer(object):
             if id not in self.detect_text_list:
                 d = {}
                 d['id'] = id
-                d['regex'] = r[1]
+                d['regex'] = str(r[1])
                 self.detect_text_list[id] = d
                 self.detect_text_ischanged = True
             else:
@@ -412,7 +412,7 @@ class DbTransfer(object):
                     del self.detect_text_list[id]
                     d = {}
                     d['id'] = id
-                    d['regex'] = r[1]
+                    d['regex'] = str(r[1])
                     self.detect_text_list[id] = d
                     self.detect_text_ischanged = True
 
@@ -439,15 +439,15 @@ class DbTransfer(object):
             if r[0] not in self.detect_hex_list:
                 d = {}
                 d['id'] = id
-                d['regex'] = r[1]
+                d['regex'] = str(r[1])
                 self.detect_hex_list[id] = d
                 self.detect_hex_ischanged = True
             else:
                 if r[1] != self.detect_hex_list[r[0]]['regex']:
                     del self.detect_hex_list[id]
                     d = {}
-                    d['id'] = r[0]
-                    d['regex'] = r[1]
+                    d['id'] = int(r[0])
+                    d['regex'] = str(r[1])
                     self.detect_hex_list[id] = d
                     self.detect_hex_ischanged = True
 
