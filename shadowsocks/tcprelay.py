@@ -360,17 +360,12 @@ class TCPRelayHandler(object):
                 while len(self._udp_data_send_buffer) > 6:
                     length = struct.unpack(
                         '>H', self._udp_data_send_buffer[:2])[0]
-                    if length >= 0xff00:
-                        length = struct.unpack(
-                            '>H', self._udp_data_send_buffer[
-                                1:3])[0] + 0xff00
 
                     if length > len(self._udp_data_send_buffer):
                         break
 
                     data = self._udp_data_send_buffer[:length]
-                    if length >= 0xff00:
-                        data = data[1:]
+
                     self._udp_data_send_buffer = self._udp_data_send_buffer[
                         length:]
 
@@ -1417,11 +1412,8 @@ class TCPRelayHandler(object):
                     ip = socket.inet_pton(socket.AF_INET6, addr[0])
                     data = b'\x00\x04' + ip + port + data
                 size = len(data) + 2
-                if size >= 0xff00:
-                    data = common.chr(0xff) + struct.pack('>H',
-                                                          size - 0xff00 + 1) + data
-                else:
-                    data = struct.pack('>H', size) + data
+
+                data = struct.pack('>H', size) + data
                 #logging.info('UDP over TCP recvfrom %s:%d %d bytes to %s:%d' % (addr[0], addr[1], len(data), self._client_address[0], self._client_address[1]))
             else:
                 if self._is_local:
