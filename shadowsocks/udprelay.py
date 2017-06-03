@@ -538,17 +538,18 @@ class UDPRelay(object):
                 handler = common.UDPAsyncDNSHandler((data, r_addr, uid, header_length))
                 handler.resolve(self._dns_resolver, (server_addr, server_port), self._handle_server_dns_resolved)
             else:
-                self._handle_server_dns_resolved((server_addr, server_port), server_addr, (data, r_addr, uid, header_length, is_relay))
+                self._handle_server_dns_resolved("", (server_addr, server_port), server_addr, (data, r_addr, uid, header_length, is_relay))
         else:
-            self._handle_server_dns_resolved((server_addr, server_port), server_addr, (data, r_addr, uid, header_length, is_relay))
+            self._handle_server_dns_resolved("", (server_addr, server_port), server_addr, (data, r_addr, uid, header_length, is_relay))
 
-    def _handle_server_dns_resolved(self, remote_addr, server_addr, params):
+    def _handle_server_dns_resolved(self, error, remote_addr, server_addr, params):
+        if error:
+            return
         data, r_addr, uid, header_length, is_relay = params
         if uid is None:
             user_id = self._listen_port
         else:
             user_id = uid
-        
         try:
             server_port = remote_addr[1]
             addrs = socket.getaddrinfo(server_addr, server_port, 0,
