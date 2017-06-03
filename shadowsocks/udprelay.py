@@ -535,7 +535,7 @@ class UDPRelay(object):
         if (addrtype & 7) == 3:
             af = common.is_ip(server_addr)
             if af == False:
-                handler = common.UDPAsyncDNSHandler((data, r_addr, uid, header_length))
+                handler = common.UDPAsyncDNSHandler((data, r_addr, uid, header_length, is_relay))
                 handler.resolve(self._dns_resolver, (server_addr, server_port), self._handle_server_dns_resolved)
             else:
                 self._handle_server_dns_resolved("", (server_addr, server_port), server_addr, (data, r_addr, uid, header_length, is_relay))
