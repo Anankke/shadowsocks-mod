@@ -676,7 +676,7 @@ class UDPRelay(object):
                 return
         except Exception as e:
             shell.print_exception(e)
-            logging.error("exception from user %d" % (uid,))
+            logging.error("exception from user %d" % (user_id,))
 
         try:
             client.sendto(data, (server_addr, server_port))
