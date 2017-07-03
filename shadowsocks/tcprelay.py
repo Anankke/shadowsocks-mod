@@ -141,6 +141,7 @@ class TCPRelayHandler(object):
         self._current_user_id = 0
         self._relay_rules = server.relay_rules.copy()
         self._is_relay = False
+        self._add_ref = 0
         if not self._create_encryptor(config):
             return
 
@@ -225,6 +226,8 @@ class TCPRelayHandler(object):
         self._update_activity()
         self._server.add_connection(1)
         self._server.stat_add(self._client_address[0], 1)
+
+        self._add_ref = 1
 
         self._recv_u_max_size = BUF_SIZE
         self._recv_d_max_size = BUF_SIZE
@@ -1663,8 +1666,9 @@ class TCPRelayHandler(object):
         self._encryptor = None
         self._dns_resolver.remove_callback(self._handle_dns_resolved)
         self._server.remove_handler(self)
-        self._server.add_connection(-1)
-        self._server.stat_add(self._client_address[0], -1)
+        if self._add_ref > 0:
+            self._server.add_connection(-1)
+            self._server.stat_add(self._client_address[0], -1)
 
 
 class TCPRelay(object):
