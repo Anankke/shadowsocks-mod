@@ -229,6 +229,8 @@ class TCPRelayHandler(object):
         self._recv_u_max_size = BUF_SIZE
         self._recv_d_max_size = BUF_SIZE
         self._recv_pack_id = 0
+        self._udp_send_pack_id = 0
+        self._udpv6_send_pack_id = 0
 
         local_sock.setblocking(False)
         local_sock.setsockopt(socket.SOL_TCP, socket.TCP_NODELAY, 1)
