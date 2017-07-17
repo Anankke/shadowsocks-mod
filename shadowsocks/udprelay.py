@@ -598,7 +598,7 @@ class UDPRelay(object):
                     for id in self.detect_text_list:
                         if common.match_regex(
                                 self.detect_text_list[id]['regex'],
-                                common.to_str(data)):
+                                str(data)):
                             if self._config['is_multi_user'] != 0 and uid != 0:
                                 if self.is_cleaning_mu_detect_log_list == False and id not in self.mu_detect_log_list[
                                         uid]:
