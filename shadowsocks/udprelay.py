@@ -676,6 +676,8 @@ class UDPRelay(object):
                 return
         except Exception as e:
             shell.print_exception(e)
+            if self._config['verbose']:
+                traceback.print_exc()
             logging.error("exception from user %d" % (user_id,))
 
         try:
