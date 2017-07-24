@@ -289,8 +289,11 @@ class WebTransfer(object):
 
         md5_users = {}
 
+        self.mu_port_list = []
+
         for row in rows:
             if row['is_multi_user'] != 0:
+                self.mu_port_list.append(int(row['port']))
                 continue
 
             md5_users[row['id']] = row.copy()
@@ -330,8 +333,6 @@ class WebTransfer(object):
                 else:
                     pass
                 i += 1
-
-        self.mu_port_list = []
 
         for row in rows:
             port = row['port']
@@ -404,7 +405,6 @@ class WebTransfer(object):
 
             if cfg['is_multi_user'] != 0:
                 cfg['users_table'] = md5_users.copy()
-                self.mu_port_list.append(port)
 
             cfg['detect_hex_list'] = self.detect_hex_list.copy()
             cfg['detect_text_list'] = self.detect_text_list.copy()
