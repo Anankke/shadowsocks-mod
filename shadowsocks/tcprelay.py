@@ -1254,7 +1254,8 @@ class TCPRelayHandler(object):
                             if self._server._config[
                                     "is_multi_user"] == 1 and self._current_user_id == 0:
                                 if self._server._config[
-                                        "obfs"] == b"tls1.2_ticket_auth":
+                                        "obfs"] == b"tls1.2_ticket_auth" or self._server._config[
+                                                "obfs"] == b"tls1.2_ticket_fastauth":
                                     if(len(obfs_decode) > 3):
                                         host = obfs_decode[3] + ":" + str(self._server._listen_port)
                             need_sendback = True
