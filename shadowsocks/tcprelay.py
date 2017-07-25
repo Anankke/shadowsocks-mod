@@ -172,7 +172,7 @@ class TCPRelayHandler(object):
         server_info.iv = self._encryptor.cipher_iv
         server_info.recv_iv = b''
         server_info.key_str = common.to_bytes(config['password'])
-        server_info.key = self._encryptor.cipher_key
+        server_info.key = self._encryptor.key
         server_info.head_len = 30
         server_info.tcp_mss = self._tcp_mss
         server_info.buffer_size = self._recv_buffer_size
@@ -195,7 +195,7 @@ class TCPRelayHandler(object):
         server_info.iv = self._encryptor.cipher_iv
         server_info.recv_iv = b''
         server_info.key_str = common.to_bytes(config['password'])
-        server_info.key = self._encryptor.cipher_key
+        server_info.key = self._encryptor.key
         server_info.head_len = 30
         server_info.tcp_mss = self._tcp_mss
         server_info.buffer_size = self._recv_buffer_size
@@ -279,6 +279,7 @@ class TCPRelayHandler(object):
         except Exception:
             self._stage = STAGE_DESTROYED
             logging.error('create encryptor fail at port %d', self._server._listen_port)
+            traceback.print_exc()
 
     def _update_user(self, user):
         self._current_user_id = int(user)
