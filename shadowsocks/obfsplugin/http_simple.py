@@ -196,11 +196,11 @@ class http_simple(plain.plain):
             ret_buf = self.get_data_from_http_header(buf)
             host = self.get_host_from_http_header(buf)
             if host and self.server_info.obfs_param:
-                pos = host.find(b":")
+                pos = host.find(":")
                 if pos >= 0:
                     host = host[:pos]
-                hosts = self.server_info.obfs_param.split(',')
-                if host not in hosts:
+                hosts = self.server_info.obfs_param.split(b',')
+                if common.to_bytes(host) not in hosts:
                     return self.not_match_return(buf)
             if len(ret_buf) < 4:
                 return self.error_return(buf)
@@ -287,8 +287,8 @@ class http_post(http_simple):
                 pos = host.find(b":")
                 if pos >= 0:
                     host = host[:pos]
-                hosts = self.server_info.obfs_param.split(',')
-                if host not in hosts:
+                hosts = self.server_info.obfs_param.split(b',')
+                if common.to_bytes(host) not in hosts:
                     return self.not_match_return(buf)
             if len(datas) > 1:
                 ret_buf += datas[1]
