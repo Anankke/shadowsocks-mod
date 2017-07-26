@@ -196,7 +196,7 @@ class http_simple(plain.plain):
             ret_buf = self.get_data_from_http_header(buf)
             host = self.get_host_from_http_header(buf)
             if host and self.server_info.obfs_param:
-                pos = host.find(":")
+                pos = host.find(b":")
                 if pos >= 0:
                     host = host[:pos]
                 hosts = self.server_info.obfs_param.split(',')
@@ -284,7 +284,7 @@ class http_post(http_simple):
             ret_buf = self.get_data_from_http_header(buf)
             host = self.get_host_from_http_header(buf)
             if host and self.server_info.obfs_param:
-                pos = host.find(":")
+                pos = host.find(b":")
                 if pos >= 0:
                     host = host[:pos]
                 hosts = self.server_info.obfs_param.split(',')
