@@ -299,7 +299,7 @@ class tls_ticket_auth(plain.plain):
 
         buf = buf[48:]
 
-        host_name = b''
+        host_name = ''
         for index in range(len(buf)):
             if index + 4 < len(buf):
                 if buf[index:index + 4] == b"\x00\x17\x00\x00":

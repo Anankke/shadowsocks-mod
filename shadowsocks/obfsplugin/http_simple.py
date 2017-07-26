@@ -199,7 +199,7 @@ class http_simple(plain.plain):
                 pos = host.find(":")
                 if pos >= 0:
                     host = host[:pos]
-                hosts = self.server_info.obfs_param.split(b',')
+                hosts = self.server_info.obfs_param.split(',')
                 if host not in hosts:
                     return self.not_match_return(buf)
             if len(ret_buf) < 4:
@@ -287,7 +287,7 @@ class http_post(http_simple):
                 pos = host.find(":")
                 if pos >= 0:
                     host = host[:pos]
-                hosts = self.server_info.obfs_param.split(b',')
+                hosts = self.server_info.obfs_param.split(',')
                 if host not in hosts:
                     return self.not_match_return(buf)
             if len(datas) > 1:

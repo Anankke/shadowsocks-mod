@@ -182,7 +182,7 @@ class simple_obfs_http(plain.plain):
                 pos = host.find(":")
                 if pos >= 0:
                     host = host[:pos]
-                hosts = self.server_info.obfs_param.split(b',')
+                hosts = self.server_info.obfs_param.split(',')
                 if host not in hosts:
                     return self.not_match_return(buf)
             if len(datas) > 1:
