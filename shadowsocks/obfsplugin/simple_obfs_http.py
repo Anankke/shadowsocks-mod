@@ -179,7 +179,7 @@ class simple_obfs_http(plain.plain):
             datas = buf.split(b'\r\n\r\n', 1)
             host = self.get_host_from_http_header(buf)
             if host and self.server_info.obfs_param:
-                pos = host.find(b":")
+                pos = host.find(":")
                 if pos >= 0:
                     host = host[:pos]
                 hosts = self.server_info.obfs_param.split(b',')
