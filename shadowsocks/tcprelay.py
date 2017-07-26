@@ -1272,7 +1272,17 @@ class TCPRelayHandler(object):
                                     self._protocol.obfs.server_info.iv)
                                 self._protocol.obfs.server_info.recv_iv = obfs_decode[
                                     0][:iv_len]
-                            data = self._encryptor.decrypt(obfs_decode[0])
+                            try:
+                                data = self._encryptor.decrypt(obfs_decode[0])
+                            except Exception as e:
+                                shell.print_exception(e)
+                                if self._config['verbose']:
+                                    traceback.print_exc()
+                                logging.error(
+                                    "decrypt data failed, exception from %s:%d" %
+                                    (self._client_address[0], self._client_address[1]))
+                                self.destroy()
+                                return
                         else:
                             data = obfs_decode[0]
 
@@ -1447,7 +1457,15 @@ class TCPRelayHandler(object):
                     iv_len = len(self._protocol.obfs.server_info.iv)
                     self._protocol.obfs.server_info.recv_iv = obfs_decode[
                         0][:iv_len]
-                data = self._encryptor.decrypt(obfs_decode[0])
+                try:
+                    data = self._encryptor.decrypt(obfs_decode[0])
+                except Exception as e:
+                    shell.print_exception(e)
+                    logging.error(
+                        "decrypt data failed, exception from %s:%d" %
+                        (self._client_address[0], self._client_address[1]))
+                    self.destroy()
+                    return
                 try:
                     data = self._protocol.client_post_decrypt(data)
                     if self._recv_pack_id == 1:
