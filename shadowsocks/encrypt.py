@@ -163,6 +163,10 @@ def gen_key_iv(password, method):
     else:
         key = password
     iv = random_string(iv_len)
+
+    if iv_len == 0:
+        iv = [0]
+
     return key, iv, m
 
 
