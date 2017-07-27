@@ -1263,8 +1263,7 @@ class TCPRelayHandler(object):
                         if obfs_decode[1]:
                             if self._server._config[
                                     "is_multi_user"] == 1 and self._current_user_id == 0:
-                                if self._server._config["obfs"] == b"http_simple" or self._server._config[
-                                        "obfs"] == b"http_post":
+                                if self._server._config["obfs"] in [b"http_simple", b"http_post", b"simple_obfs_tls", b"simple_obfs_http"]:
                                     if(len(obfs_decode) > 3):
                                         host = obfs_decode[3]
                             if not self._protocol.obfs.server_info.recv_iv:
