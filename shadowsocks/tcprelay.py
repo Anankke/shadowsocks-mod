@@ -1281,8 +1281,7 @@ class TCPRelayHandler(object):
                                 logging.error(
                                     "decrypt data failed, exception from %s:%d" %
                                     (self._client_address[0], self._client_address[1]))
-                                self.destroy()
-                                return
+                                data = [0]
                         else:
                             data = obfs_decode[0]
 
