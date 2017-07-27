@@ -65,6 +65,7 @@ class simple_obfs_http(plain.plain):
         return b''.join(chs)
 
     def client_encode(self, buf):
+        raise Exception('Need to finish')
         if self.has_sent_header:
             return buf
         port = b''
@@ -89,6 +90,7 @@ class simple_obfs_http(plain.plain):
         return http_head + buf
 
     def client_decode(self, buf):
+        raise Exception('Need to finish')
         if self.has_recv_header:
             return (buf, False)
         pos = buf.find(b'\r\n\r\n')
