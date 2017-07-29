@@ -100,7 +100,8 @@ class Encryptor(object):
             )
         else:
             logging.error('method %s not supported' % method)
-            sys.exit(1)
+            # sys.exit(1)
+            raise Exception('method not supported')
 
     @staticmethod
     def get_method_info(method):
@@ -157,6 +158,8 @@ class Encryptor(object):
 
 def gen_key_iv(password, method):
     method = method.lower()
+    if method not in method_supported:
+        raise Exception('method not supported')
     (key_len, iv_len, m) = method_supported[method]
     if key_len > 0:
         key, _ = EVP_BytesToKey(password, key_len, iv_len)
@@ -199,6 +202,8 @@ def encrypt_all(password, method, data, crypto_path=None):
 
 def encrypt_key(password, method):
     method = method.lower()
+    if method not in method_supported:
+        raise Exception('method not supported')
     (key_len, iv_len, m) = method_supported[method]
     if key_len > 0:
         key, _ = EVP_BytesToKey(password, key_len, iv_len)
@@ -208,11 +213,15 @@ def encrypt_key(password, method):
 
 def encrypt_iv_len(method):
     method = method.lower()
+    if method not in method_supported:
+        raise Exception('method not supported')
     (key_len, iv_len, m) = method_supported[method]
     return iv_len
 
 def encrypt_new_iv(method):
     method = method.lower()
+    if method not in method_supported:
+        raise Exception('method not supported')
     (key_len, iv_len, m) = method_supported[method]
     return random_string(iv_len)
 

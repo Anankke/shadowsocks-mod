@@ -210,7 +210,11 @@ class UDPRelay(object):
         server_info.iv = b''
         server_info.recv_iv = b''
         server_info.key_str = common.to_bytes(config['password'])
-        server_info.key = encrypt.encrypt_key(self._password, self._method)
+        try:
+            server_info.key = encrypt.encrypt_key(self._password, self._method)
+        except Exception:
+            logging.error("UDP: method not support")
+            server_info.key = b''
         server_info.head_len = 30
         server_info.tcp_mss = 1452
         server_info.buffer_size = BUF_SIZE
@@ -470,7 +474,7 @@ class UDPRelay(object):
                 traceback.print_exc()
                 logging.debug('UDP handle_server: decrypt data failed')
                 return
-            
+
             # decrypt data
             if not data:
                 logging.debug('UDP handle_server: data is empty after decrypt')
@@ -669,11 +673,11 @@ class UDPRelay(object):
             self._cache_dns_client.clear(16)
 
             if self._is_local:
-                key, ref_iv, m = encrypt.gen_key_iv(self._password, self._method)
-                self._protocol.obfs.server_info.iv = ref_iv[0]
-                data = self._protocol.client_udp_pre_encrypt(data)
-                #logging.debug("%s" % (binascii.hexlify(data),))
                 try:
+                    key, ref_iv, m = encrypt.gen_key_iv(self._password, self._method)
+                    self._protocol.obfs.server_info.iv = ref_iv[0]
+                    data = self._protocol.client_udp_pre_encrypt(data)
+                    #logging.debug("%s" % (binascii.hexlify(data),))
                     data = encrypt.encrypt_all_m(key, ref_iv, m, self._method, data)
                 except Exception:
                     logging.debug("UDP handle_server: encrypt data failed")
@@ -733,10 +737,10 @@ class UDPRelay(object):
             origin_data = data[:]
 
             data = pack_addr(r_addr[0]) + struct.pack('>H', r_addr[1]) + data
-            ref_iv = [encrypt.encrypt_new_iv(self._method)]
-            self._protocol.obfs.server_info.iv = ref_iv[0]
-            data = self._protocol.server_udp_pre_encrypt(data, client_uid)
             try:
+                ref_iv = [encrypt.encrypt_new_iv(self._method)]
+                self._protocol.obfs.server_info.iv = ref_iv[0]
+                data = self._protocol.server_udp_pre_encrypt(data, client_uid)
                 response = encrypt.encrypt_all(self._password,
                                                self._method, data)
             except Exception:
