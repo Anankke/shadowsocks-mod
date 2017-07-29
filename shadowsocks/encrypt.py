@@ -75,7 +75,7 @@ def EVP_BytesToKey(password, key_len, iv_len):
 
 
 class Encryptor(object):
-    def __init__(self, password, method, crypto_path=None):
+    def __init__(self, password, method, crypto_path=None, iv=None):
         """
         Crypto wrapper
         :param password: str cipher password
@@ -94,10 +94,13 @@ class Encryptor(object):
         method = method.lower()
         self._method_info = Encryptor.get_method_info(method)
         if self._method_info:
-            self.cipher = self.get_cipher(
-                password, method, CIPHER_ENC_ENCRYPTION,
-                random_string(self._method_info[METHOD_INFO_IV_LEN])
-            )
+            if iv is None or len(iv) != self._method_info[1]:
+                self.cipher = self.get_cipher(
+                    password, method, CIPHER_ENC_ENCRYPTION,
+                    random_string(self._method_info[METHOD_INFO_IV_LEN])
+                )
+            else:
+                self.cipher = self.get_cipher(key, method, 1, iv)
         else:
             logging.error('method %s not supported' % method)
             # sys.exit(1)
@@ -166,9 +169,6 @@ def gen_key_iv(password, method):
     else:
         key = password
     iv = random_string(iv_len)
-
-    if iv_len == 0:
-        iv = [0]
 
     return key, iv, m
 

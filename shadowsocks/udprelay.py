@@ -479,6 +479,7 @@ class UDPRelay(object):
             if not data:
                 logging.debug('UDP handle_server: data is empty after decrypt')
                 return
+            ref_iv = [0]
             self._protocol.obfs.server_info.recv_iv = ref_iv[0]
             data, uid = self._protocol.server_udp_post_decrypt(data)
 
@@ -749,9 +750,8 @@ class UDPRelay(object):
             if not response:
                 return
         else:
-            ref_iv = [0]
             try:
-                data, key, iv = encrypt.decrypt_all(self._password,
+                data, key, ref_iv = encrypt.decrypt_all(self._password,
                                                     self._method, data)
             except Exception:
                 logging.debug('UDP handle_client: decrypt data failed')
