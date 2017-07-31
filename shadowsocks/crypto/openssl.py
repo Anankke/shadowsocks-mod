@@ -113,12 +113,6 @@ class OpenSSLCryptoBase(object):
     def decrypt_once(self, data):
         return self.update(data)
 
-    def encrypt(self, data):
-        return self.update(data)
-
-    def decrypt(self, data):
-        return self.update(data)
-
     def update(self, data):
         """
         Encrypt/decrypt data
@@ -290,6 +284,12 @@ class OpenSSLStreamCrypto(OpenSSLCryptoBase):
         if not r:
             self.clean()
             raise Exception('can not initialize cipher context')
+
+    def encrypt(self, data):
+        return self.update(data)
+
+    def decrypt(self, data):
+        return self.update(data)
 
 
 ciphers = {
