@@ -1278,9 +1278,6 @@ class TCPRelayHandler(object):
                             try:
                                 data = self._encryptor.decrypt(obfs_decode[0])
                             except Exception as e:
-                                shell.print_exception(e)
-                                if self._config['verbose']:
-                                    traceback.print_exc()
                                 logging.error(
                                     "decrypt data failed, exception from %s:%d" %
                                     (self._client_address[0], self._client_address[1]))
@@ -1462,7 +1459,6 @@ class TCPRelayHandler(object):
                 try:
                     data = self._encryptor.decrypt(obfs_decode[0])
                 except Exception as e:
-                    shell.print_exception(e)
                     logging.error(
                         "decrypt data failed, exception from %s:%d" %
                         (self._client_address[0], self._client_address[1]))

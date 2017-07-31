@@ -471,7 +471,6 @@ class UDPRelay(object):
                                                     self._method,
                                                     data)
             except Exception:
-                traceback.print_exc()
                 logging.debug('UDP handle_server: decrypt data failed')
                 return
 
