@@ -179,12 +179,6 @@ class OpenSSLAeadCrypto(OpenSSLCryptoBase, AeadCryptoBase):
 
         self.cipher_ctx_init()
 
-    def encrypt(self, data):
-        return self.update(data)
-
-    def decrypt(self, data):
-        return self.update(data)
-
     def cipher_ctx_init(self):
         """
         Need init cipher context after EVP_CipherFinal_ex to reuse context
