@@ -159,8 +159,6 @@ class simple_obfs_tls(plain.plain):
                 ret += b"\x17" + self.tls_version + struct.pack('>H', len(buf)) + buf
             return ret
 
-        self.obfs_stage += 1
-
         utc_time = int(time.time()) & 0xFFFFFFFF
 
         if len(self.client_id) < 32:
@@ -184,6 +182,8 @@ class simple_obfs_tls(plain.plain):
         #         buf = buf[size:]
         #     if len(buf) > 0:
         #         data += b"\x17" + self.tls_version + struct.pack('>H', len(buf)) + buf
+
+        self.obfs_stage += 1
 
         return data
 
@@ -214,7 +214,6 @@ class simple_obfs_tls(plain.plain):
             return (ret, True, False)
 
         #raise Exception("handshake data = %s" % (binascii.hexlify(buf)))
-        self.deobfs_stage = 1
 
         self.recv_buffer += buf
         buf = self.recv_buffer
@@ -229,7 +228,6 @@ class simple_obfs_tls(plain.plain):
             return (b'', False, False)
 
         self.recv_buffer = self.recv_buffer[header_len + 5:]
-        self.has_recv_header = False
         buf = buf[2:header_len + 2]
         if not match_begin(buf, b'\x01\x00'): #client hello
             logging.info("tls_auth not client hello message")
@@ -275,6 +273,8 @@ class simple_obfs_tls(plain.plain):
         if not match_begin(buf, b'\x00\x23'):
             logging.info("ext header error")
             return self.decode_error_return(ogn_buf)
+
+        self.deobfs_stage = 1
 
         buf = buf[2:]
         ext_length = struct.unpack('>H', buf[:2])[0]
