@@ -250,7 +250,6 @@ class simple_obfs_tls(plain.plain):
         sessionid = buf[1:sessionid_len + 1]
         buf = buf[sessionid_len+1:]
         self.client_id = sessionid
-        sha1 = hmac.new(self.server_info.key + sessionid, verifyid[:22], hashlib.sha1).digest()[:10]
         utc_time = struct.unpack('>I', verifyid[:4])[0]
         time_dif = common.int32((int(time.time()) & 0xffffffff) - utc_time)
         if self.server_info.obfs_param:
