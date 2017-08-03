@@ -190,6 +190,7 @@ class simple_obfs_tls(plain.plain):
     def decode_error_return(self, buf):
         self.deobfs_stage = -1
         self.obfs_stage = -1
+        self.overhead = 0
         if self.method == 'simple_obfs_tls':
             return (b'E'*2048, False, False)
         return (buf, True, False)
