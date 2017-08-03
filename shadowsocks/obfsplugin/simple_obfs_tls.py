@@ -152,7 +152,7 @@ class simple_obfs_tls(plain.plain):
         if self.obfs_stage == 1:
             ret = b''
             while len(buf) > 2048:
-                size = 2048
+                size = min(struct.unpack('>H', os.urandom(2))[0] % 4096 + 100, len(buf))
                 ret += b"\x17" + self.tls_version + struct.pack('>H', size) + buf[:size]
                 buf = buf[size:]
             if len(buf) > 0:
@@ -172,16 +172,18 @@ class simple_obfs_tls(plain.plain):
 
         data += b"\x14" + self.tls_version + b"\x00\x01\x01" #ChangeCipherSpec
 
-        data += b"\x16" + self.tls_version + struct.pack('>H', len(buf)) + buf
+        size = min(struct.unpack('>H', os.urandom(2))[0] % 4096 + 100, len(buf))
 
-        # if len(buf) - size > 0:
-        #     buf = buf[size:]
-        #     while len(buf) > 2048:
-        #         size = 2048
-        #         data += b"\x17" + self.tls_version + struct.pack('>H', size) + buf[:size]
-        #         buf = buf[size:]
-        #     if len(buf) > 0:
-        #         data += b"\x17" + self.tls_version + struct.pack('>H', len(buf)) + buf
+        data += b"\x16" + self.tls_version + struct.pack('>H', size) + buf[:size]
+
+        if len(buf) - size > 0:
+            buf = buf[size:]
+            while len(buf) > 2048:
+                size = min(struct.unpack('>H', os.urandom(2))[0] % 4096 + 100, len(buf))
+                data += b"\x17" + self.tls_version + struct.pack('>H', size) + buf[:size]
+                buf = buf[size:]
+            if len(buf) > 0:
+                data += b"\x17" + self.tls_version + struct.pack('>H', len(buf)) + buf
 
         self.obfs_stage += 1
 
