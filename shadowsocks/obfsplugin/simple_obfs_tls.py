@@ -228,6 +228,7 @@ class simple_obfs_tls(plain.plain):
             return (b'', False, False)
 
         self.recv_buffer = self.recv_buffer[header_len + 5:]
+        self.deobfs_stage = 1
         buf = buf[2:header_len + 2]
         if not match_begin(buf, b'\x01\x00'): #client hello
             logging.info("tls_auth not client hello message")
@@ -273,12 +274,12 @@ class simple_obfs_tls(plain.plain):
             logging.info("ext header error")
             return self.decode_error_return(ogn_buf)
 
-        self.deobfs_stage = 1
-
         buf = buf[2:]
         ext_length = struct.unpack('>H', buf[:2])[0]
         buf = buf[2:]
         ret = buf[:ext_length]
+        if len(self.recv_buffer) > 0:
+            ret += self.server_decode(b'')[0]
         buf = buf[ext_length:]
 
         host_name = b''
