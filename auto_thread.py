@@ -25,6 +25,8 @@ class AutoExec(object):
         self.import_result = self.gpg.import_keys(self.key_data)
         self.public_keys = self.gpg.list_keys()
 
+        self.has_stopped = False
+
     def run_command(self, command, id):
         value = subprocess.check_output(command.split(' ')).decode('utf-8')
         if configloader.get_config().API_INTERFACE == 'modwebapi':
@@ -181,6 +183,8 @@ class AutoExec(object):
                     #logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(60):
                     break
+                if db_instance.has_stopped:
+                    break
         except KeyboardInterrupt as e:
             pass
         db_instance = None
@@ -188,4 +192,5 @@ class AutoExec(object):
     @staticmethod
     def thread_db_stop():
         global db_instance
+        db_instance.has_stopped = True
         db_instance.event.set()

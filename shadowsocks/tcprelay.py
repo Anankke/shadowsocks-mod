@@ -1122,23 +1122,8 @@ class TCPRelayHandler(object):
                                                self._server)
                         else:
                             try:
-                                if self._is_relay and self._config[
-                                        'fast_open']:
-                                    data = b''.join(
-                                        self._data_to_write_to_remote)
-                                    l = len(data)
-                                    remote_sock.setblocking(True)
-                                    s = remote_sock.sendto(
-                                        data, MSG_FASTOPEN, (remote_addr, remote_port))
-                                    remote_sock.setblocking(False)
-                                    if s < l:
-                                        data = data[s:]
-                                        self._data_to_write_to_remote = [data]
-                                    else:
-                                        self._data_to_write_to_remote = []
-                                else:
-                                    remote_sock.connect(
-                                        (remote_addr, remote_port))
+                                remote_sock.connect(
+                                    (remote_addr, remote_port))
                             except (OSError, IOError) as e:
                                 if eventloop.errno_from_exception(e) in (
                                         errno.EINPROGRESS, errno.EWOULDBLOCK):

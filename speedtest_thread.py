@@ -15,6 +15,7 @@ class Speedtest(object):
     def __init__(self):
         import threading
         self.event = threading.Event()
+        self.has_stopped = False
 
     def speedtest_thread(self):
         if self.event.wait(600):
@@ -180,6 +181,8 @@ class Speedtest(object):
                     #logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(configloader.get_config().SPEEDTEST * 3600):
                     break
+                if db_instance.has_stopped:
+                    break
         except KeyboardInterrupt as e:
             pass
         db_instance = None
@@ -187,4 +190,5 @@ class Speedtest(object):
     @staticmethod
     def thread_db_stop():
         global db_instance
+        db_instance.has_stopped = True
         db_instance.event.set()

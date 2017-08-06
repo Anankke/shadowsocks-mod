@@ -20,6 +20,7 @@ class AutoBlock(object):
         import threading
         self.event = threading.Event()
         self.start_line = self.file_len("/etc/hosts.deny")
+        self.has_stopped = False
 
     def get_ip(self, text):
         if common.match_ipv4_address(text) is not None:
@@ -293,6 +294,8 @@ class AutoBlock(object):
                     #logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(60):
                     break
+                if db_instance.has_stopped:
+                    break
         except KeyboardInterrupt as e:
             pass
         db_instance = None
@@ -300,4 +303,5 @@ class AutoBlock(object):
     @staticmethod
     def thread_db_stop():
         global db_instance
+        db_instance.has_stopped = True
         db_instance.event.set()

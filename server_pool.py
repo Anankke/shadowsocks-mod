@@ -56,7 +56,6 @@ class ServerPool(object):
         self.mgr = None  # asyncmgr.ServerMgr()
 
         self.eventloop_pool = {}
-        self.thread_pool = {}
         self.dns_resolver_pool = {}
 
         self.dns_resolver = asyncdns.DNSResolver()
@@ -219,9 +218,6 @@ class ServerPool(object):
 
         if port in self.dns_resolver_pool:
             del self.dns_resolver_pool[port]
-
-        if port in self.thread_pool:
-            del self.thread_pool[port]
 
         if port not in self.tcp_servers_pool:
             logging.info(

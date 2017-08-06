@@ -43,6 +43,8 @@ class DbTransfer(object):
         self.node_ip_list = []
         self.mu_port_list = []
 
+        self.has_stopped = False
+
     def update_all_user(self, dt_transfer):
         import cymysql
         update_transfer = {}
@@ -871,6 +873,8 @@ class DbTransfer(object):
                     # logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
                     break
+                if db_instance.has_stopped:
+                    break
         except KeyboardInterrupt as e:
             pass
         db_instance.del_servers()
@@ -880,12 +884,10 @@ class DbTransfer(object):
     @staticmethod
     def thread_db_stop():
         global db_instance
+        db_instance.has_stopped = True
         db_instance.event.set()
 
     def is_all_thread_alive(self):
-        for port in ServerPool.get_instance().thread_pool:
-            if not ServerPool.get_instance().thread_pool[port].is_alive():
-                return False
         if not ServerPool.get_instance().thread.is_alive():
             return False
         return True
