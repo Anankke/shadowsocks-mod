@@ -877,14 +877,14 @@ class TCPRelayHandler(object):
                                     self._client_address[0],
                                     self._client_address[1],
                                     self._server._listen_port))
-                if self._config['is_multi_user'] == 0 and self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
-                    self._server.connected_iplist.append(self._client_address[0])
+                if self._config['is_multi_user'] == 0 and common.getRealIp(self._client_address[0]) not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                    self._server.connected_iplist.append(common.getRealIp(self._client_address[0]))
 
                 if self._config[
                         'is_multi_user'] != 0 and self._current_user_id != 0:
-                    if self._client_address[0] not in self._server.mu_connected_iplist[
+                    if common.getRealIp(self._client_address[0]) not in self._server.mu_connected_iplist[
                             self._current_user_id] and self._client_address[0] != 0:
-                        self._server.mu_connected_iplist[self._current_user_id].append(self._client_address[0])
+                        self._server.mu_connected_iplist[self._current_user_id].append(common.getRealIp(self._client_address[0]))
 
                 if self._client_address[0] in self._server.wrong_iplist and self._client_address[
                         0] != 0 and self._server.is_cleaning_wrong_iplist == False:
@@ -1001,7 +1001,7 @@ class TCPRelayHandler(object):
                             sa[1])
                 if self._server.multi_user_table[
                         self._current_user_id]['_disconnect_ipset']:
-                    if self._client_address[0] in self._server.multi_user_table[
+                    if common.getRealIp(self._client_address[0]) in self._server.multi_user_table[
                             self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
                             raise Exception(

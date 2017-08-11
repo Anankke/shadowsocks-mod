@@ -293,6 +293,9 @@ def parse_header(data):
         return None
     return connecttype, addrtype, to_bytes(dest_addr), dest_port, header_length
 
+def getRealIp(ip):
+    return ip.replace("::ffff:", "")
+
 
 class IPNetwork(object):
     ADDRLENGTH = {socket.AF_INET: 32, socket.AF_INET6: 128, False: 0}

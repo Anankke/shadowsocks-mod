@@ -493,8 +493,8 @@ class UDPRelay(object):
                     if uid not in self.mu_detect_log_list:
                         self.mu_detect_log_list[uid] = []
 
-                    if r_addr[0] not in self.mu_connected_iplist[uid]:
-                        self.mu_connected_iplist[uid].append(r_addr[0])
+                    if common.getRealIp(r_addr[0]) not in self.mu_connected_iplist[uid]:
+                        self.mu_connected_iplist[uid].append(common.getRealIp(r_addr[0]))
 
                 else:
                     raise Exception(
@@ -576,7 +576,7 @@ class UDPRelay(object):
                         # drop
                         return
                 if self._disconnect_ipset:
-                    if common.to_str(sa[0]) in self._disconnect_ipset:
+                    if common.getRealIp(common.to_str(sa[0])) in self._disconnect_ipset:
                         logging.debug('IP %s is in disconnect list, drop' % common.to_str(sa[0]))
                         # drop
                         return
@@ -665,9 +665,9 @@ class UDPRelay(object):
                     if common.to_str(r_addr[0]) in self.wrong_iplist and r_addr[
                             0] != 0 and self.is_cleaning_wrong_iplist == False:
                         del self.wrong_iplist[common.to_str(r_addr[0])]
-                    if r_addr[0] not in self.connected_iplist and r_addr[
+                    if common.getRealIp(r_addr[0]) not in self.connected_iplist and r_addr[
                             0] != 0 and self.is_cleaning_connected_iplist == False:
-                        self.connected_iplist.append(r_addr[0])
+                        self.connected_iplist.append(common.getRealIp(r_addr[0]))
             else:
                 client, client_uid = client_pair
             self._cache.clear(self._udp_cache_size)
@@ -932,7 +932,7 @@ class UDPRelay(object):
             self._sweep_timeout()
 
     def connected_iplist_clean(self):
-        self.is_cleaning_connected_iplist = True
+        self.is_cleaninglist = True
         del self.connected_iplist[:]
         self.is_cleaning_connected_iplist = False
 
