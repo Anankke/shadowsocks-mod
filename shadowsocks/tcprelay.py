@@ -784,6 +784,7 @@ class TCPRelayHandler(object):
                 else:
                     data = pre_parse_header(data)
                     if data is None:
+                        is_error = True
                         data = self._handel_protocol_error(
                             self._client_address, ogn_data)
                     header_result = parse_header(data)
