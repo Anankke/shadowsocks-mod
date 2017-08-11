@@ -411,8 +411,6 @@ class WebTransfer(object):
             cfg['detect_hex_list'] = self.detect_hex_list.copy()
             cfg['detect_text_list'] = self.detect_text_list.copy()
 
-            cfg['ip_md5_salt'] = get_config().IP_MD5_SALT
-
             if self.is_relay and row['is_multi_user'] != 2:
                 temp_relay_rules = {}
                 for id in self.relay_rule_list:

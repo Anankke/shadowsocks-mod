@@ -876,21 +876,14 @@ class TCPRelayHandler(object):
                                     self._client_address[0],
                                     self._client_address[1],
                                     self._server._listen_port))
-                if self._config['is_multi_user'] == 0 and common.get_ip_md5(self._client_address[0], self._server._config[
-                                                                            'ip_md5_salt']) not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
-                    self._server.connected_iplist.append(
-                        common.get_ip_md5(
-                            self._client_address[0],
-                            self._server._config['ip_md5_salt']))
+                if self._config['is_multi_user'] == 0 and self._client_address[0] not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                    self._server.connected_iplist.append(self._client_address[0])
 
                 if self._config[
                         'is_multi_user'] != 0 and self._current_user_id != 0:
-                    if common.get_ip_md5(
-                            self._client_address[0],
-                            self._server._config['ip_md5_salt']) not in self._server.mu_connected_iplist[
+                    if self._client_address[0] not in self._server.mu_connected_iplist[
                             self._current_user_id] and self._client_address[0] != 0:
-                        self._server.mu_connected_iplist[self._current_user_id].append(
-                            common.get_ip_md5(self._client_address[0], self._server._config['ip_md5_salt']))
+                        self._server.mu_connected_iplist[self._current_user_id].append(self._client_address[0])
 
                 if self._client_address[0] in self._server.wrong_iplist and self._client_address[
                         0] != 0 and self._server.is_cleaning_wrong_iplist == False:
@@ -1007,9 +1000,7 @@ class TCPRelayHandler(object):
                             sa[1])
                 if self._server.multi_user_table[
                         self._current_user_id]['_disconnect_ipset']:
-                    if common.get_ip_md5(
-                            self._client_address[0],
-                            self._server._config['ip_md5_salt']) in self._server.multi_user_table[
+                    if self._client_address[0] in self._server.multi_user_table[
                             self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
                             raise Exception(
@@ -1047,8 +1038,7 @@ class TCPRelayHandler(object):
                             'Port %d is in forbidden list, reject' %
                             sa[1])
                 if self._server._disconnect_ipset:
-                    if common.get_ip_md5(self._client_address[0], self._server._config[
-                                         'ip_md5_salt']) in self._server._disconnect_ipset:
+                    if self._client_address[0] in self._server._disconnect_ipset:
                         if self._remote_address:
                             raise Exception(
                                 'IP %s is in disconnect list, when connect to %s:%d via port %d' %

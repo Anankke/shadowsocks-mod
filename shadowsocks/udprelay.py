@@ -493,11 +493,8 @@ class UDPRelay(object):
                     if uid not in self.mu_detect_log_list:
                         self.mu_detect_log_list[uid] = []
 
-                    if common.get_ip_md5(
-                            r_addr[0],
-                            self._config['ip_md5_salt']) not in self.mu_connected_iplist[uid]:
-                        self.mu_connected_iplist[uid].append(
-                            common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']))
+                    if r_addr[0] not in self.mu_connected_iplist[uid]:
+                        self.mu_connected_iplist[uid].append(r_addr[0])
 
                 else:
                     raise Exception(
@@ -576,6 +573,11 @@ class UDPRelay(object):
                 if self._forbidden_iplist:
                     if common.to_str(sa[0]) in self._forbidden_iplist:
                         logging.debug('IP %s is in forbidden list, drop' % common.to_str(sa[0]))
+                        # drop
+                        return
+                if self._disconnect_ipset:
+                    if common.to_str(sa[0]) in self._disconnect_ipset:
+                        logging.debug('IP %s is in disconnect list, drop' % common.to_str(sa[0]))
                         # drop
                         return
                 if self._forbidden_portset:
@@ -663,10 +665,9 @@ class UDPRelay(object):
                     if common.to_str(r_addr[0]) in self.wrong_iplist and r_addr[
                             0] != 0 and self.is_cleaning_wrong_iplist == False:
                         del self.wrong_iplist[common.to_str(r_addr[0])]
-                    if common.get_ip_md5(r_addr[0], self._config['ip_md5_salt']) not in self.connected_iplist and r_addr[
+                    if r_addr[0] not in self.connected_iplist and r_addr[
                             0] != 0 and self.is_cleaning_connected_iplist == False:
-                        self.connected_iplist.append(common.get_ip_md5(
-                            r_addr[0], self._config['ip_md5_salt']))
+                        self.connected_iplist.append(r_addr[0])
             else:
                 client, client_uid = client_pair
             self._cache.clear(self._udp_cache_size)
