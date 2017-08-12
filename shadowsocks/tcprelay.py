@@ -217,8 +217,6 @@ class TCPRelayHandler(object):
         self._remote_address = None
 
         self._header_buf = []
-        self._forbidden_iplist = config.get('forbidden_ip', None)
-        self._forbidden_portset = config.get('forbidden_port', None)
         if is_local:
             self._chosen_server = self._get_a_server()
 
@@ -1001,26 +999,26 @@ class TCPRelayHandler(object):
                             sa[1])
                 if self._server.multi_user_table[
                         self._current_user_id]['_disconnect_ipset']:
-                    if common.getRealIp(self._client_address[0]) in self._server.multi_user_table[
+                    logging.info("%s"%(self._client_address[0]))
+                    if self._client_address[0] in self._server.multi_user_table[
                             self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
                             raise Exception(
                                 'IP %s is in disconnect list, when connect to %s:%d via port %d' %
                                 (self._client_address[0],
-                                 self._remote_address[0],
+                                    self._remote_address[0],
                                     self._remote_address[1],
                                     self._server.multi_user_table[
                                     self._current_user_id]['port']))
                         raise Exception('IP %s is in disconnect list, reject' %
-                                        self._client_address[0])
+                                        (self._client_address[0]))
             else:
                 if self._server._forbidden_iplist:
                     if common.to_str(sa[0]) in self._server._forbidden_iplist:
                         if self._remote_address:
                             raise Exception(
                                 'IP %s is in forbidden list, when connect to %s:%d via port %d' %
-                                (common.to_str(
-                                    sa[0]),
+                                (self._client_address[0],
                                     self._remote_address[0],
                                     self._remote_address[1],
                                     self._server._listen_port))
@@ -1044,7 +1042,7 @@ class TCPRelayHandler(object):
                             raise Exception(
                                 'IP %s is in disconnect list, when connect to %s:%d via port %d' %
                                 (self._client_address[0],
-                                 self._remote_address[0],
+                                    self._remote_address[0],
                                     self._remote_address[1],
                                     self._server._listen_port))
                         raise Exception('IP %s is in disconnect list, reject' %
@@ -1735,7 +1733,7 @@ class TCPRelay(object):
         else:
             self._forbidden_portset = None
         if 'disconnect_ip' in config:
-            self._disconnect_ipset = config['disconnect_ip'].split(',')
+            self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
         else:
             self._disconnect_ipset = None
 
@@ -1748,8 +1746,8 @@ class TCPRelay(object):
                     self.multi_user_table[id][
                         '_forbidden_iplist'] = IPNetwork(str(""))
                 if self.multi_user_table[id]['disconnect_ip'] is not None:
-                    self.multi_user_table[id]['_disconnect_ipset'] = str(
-                        self.multi_user_table[id]['disconnect_ip']).split(',')
+                    self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(
+                        str(self.multi_user_table[id]['disconnect_ip']))
                 else:
                     self.multi_user_table[id]['_disconnect_ipset'] = None
                 if self.multi_user_table[id]['forbidden_port'] is not None:
@@ -2077,8 +2075,8 @@ class TCPRelay(object):
                 self.multi_user_table[id][
                     '_forbidden_iplist'] = IPNetwork(str(""))
             if self.multi_user_table[id]['disconnect_ip'] is not None:
-                self.multi_user_table[id]['_disconnect_ipset'] = str(
-                    self.multi_user_table[id]['disconnect_ip']).split(",")
+                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(
+                        str(self.multi_user_table[id]['disconnect_ip']))
             else:
                 self.multi_user_table[id]['_disconnect_ipset'] = None
             if self.multi_user_table[id]['forbidden_port'] is not None:

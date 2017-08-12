@@ -244,7 +244,7 @@ class UDPRelay(object):
         else:
             self._forbidden_portset = None
         if 'disconnect_ip' in config:
-            self._disconnect_ipset = config['disconnect_ip'].split(',')
+            self._disconnect_ipset = IPNetwork(config['disconnect_ip'])
         else:
             self._disconnect_ipset = None
 
@@ -554,8 +554,10 @@ class UDPRelay(object):
             return
         data, r_addr, uid, header_length, is_relay = params
         if uid is None:
+            is_mu = False
             user_id = self._listen_port
         else:
+            is_mu = True
             user_id = uid
         try:
             server_port = remote_addr[1]
@@ -576,7 +578,7 @@ class UDPRelay(object):
                         # drop
                         return
                 if self._disconnect_ipset:
-                    if common.getRealIp(common.to_str(sa[0])) in self._disconnect_ipset:
+                    if common.to_str(sa[0]) in self._disconnect_ipset:
                         logging.debug('IP %s is in disconnect list, drop' % common.to_str(sa[0]))
                         # drop
                         return
@@ -585,6 +587,24 @@ class UDPRelay(object):
                         logging.debug('Port %d is in forbidden list, reject' % sa[1])
                         # drop
                         return
+
+                if is_mu:
+                    if self.multi_user_table[uid]['_forbidden_iplist']:
+                        if common.to_str(sa[0]) in self.multi_user_table[uid]['_forbidden_iplist']:
+                            logging.debug('IP %s is in forbidden list, drop' % common.to_str(sa[0]))
+                            # drop
+                            return
+                    if self.multi_user_table[uid]['_disconnect_ipset']:
+                        if common.to_str(sa[0]) in self.multi_user_table[uid]['_disconnect_ipset']:
+                            logging.debug('IP %s is in disconnect list, drop' % common.to_str(sa[0]))
+                            # drop
+                            return
+                    if self.multi_user_table[uid]['_forbidden_portset']:
+                        if sa[1] in self.multi_user_table[uid]['_forbidden_portset']:
+                            logging.debug('Port %d is in forbidden list, reject' % sa[1])
+                            # drop
+                            return
+
                 client = socket.socket(af, socktype, proto)
                 client_uid = uid
                 client.setblocking(False)
@@ -995,8 +1015,8 @@ class UDPRelay(object):
                 self.multi_user_table[id][
                     '_forbidden_iplist'] = IPNetwork(str(""))
             if self.multi_user_table[id]['disconnect_ip'] is not None:
-                self.multi_user_table[id]['_disconnect_ipset'] = str(
-                    self.multi_user_table[id]['disconnect_ip']).split(',')
+                self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(
+                    str(self.multi_user_table[id]['disconnect_ip']))
             else:
                 self.multi_user_table[id]['_disconnect_ipset'] = None
             if self.multi_user_table[id]['forbidden_port'] is not None:

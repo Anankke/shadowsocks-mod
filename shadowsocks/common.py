@@ -294,7 +294,7 @@ def parse_header(data):
     return connecttype, addrtype, to_bytes(dest_addr), dest_port, header_length
 
 def getRealIp(ip):
-    return ip.replace("::ffff:", "")
+    return to_str(ip.replace("::ffff:", ""))
 
 
 class IPNetwork(object):
@@ -312,6 +312,9 @@ class IPNetwork(object):
     def add_network(self, addr):
         if addr is "":
             return
+
+        addr = addr.replace("::ffff:", "")
+
         block = addr.split('/')
         addr_family = is_ip(block[0])
         addr_len = IPNetwork.ADDRLENGTH[addr_family]
@@ -340,6 +343,8 @@ class IPNetwork(object):
             self._network_list_v6.append((ip, prefix_size))
 
     def __contains__(self, addr):
+        addr = addr.replace("::ffff:", "")
+
         addr_family = is_ip(addr)
         if addr_family is socket.AF_INET:
             ip, = struct.unpack("!I", socket.inet_aton(addr))
