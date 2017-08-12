@@ -999,7 +999,6 @@ class TCPRelayHandler(object):
                             sa[1])
                 if self._server.multi_user_table[
                         self._current_user_id]['_disconnect_ipset']:
-                    logging.info("%s"%(self._client_address[0]))
                     if self._client_address[0] in self._server.multi_user_table[
                             self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
