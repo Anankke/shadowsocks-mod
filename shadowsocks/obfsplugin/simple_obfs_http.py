@@ -115,24 +115,6 @@ class simple_obfs_http(plain.plain):
         self.has_sent_header = True
         return header + buf
 
-    def get_data_from_http_header(self, buf):
-        ret_buf = b''
-        lines = buf.split(b'\r\n')
-        if lines and len(lines) > 1:
-            hex_items = lines[0].split(b'%')
-            if hex_items and len(hex_items) > 1:
-                for index in range(1, len(hex_items)):
-                    if len(hex_items[index]) < 2:
-                        ret_buf += binascii.unhexlify('0' + hex_items[index])
-                        break
-                    elif len(hex_items[index]) > 2:
-                        ret_buf += binascii.unhexlify(hex_items[index][:2])
-                        break
-                    else:
-                        ret_buf += binascii.unhexlify(hex_items[index])
-                return ret_buf
-        return b''
-
     def get_host_from_http_header(self, buf):
         ret_buf = b''
         lines = buf.split(b'\r\n')
@@ -147,11 +129,6 @@ class simple_obfs_http(plain.plain):
         if self.method == 'simple_obfs_http':
             return (b'E'*2048, False, False)
         return (buf, True, False)
-
-    def error_return(self, buf):
-        self.has_sent_header = True
-        self.has_recv_header = True
-        return (b'E'*2048, False, False)
 
     def server_decode(self, buf):
         if self.has_recv_header:
@@ -177,7 +154,6 @@ class simple_obfs_http(plain.plain):
                 self.recv_buffer = None
                 logging.debug('simple_obfs_http: protocol error')
                 return self.not_match_return(buf)
-
             datas = buf.split(b'\r\n\r\n', 1)
             host = self.get_host_from_http_header(buf)
             if host and self.server_info.obfs_param:

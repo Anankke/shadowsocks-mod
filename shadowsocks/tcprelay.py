@@ -2007,7 +2007,9 @@ class TCPRelay(object):
     def handle_periodic(self):
         if self._closed:
             if self._server_socket:
-                self._eventloop.removefd(self._server_socket_fd)
+                if self._server_socket_fd:
+                    self._eventloop.removefd(self._server_socket_fd)
+                    self._server_socket_fd = 0
                 self._server_socket.close()
                 self._server_socket = None
                 logging.info('closed TCP port %d', self._listen_port)
@@ -2110,7 +2112,9 @@ class TCPRelay(object):
         if not next_tick:
             if self._eventloop:
                 self._eventloop.remove_periodic(self.handle_periodic)
-                self._eventloop.removefd(self._server_socket_fd)
+                if self._server_socket_fd:
+                    self._eventloop.removefd(self._server_socket_fd)
+                    self._server_socket_fd = 0
             self._server_socket.close()
             for handler in list(self._fd_to_handlers.values()):
                 handler.destroy()
