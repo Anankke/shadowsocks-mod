@@ -21,7 +21,12 @@ class WebApi(object):
                 (get_config().WEBAPI_URL, uri),
                 params=uri_params,
                 timeout=10)
-            data = res.json()
+            try:
+                data = res.json()
+            except Exception:
+                if res:
+                    logging.error("Error data:%s" % (res.text))
+                return []
             if data['ret'] == 0:
                 logging.error("Error data:%s" % (res.text))
                 logging.error("request %s error!wrong ret!"%(uri))
@@ -31,8 +36,6 @@ class WebApi(object):
             import traceback
             trace = traceback.format_exc()
             logging.error(trace)
-            if res:
-                logging.error("Error data:%s" % (res.text))
             raise Exception('network issue or server error!')
 
 
@@ -48,7 +51,12 @@ class WebApi(object):
                 params=uri_params,
                 json=raw_data,
                 timeout=10)
-            data = res.json()
+            try:
+                data = res.json()
+            except Exception:
+                if res:
+                    logging.error("Error data:%s" % (res.text))
+                return []
             if data['ret'] == 0:
                 logging.error("Error data:%s" % (res.text))
                 logging.error("request %s error!wrong ret!"%(uri))
@@ -58,6 +66,4 @@ class WebApi(object):
             import traceback
             trace = traceback.format_exc()
             logging.error(trace)
-            if res:
-                logging.error("Error data:%s" % (res.text))
             raise Exception('network issue or server error!')
