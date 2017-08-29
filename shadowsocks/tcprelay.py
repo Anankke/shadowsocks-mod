@@ -280,15 +280,17 @@ class TCPRelayHandler(object):
             traceback.print_exc()
 
     def _update_user(self, user):
-        self._current_user_id = int(user)
-        if self._current_user_id not in self._server.mu_server_transfer_ul:
-            self._server.mu_server_transfer_ul[self._current_user_id] = 0
-        if self._current_user_id not in self._server.mu_server_transfer_dl:
-            self._server.mu_server_transfer_dl[self._current_user_id] = 0
-        if self._current_user_id not in self._server.mu_connected_iplist:
-            self._server.mu_connected_iplist[self._current_user_id] = []
-        if self._current_user_id not in self._server.mu_detect_log_list:
-            self._server.mu_detect_log_list[self._current_user_id] = []
+        if self._current_user_id == 0:
+            self._current_user_id = int(user)
+            self.mu_reset_time = self._server.mu_reset_time[self._current_user_id]
+            if self._current_user_id not in self._server.mu_server_transfer_ul:
+                self._server.mu_server_transfer_ul[self._current_user_id] = 0
+            if self._current_user_id not in self._server.mu_server_transfer_dl:
+                self._server.mu_server_transfer_dl[self._current_user_id] = 0
+            if self._current_user_id not in self._server.mu_connected_iplist:
+                self._server.mu_connected_iplist[self._current_user_id] = []
+            if self._current_user_id not in self._server.mu_detect_log_list:
+                self._server.mu_detect_log_list[self._current_user_id] = []
 
     def _update_activity(self, data_len=0):
         # tell the TCP Relay we have activities recently
@@ -331,6 +333,15 @@ class TCPRelayHandler(object):
         # write data to sock
         # if only some of the data are written, put remaining in the buffer
         # and update the stream to wait for writing
+
+        if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
+            if self._current_user_id not in self._server.multi_user_table:
+                self.destroy()
+                return False
+            if self._server.mu_reset_time[self._current_user_id] > self.mu_reset_time:
+                self.destroy()
+                return False
+
         if not sock:
             return False
         uncomplete = False
@@ -1368,6 +1379,13 @@ class TCPRelayHandler(object):
             self._handle_stage_addr(ogn_data, data)
 
     def _on_remote_read(self, is_remote_sock):
+        if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
+            if self._current_user_id not in self._server.multi_user_table:
+                self.destroy()
+                return
+            if self._server.mu_reset_time[self._current_user_id] > self.mu_reset_time:
+                self.destroy()
+                return
 
         # handle all remote read events
         data = None
@@ -1737,7 +1755,9 @@ class TCPRelay(object):
             self._disconnect_ipset = None
 
         if config["is_multi_user"] != 0:
+            self.mu_reset_time = {}
             for id in self.multi_user_table:
+                self.mu_reset_time[id] = time.time()
                 if self.multi_user_table[id]['forbidden_ip'] is not None:
                     self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(
                         str(self.multi_user_table[id]['forbidden_ip']))
@@ -2057,6 +2077,7 @@ class TCPRelay(object):
         self.is_cleaning_mu_detect_log_list = False
 
     def reset_single_multi_user_traffic(self, user_id):
+        self.mu_reset_time[user_id] = time.time()
         if user_id in self.mu_server_transfer_ul:
             self.mu_server_transfer_ul[user_id] = 0
         if user_id in self.mu_server_transfer_dl:
