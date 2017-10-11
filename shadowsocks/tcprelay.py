@@ -2087,8 +2087,6 @@ class TCPRelay(object):
         self.multi_user_table = new_table.copy()
         self.multi_user_host_table = {}
 
-        self._protocol.obfs.server_info.users = self.multi_user_table
-
         for id in self.multi_user_table:
             self.multi_user_host_table[common.get_mu_host(
                 id, self.multi_user_table[id]['md5'])] = id
