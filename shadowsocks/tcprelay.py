@@ -1758,17 +1758,20 @@ class TCPRelay(object):
             self.mu_reset_time = {}
             for id in self.multi_user_table:
                 self.mu_reset_time[id] = time.time()
+
                 if self.multi_user_table[id]['forbidden_ip'] is not None:
                     self.multi_user_table[id]['_forbidden_iplist'] = IPNetwork(
                         str(self.multi_user_table[id]['forbidden_ip']))
                 else:
                     self.multi_user_table[id][
                         '_forbidden_iplist'] = IPNetwork(str(""))
+
                 if self.multi_user_table[id]['disconnect_ip'] is not None:
                     self.multi_user_table[id]['_disconnect_ipset'] = IPNetwork(
                         str(self.multi_user_table[id]['disconnect_ip']))
                 else:
                     self.multi_user_table[id]['_disconnect_ipset'] = None
+
                 if self.multi_user_table[id]['forbidden_port'] is not None:
                     self.multi_user_table[id]['_forbidden_portset'] = PortRange(
                         str(self.multi_user_table[id]['forbidden_port']))
@@ -2088,6 +2091,9 @@ class TCPRelay(object):
         self.multi_user_host_table = {}
 
         for id in self.multi_user_table:
+            if id not in self.mu_reset_time:
+                self.mu_reset_time[id] = time.time()
+
             self.multi_user_host_table[common.get_mu_host(
                 id, self.multi_user_table[id]['md5'])] = id
             if self.multi_user_table[id]['forbidden_ip'] is not None:
