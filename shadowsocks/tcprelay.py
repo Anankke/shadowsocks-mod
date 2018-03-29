@@ -1719,16 +1719,28 @@ class TCPRelay(object):
         if 'users_table' in self._config:
             self.multi_user_host_table = {}
             self.multi_user_table = self._config['users_table']
+            if 'node_speedlimit' not in config:
+                self.mu_bandwidth = 0
+            else:
+                self.mu_bandwidth = float(config['node_speedlimit']) * 128
 
             for id in self.multi_user_table:
                 self.multi_user_host_table[common.get_mu_host(
                     id, self.multi_user_table[id]['md5'])] = id
 
                 if 'node_speedlimit' not in self.multi_user_table[id]:
-                    bandwidth = 0
+                    bandwidth = max(
+                        float(self.mu_bandwidth), float(0.00))
                 else:
-                    bandwidth = float(
-                        self.multi_user_table[id]['node_speedlimit']) * 128
+                    if float(
+                            self.mu_bandwidth) > 0.0 or float(
+                            self.multi_user_table[id]['node_speedlimit']) * 128 > 0.0:
+                        bandwidth = max(
+                            float(
+                                self.mu_bandwidth), float(
+                                self.multi_user_table[id]['node_speedlimit']) * 128)
+                    else:
+                        bandwidth = 0
 
                 self.mu_speed_tester_u[id] = SpeedTester(bandwidth)
                 self.mu_speed_tester_d[id] = SpeedTester(bandwidth)
@@ -2115,10 +2127,18 @@ class TCPRelay(object):
                     '_forbidden_portset'] = PortRange(str(""))
 
             if 'node_speedlimit' not in self.multi_user_table[id]:
-                bandwidth = 0
+                bandwidth = max(
+                    float(self.mu_bandwidth), float(0.00))
             else:
-                bandwidth = float(
-                    self.multi_user_table[id]['node_speedlimit']) * 128
+                if float(
+                        self.mu_bandwidth) > 0.0 or float(
+                        self.multi_user_table[id]['node_speedlimit']) * 128 > 0.0:
+                    bandwidth = max(
+                        float(
+                            self.mu_bandwidth), float(
+                            self.multi_user_table[id]['node_speedlimit']) * 128)
+                else:
+                    bandwidth = 0
 
             self.mu_speed_tester_u[id] = SpeedTester(bandwidth)
             self.mu_speed_tester_d[id] = SpeedTester(bandwidth)
