@@ -26,11 +26,11 @@ class WebApi(object):
             except Exception:
                 if res:
                     logging.error("Error data:%s" % (res.text))
-                return []
+                raise Exception('error data!')
             if data['ret'] == 0:
                 logging.error("Error data:%s" % (res.text))
                 logging.error("request %s error!wrong ret!"%(uri))
-                return []
+                raise Exception('wrong ret!')
             return data['data']
         except Exception:
             import traceback
@@ -56,11 +56,11 @@ class WebApi(object):
             except Exception:
                 if res:
                     logging.error("Error data:%s" % (res.text))
-                return []
+                raise Exception('error data!')
             if data['ret'] == 0:
                 logging.error("Error data:%s" % (res.text))
                 logging.error("request %s error!wrong ret!"%(uri))
-                return []
+                raise Exception('wrong ret!')
             return data['data']
         except Exception:
             import traceback
