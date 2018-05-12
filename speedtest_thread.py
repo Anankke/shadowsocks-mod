@@ -79,7 +79,7 @@ class Speedtest(object):
                     servers_list.append(server)
         speedtest_cm.get_best_server(servers_list)
         results_cm = speedtest_cm.results
-        CMPing = str(results_cu.server['latency']) + ' ms'
+        CMPing = str(results_cm.server['latency']) + ' ms'
         speedtest_cm.download()
         CMDLSpeed = str(
             round(
