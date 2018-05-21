@@ -640,7 +640,7 @@ class DbTransfer(object):
                         if has_higher_priority:
                             continue
 
-                        if self.relay_rule_list[id]['dist_ip'] == '0.0.0.0':
+                        if self.relay_rule_list[id]['dist_ip'] == '0.0.0.0' and row['is_multi_user'] == 0:
                             continue
 
                         temp_relay_rules[id] = self.relay_rule_list[id]
@@ -711,7 +711,7 @@ class DbTransfer(object):
                                 continue
 
                             if self.relay_rule_list[id][
-                                    'dist_ip'] == '0.0.0.0':
+                                    'dist_ip'] == '0.0.0.0' and row['is_multi_user'] == 0:
                                 continue
 
                             temp_relay_rules[id] = self.relay_rule_list[id]

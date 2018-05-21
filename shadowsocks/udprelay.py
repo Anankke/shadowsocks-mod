@@ -399,6 +399,9 @@ class UDPRelay(object):
 
                 if has_higher_priority:
                     continue
+					
+				if self._relay_rules[id]['dist_ip'] == '0.0.0.0':
+                    continue
 
                 if self._relay_rules[id]['port'] == 0:
                     port = self._listen_port
