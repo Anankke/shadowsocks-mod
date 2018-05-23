@@ -23,6 +23,8 @@ db_instance = None
 class DbTransfer(object):
 
     def __init__(self):
+        reload(sys)
+        sys.setdefaultencoding('utf-8')
         import threading
         self.last_update_transfer = {}
         self.event = threading.Event()
