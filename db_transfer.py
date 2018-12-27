@@ -113,7 +113,7 @@ class DbTransfer(object):
             cur.close()
 
             bandwidth_thistime = bandwidth_thistime + \
-                ((dt_transfer[id][0] + dt_transfer[id][1]) * self.traffic_rate)
+                (dt_transfer[id][0] + dt_transfer[id][1])
 
             if query_sub_in is not None:
                 query_sub_in += ',%s' % id
