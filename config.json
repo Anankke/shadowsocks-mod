@@ -19,6 +19,6 @@
     "connect_verbose_info": 0,
     "connect_hex_data": 0,
     "redirect": "",
-    "fast_open": false,
+    "fast_open": true,
     "friendly_detect": 1
 }
