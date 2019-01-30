@@ -1,0 +1,14 @@
+[Unit]
+Description=ssr deamon
+After=rc-local.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/root/shadowsocks
+ExecStart=/usr/bin/python server.py
+Restart=always
+LimitNOFILE=512000
+[Install]
+WantedBy=multi-user.target
