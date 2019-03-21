@@ -580,17 +580,10 @@ class DbTransfer(object):
                         logging.warning(
                             'encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
 
-            if 'node_speedlimit' in cfg:
-                if float(
-                        self.node_speedlimit) > 0.0 or float(
-                        cfg['node_speedlimit']) > 0.0:
-                    cfg['node_speedlimit'] = max(
-                        float(
-                            self.node_speedlimit), float(
-                            cfg['node_speedlimit']))
-            else:
-                cfg['node_speedlimit'] = max(
-                    float(self.node_speedlimit), float(0.00))
+            if 'node_speedlimit' not in cfg or float(cfg['node_speedlimit']) <= 0.0:
+                cfg['node_speedlimit'] = float(self.node_speedlimit)
+            elif float(self.node_speedlimit) > 0.0:
+                cfg['node_speedlimit'] = float(min(self.node_speedlimit, cfg['node_speedlimit']))
 
             if 'disconnect_ip' not in cfg:
                 cfg['disconnect_ip'] = ''
