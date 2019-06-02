@@ -7,8 +7,9 @@ import sys
 import os
 import configloader
 import importloader
-from speedtest import speedtest
+import speedtest
 from shadowsocks import common, shell
+
 
 class Speedtest(object):
 
@@ -93,16 +94,16 @@ class Speedtest(object):
 
         if configloader.get_config().API_INTERFACE == 'modwebapi':
             webapi.postApi('func/speedtest',
-                                 {'node_id': configloader.get_config().NODE_ID},
-                                 {'data': [{'telecomping': CTPing,
-                                            'telecomeupload': CTUpSpeed,
-                                            'telecomedownload': CTDLSpeed,
-                                            'unicomping': CUPing,
-                                            'unicomupload': CUUpSpeed,
-                                            'unicomdownload': CUDLSpeed,
-                                            'cmccping': CMPing,
-                                            'cmccupload': CMUpSpeed,
-                                            'cmccdownload': CMDLSpeed}]})
+                           {'node_id': configloader.get_config().NODE_ID},
+                           {'data': [{'telecomping': CTPing,
+                                      'telecomeupload': CTUpSpeed,
+                                      'telecomedownload': CTDLSpeed,
+                                      'unicomping': CUPing,
+                                      'unicomupload': CUUpSpeed,
+                                      'unicomdownload': CUDLSpeed,
+                                      'cmccping': CMPing,
+                                      'cmccupload': CMUpSpeed,
+                                      'cmccdownload': CMDLSpeed}]})
         else:
             import cymysql
             if configloader.get_config().MYSQL_SSL_ENABLE == 1:
@@ -178,7 +179,7 @@ class Speedtest(object):
                     import traceback
                     trace = traceback.format_exc()
                     logging.error(trace)
-                    #logging.warn('db thread except:%s' % e)
+                    # logging.warn('db thread except:%s' % e)
                 if db_instance.event.wait(configloader.get_config().SPEEDTEST * 3600):
                     break
                 if db_instance.has_stopped:
