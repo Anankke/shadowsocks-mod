@@ -43,7 +43,6 @@ class MainThread(threading.Thread):
 
 
 class ServerPool(object):
-
     instance = None
 
     def __init__(self):
@@ -133,7 +132,7 @@ class ServerPool(object):
                 a_config = self.config.copy()
                 a_config.update(user_config)
                 if len(a_config['server_ipv6']) > 2 and a_config['server_ipv6'][
-                        0] == "[" and a_config['server_ipv6'][-1] == "]":
+                    0] == "[" and a_config['server_ipv6'][-1] == "]":
                     a_config['server_ipv6'] = a_config['server_ipv6'][1:-1]
                 a_config['server'] = a_config['server_ipv6']
                 a_config['server_port'] = port
@@ -187,7 +186,7 @@ class ServerPool(object):
 
                 except Exception as e:
                     if not ipv6_ok:
-                        logging.warn("IPV4 %s " % (e,))
+                        logging.warning("IPV4 %s " % (e,))
 
         return True
 

@@ -4,6 +4,7 @@
 import logging
 import time
 import sys
+import importlib
 import os
 import socket
 from server_pool import ServerPool
@@ -23,8 +24,8 @@ db_instance = None
 class DbTransfer(object):
 
     def __init__(self):
-        reload(sys)
-        sys.setdefaultencoding('utf-8')
+        importlib.reload(sys)
+        #sys.setdefaultencoding('utf-8')
         import threading
         self.last_update_transfer = {}
         self.event = threading.Event()
@@ -495,9 +496,9 @@ class DbTransfer(object):
 
     def cmp(self, val1, val2):
         if isinstance(val1, bytes):
-            val1 = common.to_str(val1)
+            val1 = str(val1)
         if isinstance(val2, bytes):
-            val2 = common.to_str(val2)
+            val2 = str(val2)
         return val1 == val2
 
     def del_server_out_of_bound_safe(self, last_rows, rows):
@@ -552,7 +553,7 @@ class DbTransfer(object):
         for row in rows:
             port = row['port']
             user_id = row['id']
-            passwd = common.to_bytes(row['passwd'])
+            passwd = row['passwd']
             cfg = {'password': passwd}
 
             read_config_keys = [
@@ -575,7 +576,7 @@ class DbTransfer(object):
             for name in cfg.keys():
                 if hasattr(cfg[name], 'encode'):
                     try:
-                        cfg[name] = cfg[name].encode('utf-8')
+                        cfg[name] = cfg[name]
                     except Exception as e:
                         logging.warning(
                             'encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
@@ -809,10 +810,7 @@ class DbTransfer(object):
 
     def new_server(self, port, passwd, cfg):
         protocol = cfg.get(
-            'protocol',
-            ServerPool.get_instance().config.get(
-                'protocol',
-                'origin'))
+            'protocol', ServerPool.get_instance().config.get('protocol', 'origin')
         method = cfg.get(
             'method', ServerPool.get_instance().config.get('method', 'None'))
         obfs = cfg.get(
