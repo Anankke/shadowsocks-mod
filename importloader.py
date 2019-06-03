@@ -12,6 +12,7 @@ def load(name):
 
     try:
         import importlib
+
         obj = importlib.__import__(name)
         importlib.reload(obj)
         return obj

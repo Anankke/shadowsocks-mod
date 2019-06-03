@@ -21,21 +21,17 @@
 # OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 # SOFTWARE.
 
-import time
-import os
-import socket
-import struct
-import re
 import logging
-from shadowsocks import common
-from shadowsocks import lru_cache
-from shadowsocks import eventloop
-import server_pool
+import socket
+import time
+
 import Config
+
+import server_pool
+from shadowsocks import eventloop
 
 
 class ServerMgr(object):
-
     def __init__(self):
         self._loop = None
         self._request_id = 1
@@ -49,11 +45,12 @@ class ServerMgr(object):
 
     def add_to_loop(self, loop):
         if self._loop:
-            raise Exception('already add to loop')
+            raise Exception("already add to loop")
         self._loop = loop
         # TODO when dns server is IPv6
-        self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
-                                   socket.SOL_UDP)
+        self._sock = socket.socket(
+            socket.AF_INET, socket.SOCK_DGRAM, socket.SOL_UDP
+        )
         self._sock.bind((Config.MANAGE_BIND_IP, Config.MANAGE_PORT))
         self._sock.setblocking(False)
         loop.add(self._sock, eventloop.POLL_IN, self)
@@ -61,26 +58,28 @@ class ServerMgr(object):
     def _handle_data(self, sock):
         data, addr = sock.recvfrom(128)
         # manage pwd:port:passwd:action
-        args = data.split(':')
+        args = data.split(":")
         if len(args) < 4:
             return
         if args[0] == Config.MANAGE_PASS:
-            if args[3] == '0':
+            if args[3] == "0":
                 server_pool.ServerPool.get_instance().cb_del_server(args[1])
-            elif args[3] == '1':
-                server_pool.ServerPool.get_instance(
-                ).new_server(args[1], args[2])
+            elif args[3] == "1":
+                server_pool.ServerPool.get_instance().new_server(
+                    args[1], args[2]
+                )
 
     def handle_event(self, sock, fd, event):
         if sock != self._sock:
             return
         if event & eventloop.POLL_ERR:
-            logging.error('mgr socket err')
+            logging.error("mgr socket err")
             self._loop.remove(self._sock)
             self._sock.close()
             # TODO when dns server is IPv6
-            self._sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM,
-                                       socket.SOL_UDP)
+            self._sock = socket.socket(
+                socket.AF_INET, socket.SOCK_DGRAM, socket.SOL_UDP
+            )
             self._sock.setblocking(False)
             self._loop.add(self._sock, eventloop.POLL_IN, self)
         else:
@@ -97,5 +96,6 @@ class ServerMgr(object):
 def test():
     pass
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     test()
