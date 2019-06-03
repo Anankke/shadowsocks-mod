@@ -810,7 +810,7 @@ class DbTransfer(object):
 
     def new_server(self, port, passwd, cfg):
         protocol = cfg.get(
-            'protocol', ServerPool.get_instance().config.get('protocol', 'origin')
+            'protocol', ServerPool.get_instance().config.get('protocol', 'origin'))
         method = cfg.get(
             'method', ServerPool.get_instance().config.get('method', 'None'))
         obfs = cfg.get(
