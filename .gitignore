@@ -1,5 +1,4 @@
 *.py[co]
-
 ca.pem
 client-cert.pem
 client-key.pem
@@ -22,6 +21,7 @@ var
 sdist
 develop-eggs
 .installed.cfg
+venv
 
 # Installer logs
 pip-log.txt
