@@ -14,8 +14,8 @@ Server
 
 Debian / Ubuntu:
 
-    apt-get install python-pip
-    pip install shadowsocks
+	apt-get -y install python-pip libffi-dev libssl-dev
+	pip install -r requirements.txt
 
 CentOS:
 
