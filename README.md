@@ -18,9 +18,11 @@ Debian / Ubuntu:
 	pip install -r requirements.txt
 
 CentOS:
-
-    yum install python-setuptools && easy_install pip
-    pip install shadowsocks
+    yum install epel-release
+    yum update
+    yum install  libffi libffi-devel openssl-devel python2-pip
+    
+    pip install -r requirements.txt
 
 Windows:
 
