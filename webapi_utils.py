@@ -2,9 +2,7 @@
 # -*- coding: utf-8 -*-
 
 import logging
-
 import requests
-
 from configloader import get_config
 
 
@@ -13,58 +11,69 @@ class WebApi(object):
         self.session_pool = requests.Session()
 
     def getApi(self, uri, params={}):
-        res = None
+        r""" Send a ``GET`` request to API server. Return response["data"] or []
+
+        :param uri: URI to request
+        :param params: Optional arguments ``request`` takes
+        :rtype: list
+        """
+        params["key"] = get_config().WEBAPI_TOKEN
+        response = self.session_pool.get(
+            "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
+            params=params,
+            timeout=10,
+        )
+        if response.status_code != 200:
+            logging.error("Server error with status code: %i" %
+                          response.status_code)
+            return []
+
         try:
-            uri_params = params.copy()
-            uri_params["key"] = get_config().WEBAPI_TOKEN
-            res = self.session_pool.get(
-                "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
-                params=uri_params,
-                timeout=10,
-            )
-            try:
-                data = res.json()
-            except Exception:
-                if res:
-                    logging.error("Error data:%s" % (res.text))
-                raise Exception("error data!")
-            if data["ret"] == 0:
-                logging.error("Error data:%s" % (res.text))
-                logging.error("request %s error!wrong ret!" % (uri))
-                raise Exception("wrong ret!")
-            return data["data"]
-        except Exception:
-            import traceback
+            json_data = response.json()
+        except:
+            logging.error("Wrong data: %s" % response.text)
+            return []
 
-            trace = traceback.format_exc()
-            logging.error(trace)
-            raise Exception("network issue or server error!")
+        if len(json_data) != 2:
+            logging.error("Wrong data: %s" % response.text)
+            return []
+        if json_data["ret"] == 0:
+            logging.error("Wrong data: %s" % json_data["data"])
+            return []
 
-    def postApi(self, uri, params={}, raw_data={}):
-        res = None
+        return json_data["data"]
+
+    def postApi(self, uri, params={}, json={}):
+        r""" Send a ``POST`` request to API server. Return response["data"] or []
+
+        :param uri: URI to request
+        :param params: Optional arguments ``request`` takes
+        :param json: Optional arguments ``json`` that ``request`` takes
+        :rtype: list
+        """
+        params["key"] = get_config().WEBAPI_TOKEN
+        response = self.session_pool.post(
+            "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
+            params=params,
+            json=json,
+            timeout=10,
+        )
+        if response.status_code != 200:
+            logging.error("Server error with status code: %i" %
+                          response.status_code)
+            return []
+
         try:
-            uri_params = params.copy()
-            uri_params["key"] = get_config().WEBAPI_TOKEN
-            res = self.session_pool.post(
-                "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
-                params=uri_params,
-                json=raw_data,
-                timeout=10,
-            )
-            try:
-                data = res.json()
-            except Exception:
-                if res:
-                    logging.error("Error data:%s" % (res.text))
-                raise Exception("error data!")
-            if data["ret"] == 0:
-                logging.error("Error data:%s" % (res.text))
-                logging.error("request %s error!wrong ret!" % (uri))
-                raise Exception("wrong ret!")
-            return data["data"]
-        except Exception:
-            import traceback
+            json_data = response.json()
+        except:
+            logging.error("Wrong data: %s" % response.text)
+            return []
 
-            trace = traceback.format_exc()
-            logging.error(trace)
-            raise Exception("network issue or server error!")
+        if len(json_data) != 2:
+            logging.error("Wrong data: %s" % response.text)
+            return []
+        if json_data["ret"] == 0:
+            logging.error("Wrong data: %s" % json_data["data"])
+            return []
+
+        return json_data["data"]
