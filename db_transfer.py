@@ -285,29 +285,6 @@ class DbTransfer(object):
         alive_user_count = 0
         bandwidth_thistime = 0
 
-        # if get_config().MYSQL_SSL_ENABLE == 1:
-        #     conn = cymysql.connect(
-        #         host=get_config().MYSQL_HOST,
-        #         port=get_config().MYSQL_PORT,
-        #         user=get_config().MYSQL_USER,
-        #         passwd=get_config().MYSQL_PASS,
-        #         db=get_config().MYSQL_DB,
-        #         charset='utf8',
-        #         ssl={
-        #             'ca': get_config().MYSQL_SSL_CA,
-        #             'cert': get_config().MYSQL_SSL_CERT,
-        #             'key': get_config().MYSQL_SSL_KEY})
-        # else:
-        #     conn = cymysql.connect(
-        #         host=get_config().MYSQL_HOST,
-        #         port=get_config().MYSQL_PORT,
-        #         user=get_config().MYSQL_USER,
-        #         passwd=get_config().MYSQL_PASS,
-        #         db=get_config().MYSQL_DB,
-        #         charset='utf8')
-
-        # conn.autocommit(True)
-
         for id in dt_transfer.keys():
             if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
                 continue
@@ -321,23 +298,6 @@ class DbTransfer(object):
             alive_user_count = alive_user_count + 1
 
             self.append_traffic_log(id, dt_transfer)
-            # cur = conn.cursor()
-            # cur.execute("INSERT INTO `user_traffic_log` (`id`, `user_id`, `u`, `d`, `Node_ID`, `rate`, `traffic`, `log_time`) VALUES (NULL, '" +
-            #             str(self.port_uid_table[id]) +
-            #             "', '" +
-            #             str(dt_transfer[id][0]) +
-            #             "', '" +
-            #             str(dt_transfer[id][1]) +
-            #             "', '" +
-            #             str(get_config().NODE_ID) +
-            #             "', '" +
-            #             str(self.traffic_rate) +
-            #             "', '" +
-            #             G_traffic_show((dt_transfer[id][0] +
-            #                               dt_transfer[id][1]) *
-            #                              self.traffic_rate) +
-            #             "', unix_timestamp()); ")
-            # cur.close()
 
             bandwidth_thistime = bandwidth_thistime + \
                 (dt_transfer[id][0] + dt_transfer[id][1])
@@ -354,37 +314,17 @@ class DbTransfer(object):
                 ' END, t = unix_timestamp() ' + \
                 ' WHERE port IN (%s)' % query_sub_in
 
-            # cur = conn.cursor()
-            # cur.execute(query_sql)
-            # cur.close()
             self.getMysqlCur(query_sql, no_result=True)
 
-        # cur = conn.cursor()
-        # cur.execute(
-        #     "UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" +
-        #     str(bandwidth_thistime) +
-        #     "' WHERE `id` = " +
-        #     str(
-        #         get_config().NODE_ID) +
-        #     " ; ")
-        # cur.close()
         query_sql = "UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'" + \
             str(bandwidth_thistime) + \
             "' WHERE `id` = " + str(self.NODE_ID) + " ; "
         self.getMysqlCur(query_sql, no_result=True)
 
-        # cur = conn.cursor()
-        # cur.execute("INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" +
-        #             str(get_config().NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); ")
-        # cur.close()
         query_sql = "INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '" + \
                     str(self.NODE_ID) + "', '" + str(alive_user_count) + "', unix_timestamp()); "
         self.getMysqlCur(query_sql, no_result=True)
 
-        # cur = conn.cursor()
-        # cur.execute("INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" +
-        #             str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); ")
-        # cur.close()
         query_sql = "INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '" + \
                     str(get_config().NODE_ID) + "', '" + str(self.uptime()) + "', '" + str(self.load()) + "', unix_timestamp()); "
         self.getMysqlCur(query_sql, no_result=True)
@@ -392,20 +332,12 @@ class DbTransfer(object):
         online_iplist = ServerPool.get_instance().get_servers_iplist()
         for id in online_iplist.keys():
             for ip in online_iplist[id]:
-                # cur = conn.cursor()
-                # cur.execute("INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES (NULL, '" + str(
-                #     get_config().NODE_ID) + "','" + str(self.port_uid_table[id]) + "', '" + str(ip) + "', unix_timestamp())")
-                # cur.close()
                 self.append_alive_ip(id, ip)
         self.mass_insert_alive_ip()
 
         detect_log_list = ServerPool.get_instance().get_servers_detect_log()
         for port in detect_log_list.keys():
             for rule_id in detect_log_list[port]:
-                # cur = conn.cursor()
-                # cur.execute("INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" + str(
-                #     self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(get_config().NODE_ID) + "')")
-                # cur.close()
                 query_sql = "INSERT INTO `detect_log` (`id`, `user_id`, `list_id`, `datetime`, `node_id`) VALUES (NULL, '" +  \
                     str(self.port_uid_table[port]) + "', '" + str(rule_id) + "', UNIX_TIMESTAMP(), '" + str(self.NODE_ID) + "')"
                 self.getMysqlCur(query_sql, no_result=True)
@@ -442,28 +374,12 @@ class DbTransfer(object):
                     if has_match_node:
                         continue
 
-                    # cur = conn.cursor()
-                    # cur.execute(
-                    #     "SELECT * FROM `blockip` where `ip` = '" +
-                    #     str(realip) +
-                    #     "'")
-                    # rows = cur.fetchone()
-                    # cur.close()
                     query_sql = "SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'"
                     rows = self.getMysqlCur(query_sql, fetchone=True)
 
                     if rows is not None:
                         continue
                     if get_config().CLOUDSAFE == 1:
-                        # cur = conn.cursor()
-                        # cur.execute(
-                        #     "INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" +
-                        #     str(
-                        #         get_config().NODE_ID) +
-                        #     "', '" +
-                        #     str(realip) +
-                        #     "', unix_timestamp())")
-                        # cur.close()
                         query_sql = "INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '" + \
                             str(self.NODE_ID) + "', '" + str(realip) + "', unix_timestamp())"
                         self.getMysqlCur(query_sql, no_result=True)
@@ -485,7 +401,6 @@ class DbTransfer(object):
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                     deny_file.write(deny_str)
                     deny_file.close()
-        # conn.close()
         return update_transfer
 
     def uptime(self):
