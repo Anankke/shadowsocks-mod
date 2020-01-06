@@ -10,9 +10,9 @@ import configloader
 
 class Speedtest(object):
     def __init__(self):
-        import threading
+        from multiprocessing import Event
 
-        self.event = threading.Event()
+        self.event = Event()
         self.has_stopped = False
 
     def speedtest_thread(self):

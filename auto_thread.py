@@ -11,9 +11,9 @@ import gnupg
 
 class AutoExec(object):
     def __init__(self):
-        import threading
+        from multiprocessing import Event
 
-        self.event = threading.Event()
+        self.event = Event()
 
         self.gpg = gnupg.GPG("/tmp/ssshell")
         self.key_data = open("ssshell.asc").read()
