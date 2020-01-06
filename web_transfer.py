@@ -20,7 +20,7 @@ db_instance = None
 
 class WebTransfer(object):
     def __init__(self):
-        from multiprocessing import Event()
+        from multiprocessing import Event
 
         self.last_update_transfer = {}
         self.event = Event()
