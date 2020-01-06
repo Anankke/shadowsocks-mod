@@ -14,9 +14,9 @@ from shadowsocks import common
 
 class AutoBlock(object):
     def __init__(self):
-        import threading
+        from multiprocessing import Event
 
-        self.event = threading.Event()
+        self.event = Event()
         self.start_line = self.file_len("/etc/hosts.deny")
         self.has_stopped = False
 

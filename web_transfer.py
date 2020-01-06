@@ -20,10 +20,10 @@ db_instance = None
 
 class WebTransfer(object):
     def __init__(self):
-        import threading
+        from multiprocessing import Event
 
         self.last_update_transfer = {}
-        self.event = threading.Event()
+        self.event = Event()
         self.port_uid_table = {}
         self.uid_port_table = {}
         self.node_speedlimit = 0.00

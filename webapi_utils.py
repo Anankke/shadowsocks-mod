@@ -26,20 +26,20 @@ class WebApi(object):
         if response.status_code != 200:
             logging.error("Server error with status code: %i" %
                           response.status_code)
-            return []
+            raise Exception('Server Error!')
 
         try:
             json_data = response.json()
         except:
             logging.error("Wrong data: %s" % response.text)
-            return []
+            raise Exception('Server Error!')
 
         if len(json_data) != 2:
             logging.error("Wrong data: %s" % response.text)
-            return []
+            raise Exception('Server Error!')
         if json_data["ret"] == 0:
             logging.error("Wrong data: %s" % json_data["data"])
-            return []
+            raise Exception('Server Error!')
 
         return json_data["data"]
 
@@ -61,19 +61,19 @@ class WebApi(object):
         if response.status_code != 200:
             logging.error("Server error with status code: %i" %
                           response.status_code)
-            return []
+            raise Exception('Server Error!')
 
         try:
             json_data = response.json()
         except:
             logging.error("Wrong data: %s" % response.text)
-            return []
+            raise Exception('Server Error!')
 
         if len(json_data) != 2:
             logging.error("Wrong data: %s" % response.text)
-            return []
+            raise Exception('Server Error!')
         if json_data["ret"] == 0:
             logging.error("Wrong data: %s" % json_data["data"])
-            return []
+            raise Exception('Server Error!')
 
         return json_data["data"]
