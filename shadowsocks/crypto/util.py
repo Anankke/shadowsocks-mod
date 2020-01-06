@@ -91,6 +91,7 @@ def find_library(possible_lib_names, search_symbol, library_name,
 
         for name in lib_names:
             patterns = [
+                '/data/data/com.termux/files/usr/lib*/lib%s.*' % name,
                 '/usr/local/lib*/lib%s.*' % name,
                 '/usr/lib*/lib%s.*' % name,
                 'lib%s.*' % name,
