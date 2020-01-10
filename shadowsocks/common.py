@@ -137,23 +137,17 @@ def is_ip(address):
 
 
 def match_ipv4_address(text):
-    reip = re.compile(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])')
-    for ip in reip.findall(text):
-        return ip
-    return None
+    ip = re.search(r'(?<![\.\d])(?:\d{1,3}\.){3}\d{1,3}(?![\.\d])', text).group()
+    return ip
 
 
 def match_ipv6_address(text):
-    reip = re.compile(
-        r'(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])')
-    for ip in reip.findall(text):
-        return ip
-    return None
+    ip = re.search(r'(?<![:.\w])(?:[A-F0-9]{1,4}:){7}[A-F0-9]{1,4}(?![:.\w])', text).group()
+    return ip
 
 
 def match_regex(regex, text):
-    regex = re.compile(regex)
-    for item in regex.findall(text):
+    if re.search(regex, text):
         return True
     return False
 
