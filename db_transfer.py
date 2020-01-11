@@ -93,8 +93,6 @@ class DbTransfer(object):
         self.MYSQL_SSL_CERT = get_config().MYSQL_SSL_CERT
         self.MYSQL_SSL_KEY = get_config().MYSQL_SSL_KEY
 
-        self.PORT_GROUP = get_config().PORT_GROUP
-        self.ENABLE_DNSLOG = get_config().ENABLE_DNSLOG
         self.NODE_ID = get_config().NODE_ID
         self.CLOUDSAFE = get_config().CLOUDSAFE
 
