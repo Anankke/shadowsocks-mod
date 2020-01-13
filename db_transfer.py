@@ -14,7 +14,7 @@ import importloader
 import platform
 import datetime
 import fcntl
-import cymysql
+
 import socket
 
 def G_socket_ping(tcp_tuple=None, host=None, port=None):
@@ -645,9 +645,9 @@ class DbTransfer(object):
 
     def cmp(self, val1, val2):
         if isinstance(val1, bytes):
-            val1 = str(val1)
+            val1 = common.to_str(val1)
         if isinstance(val2, bytes):
-            val2 = str(val2)
+            val2 = common.to_str(val2)
         return val1 == val2
 
     def del_server_out_of_bound_safe(self, last_rows, rows):
@@ -702,7 +702,7 @@ class DbTransfer(object):
         for row in rows:
             port = row['port']
             user_id = row['id']
-            passwd = row['passwd']
+            passwd = common.to_bytes(row['passwd'])
             cfg = {'password': passwd}
 
             read_config_keys = [
@@ -725,7 +725,7 @@ class DbTransfer(object):
             for name in cfg.keys():
                 if hasattr(cfg[name], 'encode'):
                     try:
-                        cfg[name] = cfg[name]
+                        cfg[name] = cfg[name].encode('utf-8')
                     except Exception as e:
                         logging.warning(
                             'encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
