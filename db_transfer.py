@@ -5,16 +5,14 @@ import logging
 import time
 import sys
 import os
-import socket
 from server_pool import ServerPool
 import traceback
 from shadowsocks import common, shell, lru_cache
 from configloader import load_config, get_config
 import importloader
 import platform
-import datetime
 import fcntl
-
+import cymysql
 import socket
 
 def G_socket_ping(tcp_tuple=None, host=None, port=None):
@@ -271,7 +269,6 @@ class DbTransfer(object):
 
 
     def update_all_user(self, dt_transfer):
-        import cymysql
         update_transfer = {}
 
         query_head = 'UPDATE user'
@@ -345,7 +342,6 @@ class DbTransfer(object):
             server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
             for id in wrong_iplist.keys():
                 for ip in wrong_iplist[id]:
-                    realip = ""
                     is_ipv6 = False
                     if common.is_ip(ip):
                         if(common.is_ip(ip) == socket.AF_INET):
@@ -400,11 +396,13 @@ class DbTransfer(object):
                     deny_file.close()
         return update_transfer
 
-    def uptime(self):
+    @staticmethod
+    def uptime():
         with open('/proc/uptime', 'r') as f:
             return float(f.readline().split()[0])
 
-    def load(self):
+    @staticmethod
+    def load():
         import os
         return os.popen(
             "cat /proc/loadavg | awk '{ print $1\" \"$2\" \"$3 }'").readlines()[0][:-2]
@@ -556,17 +554,13 @@ class DbTransfer(object):
             id = int(r[0])
             exist_id_list.append(id)
             if id not in self.detect_text_list:
-                d = {}
-                d['id'] = id
-                d['regex'] = str(r[1])
+                d = {'id': id, 'regex': str(r[1])}
                 self.detect_text_list[id] = d
                 self.detect_text_ischanged = True
             else:
                 if r[1] != self.detect_text_list[id]['regex']:
                     del self.detect_text_list[id]
-                    d = {}
-                    d['id'] = id
-                    d['regex'] = str(r[1])
+                    d = {'id': id, 'regex': str(r[1])}
                     self.detect_text_list[id] = d
                     self.detect_text_ischanged = True
 
@@ -591,17 +585,13 @@ class DbTransfer(object):
             id = int(r[0])
             exist_id_list.append(id)
             if r[0] not in self.detect_hex_list:
-                d = {}
-                d['id'] = id
-                d['regex'] = str(r[1])
+                d = {'id': id, 'regex': str(r[1])}
                 self.detect_hex_list[id] = d
                 self.detect_hex_ischanged = True
             else:
                 if r[1] != self.detect_hex_list[r[0]]['regex']:
                     del self.detect_hex_list[id]
-                    d = {}
-                    d['id'] = int(r[0])
-                    d['regex'] = str(r[1])
+                    d = {'id': int(r[0]), 'regex': str(r[1])}
                     self.detect_hex_list[id] = d
                     self.detect_hex_ischanged = True
 
@@ -630,12 +620,8 @@ class DbTransfer(object):
                         str(get_config().NODE_ID))
 
             for r in cur.fetchall():
-                d = {}
-                d['id'] = int(r[0])
-                d['user_id'] = int(r[1])
-                d['dist_ip'] = str(r[2])
-                d['port'] = int(r[3])
-                d['priority'] = int(r[4])
+                d = {'id': int(r[0]), 'user_id': int(r[1]), 'dist_ip': str(r[2]), 'port': int(r[3]),
+                     'priority': int(r[4])}
                 self.relay_rule_list[d['id']] = d
 
             cur.close()
@@ -643,7 +629,8 @@ class DbTransfer(object):
         conn.close()
         return rows
 
-    def cmp(self, val1, val2):
+    @staticmethod
+    def cmp(val1, val2):
         if isinstance(val1, bytes):
             val1 = common.to_str(val1)
         if isinstance(val2, bytes):
@@ -957,7 +944,8 @@ class DbTransfer(object):
                 ServerPool.get_instance().udp_ipv6_servers_pool[
                     mu_user_port].reset_single_multi_user_traffic(self.port_uid_table[port])
 
-    def new_server(self, port, passwd, cfg):
+    @staticmethod
+    def new_server(port, passwd, cfg):
         protocol = cfg.get(
             'protocol',
             ServerPool.get_instance().config.get(
@@ -1038,7 +1026,8 @@ class DbTransfer(object):
         db_instance.has_stopped = True
         db_instance.event.set()
 
-    def is_all_thread_alive(self):
+    @staticmethod
+    def is_all_thread_alive():
         if not ServerPool.get_instance().thread.is_alive():
             return False
         return True
