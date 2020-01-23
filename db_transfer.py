@@ -1040,7 +1040,7 @@ class DbTransfer(object):
                     db_instance.detect_text_ischanged = False
                     db_instance.detect_hex_ischanged = False
                     last_rows = rows
-                    db_instance.closeMysqlConn()
+                    db_instance.close_cysql_conn()
                 except Exception as e:
                     trace = traceback.format_exc()
                     logging.error(trace)
