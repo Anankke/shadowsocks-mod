@@ -208,9 +208,11 @@ class DbTransfer(object):
                     isinstance(e, ConnectionAbortedError),
                     isinstance(e.errmsg, ConnectionAbortedError))
                 """
-                if isinstance(e.errmsg, BrokenPipeError) or \
-                    isinstance(e.errmsg, ConnectionAbortedError) or \
-                    isinstance(e.errmsg, BlockingIOError):
+                if (
+                    isinstance(e.errmsg, BrokenPipeError)
+                    or isinstance(e.errmsg, ConnectionAbortedError)
+                    or isinstance(e.errmsg, BlockingIOError)
+                ):
                     if cur:
                         cur.close()
                     # need to recreate conn in these cases
