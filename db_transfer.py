@@ -45,8 +45,17 @@ def g_traffic_show(traffic):
     return str(round((traffic / 1024 / 1024 / 1024), 2)) + "GB"
 
 
+def sp_instance():
+    return ServerPool.get_instance()
+
+
 switchrule = None
 db_instance = None
+
+
+FETCH_NONE = 0
+FETCH_ONE = 1
+FETCH_ALL = 2
 
 
 class DbTransfer(object):
@@ -80,44 +89,36 @@ class DbTransfer(object):
         self.alive_ip_to_insert = ""
         self.alive_ip_query_head = "INSERT INTO `alive_ip` (`id`, `nodeid`,`userid`, `ip`, `datetime`) VALUES "
 
-        self.MYSQL_HOST = get_config().MYSQL_HOST
-        self.MYSQL_PORT = get_config().MYSQL_PORT
-        self.MYSQL_USER = get_config().MYSQL_USER
-        self.MYSQL_PASS = get_config().MYSQL_PASS
-        self.MYSQL_DB = get_config().MYSQL_DB
-
-        self.MYSQL_SSL_ENABLE = get_config().MYSQL_SSL_ENABLE
-        self.MYSQL_SSL_CA = get_config().MYSQL_SSL_CA
-        self.MYSQL_SSL_CERT = get_config().MYSQL_SSL_CERT
-        self.MYSQL_SSL_KEY = get_config().MYSQL_SSL_KEY
-
-        self.NODE_ID = get_config().NODE_ID
-        self.CLOUDSAFE = get_config().CLOUDSAFE
+        self.api_config = get_config()
 
         self.mysql_conn = None
         self.mysql_err_sleep = 10
+        self.mysql_timeout = 120
+        self.print_mysql_query = self.api_config.PRINT_MYSQL_QUERY
+
+        self.port_offset = 0
 
     def get_mysql_conn_base(self):
-        if self.MYSQL_SSL_ENABLE == 1:
+        if self.api_config.MYSQL_SSL_ENABLE == 1:
             conn = cymysql.connect(
-                host=self.MYSQL_HOST,
-                port=self.MYSQL_PORT,
-                user=self.MYSQL_USER,
-                passwd=self.MYSQL_PASS,
-                db=self.MYSQL_DB,
+                host=self.api_config.MYSQL_HOST,
+                port=self.api_config.MYSQL_PORT,
+                user=self.api_config.MYSQL_USER,
+                passwd=self.api_config.MYSQL_PASS,
+                db=self.api_config.MYSQL_DB,
                 charset="utf8",
-                ssl={"ca": self.MYSQL_SSL_CA, "cert": self.MYSQL_SSL_CERT, "key": self.MYSQL_SSL_KEY},
-                connect_timeout=120,
+                ssl={"ca": self.api_config.MYSQL_SSL_CA, "cert": self.api_config.MYSQL_SSL_CERT, "key": self.api_config.MYSQL_SSL_KEY},
+                connect_timeout=self.mysql_timeout,
             )
         else:
             conn = cymysql.connect(
-                host=self.MYSQL_HOST,
-                port=self.MYSQL_PORT,
-                user=self.MYSQL_USER,
-                passwd=self.MYSQL_PASS,
-                db=self.MYSQL_DB,
+                host=self.api_config.MYSQL_HOST,
+                port=self.api_config.MYSQL_PORT,
+                user=self.api_config.MYSQL_USER,
+                passwd=self.api_config.MYSQL_PASS,
+                db=self.api_config.MYSQL_DB,
                 charset="utf8",
-                connect_timeout=120,
+                connect_timeout=self.mysql_timeout,
             )
         conn.autocommit(True)
         return conn
@@ -140,7 +141,7 @@ class DbTransfer(object):
     def is_mysql_connectable(self):
         failed_count = 0
         for i in range(2):
-            if g_socket_ping((self.MYSQL_HOST, self.MYSQL_PORT)) == -1:
+            if g_socket_ping((self.api_config.MYSQL_HOST, self.api_config.MYSQL_PORT)) == -1:
                 failed_count = failed_count + 1
         if failed_count == 2:
             return False
@@ -152,25 +153,31 @@ class DbTransfer(object):
             sleep_time += sleep_time
             time.sleep(sleep_time)
 
-    def get_mysql_cur(self, query_sql, fetchone=False, fetchall=False, no_result=False):
+    def get_mysql_cur(self, query_sql, fetch_type=FETCH_NONE):
         try:
             ret = None
             cur = None
             conn = self.get_mysql_conn()
             cur = conn.cursor()
             cur.execute(query_sql)
-            if fetchall is True and fetchone is False:
+            if self.print_mysql_query:
+                logging.info(query_sql)
+            if fetch_type is FETCH_NONE:
+                return
+            if fetch_type is FETCH_ONE:
+                return cur.fetchone()
+            if fetch_type is FETCH_ALL:
                 ret = cur.fetchall()
-            if fetchall is False and fetchone is True:
-                ret = cur.fetchone()
-            if ret:
+                if ret is None:
+                    # cymysql may return none
+                    # 'NoneType' object is not iterable
+                    return {}
                 return ret
-            if fetchall is True and fetchone is False:
-                return {}
+            # raise Exception("Unknown fetch_type >> %d", fetch_type)
+            return None
         except ConnectionAbortedError as e:
             logging.error(e)
             logging.error(query_sql)
-            # print(isinstance(e, ConnectionAbortedError))
 
             self.wait_for_mysql_connectable()
             time.sleep(self.mysql_err_sleep)
@@ -178,13 +185,19 @@ class DbTransfer(object):
 
             if cur:
                 cur.close()
-            return self.get_mysql_cur(query_sql, fetchone=fetchone, fetchall=fetchall, no_result=no_result)
+            return self.get_mysql_cur(query_sql, fetch_type=fetch_type)
         except Exception as e:
             logging.error(e)
             logging.error(query_sql)
 
-            # BrokenPipeError等等 无法直接catch
-            if hasattr(e, "errmsg"):
+            self.wait_for_mysql_connectable()
+            time.sleep(self.mysql_err_sleep)
+
+            """
+            BrokenPipeError等等，需要重新创建mysql_conn
+            而且无法直接catch
+            """
+            if hasattr(e, 'errmsg'):
                 """
                 print(
                     e.errmsg,
@@ -201,36 +214,31 @@ class DbTransfer(object):
                     or isinstance(e.errmsg, ConnectionAbortedError)
                     or isinstance(e.errmsg, BlockingIOError)
                 ):
-                    self.wait_for_mysql_connectable()
-                    time.sleep(self.mysql_err_sleep)
-                    self.close_cysql_conn()
-
                     if cur:
                         cur.close()
-                    return self.get_mysql_cur(query_sql, fetchone=fetchone, fetchall=fetchall, no_result=no_result)
+                    # need to recreate conn in these cases
+                    self.close_cysql_conn()
 
-            self.wait_for_mysql_connectable()
-            time.sleep(self.mysql_err_sleep)
+                    return self.get_mysql_cur(query_sql, fetch_type=fetch_type)
+
             self.mysql_err_sleep += 10
-
             if cur:
                 cur.close()
-            return self.get_mysql_cur(query_sql, fetchone=fetchone, fetchall=fetchall, no_result=no_result)
-        return None
+            return self.get_mysql_cur(query_sql, fetch_type=fetch_type)
 
-    def append_traffic_log(self, pid, dt_transfer):
-        traffic_show = g_traffic_show((dt_transfer[pid][0] + dt_transfer[pid][1]) * self.traffic_rate)
+    def append_traffic_log(self, port, dt_transfer):
+        traffic_show = g_traffic_show((dt_transfer[port][0] + dt_transfer[port][1]) * self.traffic_rate)
         if self.traffic_log_to_insert:
             self.traffic_log_to_insert += ","
         self.traffic_log_to_insert += (
             "(NULL, '"
-            + str(self.port_uid_table[pid])
+            + str(self.port_uid_table[port])
             + "', '"
-            + str(dt_transfer[pid][0])
+            + str(dt_transfer[port][0])
             + "', '"
-            + str(dt_transfer[pid][1])
+            + str(dt_transfer[port][1])
             + "', '"
-            + str(self.NODE_ID)
+            + str(self.api_config.NODE_ID)
             + "', '"
             + str(self.traffic_rate)
             + "', '"
@@ -241,17 +249,17 @@ class DbTransfer(object):
     def mass_insert_traffic(self):
         if self.traffic_log_to_insert:
             query_sql = self.traffic_log_query_head + self.traffic_log_to_insert + ";"
-            self.get_mysql_cur(query_sql, no_result=True)
+            self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
             self.traffic_log_to_insert = ""
 
-    def append_alive_ip(self, pid, ip):
+    def append_alive_ip(self, port, ip):
         if self.alive_ip_to_insert:
             self.alive_ip_to_insert += ","
         self.alive_ip_to_insert += (
             "(NULL, '"
-            + str(self.NODE_ID)
+            + str(self.api_config.NODE_ID)
             + "','"
-            + str(self.port_uid_table[pid])
+            + str(self.port_uid_table[port])
             + "', '"
             + str(ip)
             + "', unix_timestamp())"
@@ -260,7 +268,7 @@ class DbTransfer(object):
     def mass_insert_alive_ip(self):
         if self.alive_ip_to_insert:
             query_sql = self.alive_ip_query_head + self.alive_ip_to_insert + ";"
-            self.get_mysql_cur(query_sql, no_result=True)
+            self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
             self.alive_ip_to_insert = ""
 
     def update_all_user(self, dt_transfer):
@@ -274,24 +282,25 @@ class DbTransfer(object):
         alive_user_count = 0
         bandwidth_thistime = 0
 
-        for id in dt_transfer.keys():
-            if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
+        for offset_port in dt_transfer.keys():
+            port = self.get_real_port(offset_port)
+            if dt_transfer[offset_port][0] == 0 and dt_transfer[offset_port][1] == 0:
                 continue
 
-            query_sub_when += " WHEN %s THEN u+%s" % (id, dt_transfer[id][0] * self.traffic_rate)
-            query_sub_when2 += " WHEN %s THEN d+%s" % (id, dt_transfer[id][1] * self.traffic_rate)
-            update_transfer[id] = dt_transfer[id]
+            query_sub_when += " WHEN %s THEN u+%s" % (port, dt_transfer[offset_port][0] * self.traffic_rate)
+            query_sub_when2 += " WHEN %s THEN d+%s" % (port, dt_transfer[offset_port][1] * self.traffic_rate)
+            update_transfer[offset_port] = dt_transfer[offset_port]
 
             alive_user_count = alive_user_count + 1
 
-            self.append_traffic_log(id, dt_transfer)
+            self.append_traffic_log(offset_port, dt_transfer)
 
-            bandwidth_thistime = bandwidth_thistime + (dt_transfer[id][0] + dt_transfer[id][1])
+            bandwidth_thistime = bandwidth_thistime + (dt_transfer[offset_port][0] + dt_transfer[offset_port][1])
 
             if query_sub_in is not None:
-                query_sub_in += ",%s" % id
+                query_sub_in += ",%s" % port
             else:
-                query_sub_in = "%s" % id
+                query_sub_in = "%s" % port
         self.mass_insert_traffic()
 
         if query_sub_when != "":
@@ -305,44 +314,44 @@ class DbTransfer(object):
                 + " WHERE port IN (%s)" % query_sub_in
             )
 
-            self.get_mysql_cur(query_sql, no_result=True)
+            self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         query_sql = (
             "UPDATE `ss_node` SET `node_heartbeat`=unix_timestamp(),`node_bandwidth`=`node_bandwidth`+'"
             + str(bandwidth_thistime)
             + "' WHERE `id` = "
-            + str(self.NODE_ID)
+            + str(self.api_config.NODE_ID)
             + " ; "
         )
-        self.get_mysql_cur(query_sql, no_result=True)
+        self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         query_sql = (
             "INSERT INTO `ss_node_online_log` (`id`, `node_id`, `online_user`, `log_time`) VALUES (NULL, '"
-            + str(self.NODE_ID)
+            + str(self.api_config.NODE_ID)
             + "', '"
             + str(alive_user_count)
             + "', unix_timestamp()); "
         )
-        self.get_mysql_cur(query_sql, no_result=True)
+        self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         query_sql = (
             "INSERT INTO `ss_node_info` (`id`, `node_id`, `uptime`, `load`, `log_time`) VALUES (NULL, '"
-            + str(get_config().NODE_ID)
+            + str(self.api_config.NODE_ID)
             + "', '"
             + str(self.uptime())
             + "', '"
             + str(self.load())
             + "', unix_timestamp()); "
         )
-        self.get_mysql_cur(query_sql, no_result=True)
+        self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
-        online_iplist = ServerPool.get_instance().get_servers_iplist()
-        for id in online_iplist.keys():
-            for ip in online_iplist[id]:
-                self.append_alive_ip(id, ip)
+        online_iplist = sp_instance().get_servers_iplist()
+        for port in online_iplist.keys():
+            for ip in online_iplist[port]:
+                self.append_alive_ip(port, ip)
         self.mass_insert_alive_ip()
 
-        detect_log_list = ServerPool.get_instance().get_servers_detect_log()
+        detect_log_list = sp_instance().get_servers_detect_log()
         for port in detect_log_list.keys():
             for rule_id in detect_log_list[port]:
                 query_sql = (
@@ -351,15 +360,15 @@ class DbTransfer(object):
                     + "', '"
                     + str(rule_id)
                     + "', UNIX_TIMESTAMP(), '"
-                    + str(self.NODE_ID)
+                    + str(self.api_config.NODE_ID)
                     + "')"
                 )
-                self.get_mysql_cur(query_sql, no_result=True)
+                self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         deny_str = ""
-        if platform.system() == "Linux" and get_config().ANTISSATTACK == 1:
-            wrong_iplist = ServerPool.get_instance().get_servers_wrong()
-            server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
+        if platform.system() == "Linux" and self.api_config.ANTISSATTACK == 1:
+            wrong_iplist = sp_instance().get_servers_wrong()
+            server_ip = socket.gethostbyname(self.api_config.MYSQL_HOST)
             for id in wrong_iplist.keys():
                 for ip in wrong_iplist[id]:
                     is_ipv6 = False
@@ -388,19 +397,19 @@ class DbTransfer(object):
                         continue
 
                     query_sql = "SELECT * FROM `blockip` where `ip` = '" + str(realip) + "'"
-                    rows = self.get_mysql_cur(query_sql, fetchone=True)
+                    rows = self.get_mysql_cur(query_sql, fetch_type=FETCH_ONE)
 
                     if rows is not None:
                         continue
-                    if get_config().CLOUDSAFE == 1:
+                    if self.api_config.CLOUDSAFE == 1:
                         query_sql = (
                             "INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '"
-                            + str(self.NODE_ID)
+                            + str(self.api_config.NODE_ID)
                             + "', '"
                             + str(realip)
                             + "', unix_timestamp())"
                         )
-                        self.get_mysql_cur(query_sql, no_result=True)
+                        self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
                     else:
                         if not is_ipv6:
                             os.system("route add -host %s gw 127.0.0.1" % str(realip))
@@ -409,13 +418,21 @@ class DbTransfer(object):
                             os.system("ip -6 route add ::1/128 via %s/128" % str(realip))
                             deny_str = deny_str + "\nALL: [" + str(realip) + "]/128"
 
-                        logging.info("Local Block ip:" + str(realip))
-                if get_config().CLOUDSAFE == 0:
+                        logging.info("Local Block ip: %s", str(realip))
+                if self.api_config.CLOUDSAFE == 0:
                     deny_file = open("/etc/hosts.deny", "a")
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                     deny_file.write(deny_str)
                     deny_file.close()
         return update_transfer
+
+    def get_port_by_offset(self, port, reverse=False):
+        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False or self.port_offset == 0:
+            return port
+        return port + self.port_offset
+
+    def get_real_port(self, port):
+        return self.get_port_by_offset(port, reverse=True)
 
     @staticmethod
     def uptime():
@@ -431,7 +448,7 @@ class DbTransfer(object):
     def push_db_all_user(self):
         # 更新用户流量到数据库
         last_transfer = self.last_update_transfer
-        curr_transfer = ServerPool.get_instance().get_servers_transfer()
+        curr_transfer = sp_instance().get_servers_transfer()
         # 上次和本次的增量
         dt_transfer = {}
         for id in curr_transfer.keys():
@@ -483,27 +500,27 @@ class DbTransfer(object):
                 "is_multi_user",
             ]
 
-        if get_config().MYSQL_SSL_ENABLE == 1:
+        if self.api_config.MYSQL_SSL_ENABLE == 1:
             conn = cymysql.connect(
-                host=get_config().MYSQL_HOST,
-                port=get_config().MYSQL_PORT,
-                user=get_config().MYSQL_USER,
-                passwd=get_config().MYSQL_PASS,
-                db=get_config().MYSQL_DB,
+                host=self.api_config.MYSQL_HOST,
+                port=self.api_config.MYSQL_PORT,
+                user=self.api_config.MYSQL_USER,
+                passwd=self.api_config.MYSQL_PASS,
+                db=self.api_config.MYSQL_DB,
                 charset="utf8",
                 ssl={
-                    "ca": get_config().MYSQL_SSL_CA,
-                    "cert": get_config().MYSQL_SSL_CERT,
-                    "key": get_config().MYSQL_SSL_KEY,
+                    "ca": self.api_config.MYSQL_SSL_CA,
+                    "cert": self.api_config.MYSQL_SSL_CERT,
+                    "key": self.api_config.MYSQL_SSL_KEY,
                 },
             )
         else:
             conn = cymysql.connect(
-                host=get_config().MYSQL_HOST,
-                port=get_config().MYSQL_PORT,
-                user=get_config().MYSQL_USER,
-                passwd=get_config().MYSQL_PASS,
-                db=get_config().MYSQL_DB,
+                host=self.api_config.MYSQL_HOST,
+                port=self.api_config.MYSQL_PORT,
+                user=self.api_config.MYSQL_USER,
+                passwd=self.api_config.MYSQL_PASS,
+                db=self.api_config.MYSQL_DB,
                 charset="utf8",
             )
         conn.autocommit(True)
@@ -511,8 +528,8 @@ class DbTransfer(object):
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort` FROM ss_node where `id`='"
-            + str(get_config().NODE_ID)
+            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort`,`name` FROM ss_node where `id`='"
+            + str(self.api_config.NODE_ID)
             + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)"
         )
         nodeinfo = cur.fetchone()
@@ -536,6 +553,14 @@ class DbTransfer(object):
         else:
             self.is_relay = False
 
+        self.port_offset = int(nodeinfo[6].split("#")[1])
+
+        logging.debug(
+            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_offset=%d",
+            nodeinfo[0], nodeinfo[1], nodeinfo[2],
+            nodeinfo[3], nodeinfo[4], nodeinfo[5],
+            nodeinfo[6], self.port_offset)
+
         if nodeinfo[0] == 0:
             node_group_sql = ""
         else:
@@ -556,6 +581,7 @@ class DbTransfer(object):
             d = {}
             for column in range(len(keys)):
                 d[keys[column]] = r[column]
+            d["port"] = self.get_port_by_offset(d["port"])
             rows.append(d)
         cur.close()
 
@@ -644,7 +670,7 @@ class DbTransfer(object):
                 "SELECT "
                 + ",".join(keys_detect)
                 + " FROM relay where `source_node_id` = 0 or `source_node_id` = "
-                + str(get_config().NODE_ID)
+                + str(self.api_config.NODE_ID)
             )
 
             for r in cur.fetchall():
@@ -720,6 +746,9 @@ class DbTransfer(object):
                     pass
                 i += 1
 
+        if len(rows) == 0:
+            logging.info("No user found!")
+
         for row in rows:
             port = row["port"]
             user_id = row["id"]
@@ -749,7 +778,7 @@ class DbTransfer(object):
                     try:
                         cfg[name] = cfg[name].encode("utf-8")
                     except Exception as e:
-                        logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
+                        logging.warning('encode cfg key "%s" fail, val "%s"', name, cfg[name])
 
             if "node_speedlimit" in cfg:
                 if float(self.node_speedlimit) > 0.0 or float(cfg["node_speedlimit"]) > 0.0:
@@ -835,33 +864,33 @@ class DbTransfer(object):
 
                 cfg["relay_rules"] = temp_relay_rules.copy()
 
-            if ServerPool.get_instance().server_is_run(port) > 0:
+            if sp_instance().server_is_run(port) > 0:
                 cfgchange = False
                 if self.detect_text_ischanged or self.detect_hex_ischanged:
                     cfgchange = True
 
-                if port in ServerPool.get_instance().tcp_servers_pool:
-                    ServerPool.get_instance().tcp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
-                    ServerPool.get_instance().tcp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
-                if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                    ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
-                    ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
-                if port in ServerPool.get_instance().udp_servers_pool:
-                    ServerPool.get_instance().udp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
-                    ServerPool.get_instance().udp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
-                if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                    ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
-                    ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+                if port in sp_instance().tcp_servers_pool:
+                    sp_instance().tcp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+                    sp_instance().tcp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+                if port in sp_instance().tcp_ipv6_servers_pool:
+                    sp_instance().tcp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+                    sp_instance().tcp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+                if port in sp_instance().udp_servers_pool:
+                    sp_instance().udp_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+                    sp_instance().udp_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
+                if port in sp_instance().udp_ipv6_servers_pool:
+                    sp_instance().udp_ipv6_servers_pool[port].modify_detect_text_list(self.detect_text_list)
+                    sp_instance().udp_ipv6_servers_pool[port].modify_detect_hex_list(self.detect_hex_list)
 
                 if row["is_multi_user"] != 0:
-                    if port in ServerPool.get_instance().tcp_servers_pool:
-                        ServerPool.get_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
-                    if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                        ServerPool.get_instance().tcp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
-                    if port in ServerPool.get_instance().udp_servers_pool:
-                        ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
-                    if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                        ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+                    if port in sp_instance().tcp_servers_pool:
+                        sp_instance().tcp_servers_pool[port].modify_multi_user_table(md5_users)
+                    if port in sp_instance().tcp_ipv6_servers_pool:
+                        sp_instance().tcp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
+                    if port in sp_instance().udp_servers_pool:
+                        sp_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
+                    if port in sp_instance().udp_ipv6_servers_pool:
+                        sp_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
 
                 if self.is_relay and row["is_multi_user"] != 2:
                     temp_relay_rules = {}
@@ -906,35 +935,35 @@ class DbTransfer(object):
 
                             temp_relay_rules[id] = self.relay_rule_list[id]
 
-                    if port in ServerPool.get_instance().tcp_servers_pool:
-                        ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                        ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_servers_pool:
-                        ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                        ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().tcp_servers_pool:
+                        sp_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().tcp_ipv6_servers_pool:
+                        sp_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().udp_servers_pool:
+                        sp_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().udp_ipv6_servers_pool:
+                        sp_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
                 else:
                     temp_relay_rules = {}
 
-                    if port in ServerPool.get_instance().tcp_servers_pool:
-                        ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                        ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_servers_pool:
-                        ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                        ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().tcp_servers_pool:
+                        sp_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().tcp_ipv6_servers_pool:
+                        sp_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().udp_servers_pool:
+                        sp_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
+                    if port in sp_instance().udp_ipv6_servers_pool:
+                        sp_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
-                if port in ServerPool.get_instance().tcp_servers_pool:
-                    relay = ServerPool.get_instance().tcp_servers_pool[port]
+                if port in sp_instance().tcp_servers_pool:
+                    relay = sp_instance().tcp_servers_pool[port]
                     for name in merge_config_keys:
                         if name in cfg and not self.cmp(cfg[name], relay._config[name]):
                             cfgchange = True
                             break
-                if not cfgchange and port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                    relay = ServerPool.get_instance().tcp_ipv6_servers_pool[port]
+                if not cfgchange and port in sp_instance().tcp_ipv6_servers_pool:
+                    relay = sp_instance().tcp_ipv6_servers_pool[port]
                     for name in merge_config_keys:
                         if name in cfg and not self.cmp(cfg[name], relay._config[name]):
                             cfgchange = True
@@ -943,7 +972,7 @@ class DbTransfer(object):
                 if cfgchange:
                     self.del_server(port, "config changed")
                     new_servers[port] = (passwd, cfg)
-            elif ServerPool.get_instance().server_run_status(port) is False:
+            elif sp_instance().server_run_status(port) is False:
                 # new_servers[port] = passwd
                 self.new_server(port, passwd, cfg)
 
@@ -961,54 +990,58 @@ class DbTransfer(object):
                 passwd, cfg = new_servers[port]
                 self.new_server(port, passwd, cfg)
 
-        ServerPool.get_instance().push_uid_port_table(self.uid_port_table)
+        sp_instance().push_uid_port_table(self.uid_port_table)
 
     def del_server(self, port, reason):
         logging.info("db stop server at port [%s] reason: %s!" % (port, reason))
-        ServerPool.get_instance().cb_del_server(port)
+        sp_instance().cb_del_server(port)
         if port in self.last_update_transfer:
             del self.last_update_transfer[port]
 
+        """
+        sp_instance().tcp_servers_pool[mu_user_port] -> 应指向 user 普通端口的 tcphandler
+        reset_single_multi_user_traffic 是重置单端口上 mu_user 的流量，在此处应为无效功能
+        """
         for mu_user_port in self.mu_port_list:
-            if mu_user_port in ServerPool.get_instance().tcp_servers_pool:
-                ServerPool.get_instance().tcp_servers_pool[mu_user_port].reset_single_multi_user_traffic(
+            if mu_user_port in sp_instance().tcp_servers_pool:
+                sp_instance().tcp_servers_pool[mu_user_port].reset_single_multi_user_traffic(
                     self.port_uid_table[port]
                 )
-            if mu_user_port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                ServerPool.get_instance().tcp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(
+            if mu_user_port in sp_instance().tcp_ipv6_servers_pool:
+                sp_instance().tcp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(
                     self.port_uid_table[port]
                 )
-            if mu_user_port in ServerPool.get_instance().udp_servers_pool:
-                ServerPool.get_instance().udp_servers_pool[mu_user_port].reset_single_multi_user_traffic(
+            if mu_user_port in sp_instance().udp_servers_pool:
+                sp_instance().udp_servers_pool[mu_user_port].reset_single_multi_user_traffic(
                     self.port_uid_table[port]
                 )
-            if mu_user_port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                ServerPool.get_instance().udp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(
+            if mu_user_port in sp_instance().udp_ipv6_servers_pool:
+                sp_instance().udp_ipv6_servers_pool[mu_user_port].reset_single_multi_user_traffic(
                     self.port_uid_table[port]
                 )
 
     @staticmethod
     def new_server(port, passwd, cfg):
-        protocol = cfg.get("protocol", ServerPool.get_instance().config.get("protocol", "origin"))
-        method = cfg.get("method", ServerPool.get_instance().config.get("method", "None"))
-        obfs = cfg.get("obfs", ServerPool.get_instance().config.get("obfs", "plain"))
+        protocol = cfg.get("protocol", sp_instance().config.get("protocol", "origin"))
+        method = cfg.get("method", sp_instance().config.get("method", "None"))
+        obfs = cfg.get("obfs", sp_instance().config.get("obfs", "plain"))
         logging.info(
             "db start server at port [%s] pass [%s] protocol [%s] method [%s] obfs [%s]"
             % (port, passwd, protocol, method, obfs)
         )
-        ServerPool.get_instance().new_server(port, cfg)
+        sp_instance().new_server(port, cfg)
 
     @staticmethod
     def del_servers():
         global db_instance
-        for port in [v for v in ServerPool.get_instance().tcp_servers_pool.keys()]:
-            if ServerPool.get_instance().server_is_run(port) > 0:
-                ServerPool.get_instance().cb_del_server(port)
+        for port in [v for v in sp_instance().tcp_servers_pool]:
+            if sp_instance().server_is_run(port) > 0:
+                sp_instance().cb_del_server(port)
                 if port in db_instance.last_update_transfer:
                     del db_instance.last_update_transfer[port]
-        for port in [v for v in ServerPool.get_instance().tcp_ipv6_servers_pool.keys()]:
-            if ServerPool.get_instance().server_is_run(port) > 0:
-                ServerPool.get_instance().cb_del_server(port)
+        for port in [v for v in sp_instance().tcp_ipv6_servers_pool]:
+            if sp_instance().server_is_run(port) > 0:
+                sp_instance().cb_del_server(port)
                 if port in db_instance.last_update_transfer:
                     del db_instance.last_update_transfer[port]
 
@@ -1040,19 +1073,20 @@ class DbTransfer(object):
                     db_instance.detect_text_ischanged = False
                     db_instance.detect_hex_ischanged = False
                     last_rows = rows
-                    db_instance.closeMysqlConn()
+                    db_instance.close_cysql_conn()
                 except Exception as e:
                     trace = traceback.format_exc()
                     logging.error(trace)
                     # logging.warn('db thread except:%s' % e)
-                if db_instance.event.wait(60) or not db_instance.is_all_thread_alive():
+
+                if db_instance.event.wait(db_instance.api_config.MYSQL_PUSH_DURATION) or not db_instance.is_all_thread_alive():
                     break
                 if db_instance.has_stopped:
                     break
         except KeyboardInterrupt as e:
             pass
         db_instance.del_servers()
-        ServerPool.get_instance().stop()
+        sp_instance().stop()
         db_instance = None
 
     @staticmethod
@@ -1063,6 +1097,6 @@ class DbTransfer(object):
 
     @staticmethod
     def is_all_thread_alive():
-        if not ServerPool.get_instance().thread.is_alive():
+        if not sp_instance().thread.is_alive():
             return False
         return True
