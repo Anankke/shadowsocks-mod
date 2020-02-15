@@ -94,8 +94,9 @@ class DbTransfer(object):
         self.mysql_conn = None
         self.mysql_err_sleep = 10
         self.mysql_timeout = 120
-        self.print_mysql_query = False
         self.print_mysql_query = self.api_config.PRINT_MYSQL_QUERY
+
+        self.port_offset = 0
 
     def get_mysql_conn_base(self):
         if self.api_config.MYSQL_SSL_ENABLE == 1:
@@ -225,17 +226,17 @@ class DbTransfer(object):
                 cur.close()
             return self.get_mysql_cur(query_sql, fetch_type=fetch_type)
 
-    def append_traffic_log(self, pid, dt_transfer):
-        traffic_show = g_traffic_show((dt_transfer[pid][0] + dt_transfer[pid][1]) * self.traffic_rate)
+    def append_traffic_log(self, port, dt_transfer):
+        traffic_show = g_traffic_show((dt_transfer[port][0] + dt_transfer[port][1]) * self.traffic_rate)
         if self.traffic_log_to_insert:
             self.traffic_log_to_insert += ","
         self.traffic_log_to_insert += (
             "(NULL, '"
-            + str(self.port_uid_table[pid])
+            + str(self.port_uid_table[port])
             + "', '"
-            + str(dt_transfer[pid][0])
+            + str(dt_transfer[port][0])
             + "', '"
-            + str(dt_transfer[pid][1])
+            + str(dt_transfer[port][1])
             + "', '"
             + str(self.api_config.NODE_ID)
             + "', '"
@@ -251,14 +252,14 @@ class DbTransfer(object):
             self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
             self.traffic_log_to_insert = ""
 
-    def append_alive_ip(self, pid, ip):
+    def append_alive_ip(self, port, ip):
         if self.alive_ip_to_insert:
             self.alive_ip_to_insert += ","
         self.alive_ip_to_insert += (
             "(NULL, '"
             + str(self.api_config.NODE_ID)
             + "','"
-            + str(self.port_uid_table[pid])
+            + str(self.port_uid_table[port])
             + "', '"
             + str(ip)
             + "', unix_timestamp())"
@@ -281,24 +282,25 @@ class DbTransfer(object):
         alive_user_count = 0
         bandwidth_thistime = 0
 
-        for id in dt_transfer.keys():
-            if dt_transfer[id][0] == 0 and dt_transfer[id][1] == 0:
+        for offset_port in dt_transfer.keys():
+            port = self.get_real_port(offset_port)
+            if dt_transfer[offset_port][0] == 0 and dt_transfer[offset_port][1] == 0:
                 continue
 
-            query_sub_when += " WHEN %s THEN u+%s" % (id, dt_transfer[id][0] * self.traffic_rate)
-            query_sub_when2 += " WHEN %s THEN d+%s" % (id, dt_transfer[id][1] * self.traffic_rate)
-            update_transfer[id] = dt_transfer[id]
+            query_sub_when += " WHEN %s THEN u+%s" % (port, dt_transfer[offset_port][0] * self.traffic_rate)
+            query_sub_when2 += " WHEN %s THEN d+%s" % (port, dt_transfer[offset_port][1] * self.traffic_rate)
+            update_transfer[offset_port] = dt_transfer[offset_port]
 
             alive_user_count = alive_user_count + 1
 
-            self.append_traffic_log(id, dt_transfer)
+            self.append_traffic_log(offset_port, dt_transfer)
 
-            bandwidth_thistime = bandwidth_thistime + (dt_transfer[id][0] + dt_transfer[id][1])
+            bandwidth_thistime = bandwidth_thistime + (dt_transfer[offset_port][0] + dt_transfer[offset_port][1])
 
             if query_sub_in is not None:
-                query_sub_in += ",%s" % id
+                query_sub_in += ",%s" % port
             else:
-                query_sub_in = "%s" % id
+                query_sub_in = "%s" % port
         self.mass_insert_traffic()
 
         if query_sub_when != "":
@@ -344,9 +346,9 @@ class DbTransfer(object):
         self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         online_iplist = sp_instance().get_servers_iplist()
-        for id in online_iplist.keys():
-            for ip in online_iplist[id]:
-                self.append_alive_ip(id, ip)
+        for port in online_iplist.keys():
+            for ip in online_iplist[port]:
+                self.append_alive_ip(port, ip)
         self.mass_insert_alive_ip()
 
         detect_log_list = sp_instance().get_servers_detect_log()
@@ -364,7 +366,7 @@ class DbTransfer(object):
                 self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
 
         deny_str = ""
-        if platform.system() == "Linux" and self.api_config.CLOUDSAFEANTISSATTACK == 1:
+        if platform.system() == "Linux" and self.api_config.ANTISSATTACK == 1:
             wrong_iplist = sp_instance().get_servers_wrong()
             server_ip = socket.gethostbyname(self.api_config.MYSQL_HOST)
             for id in wrong_iplist.keys():
@@ -399,7 +401,7 @@ class DbTransfer(object):
 
                     if rows is not None:
                         continue
-                    if self.api_config.CLOUDSAFECLOUDSAFE == 1:
+                    if self.api_config.CLOUDSAFE == 1:
                         query_sql = (
                             "INSERT INTO `blockip` (`id`, `nodeid`, `ip`, `datetime`) VALUES (NULL, '"
                             + str(self.api_config.NODE_ID)
@@ -416,13 +418,21 @@ class DbTransfer(object):
                             os.system("ip -6 route add ::1/128 via %s/128" % str(realip))
                             deny_str = deny_str + "\nALL: [" + str(realip) + "]/128"
 
-                        logging.info("Local Block ip:" + str(realip))
-                if self.api_config.CLOUDSAFECLOUDSAFE == 0:
+                        logging.info("Local Block ip: %s", str(realip))
+                if self.api_config.CLOUDSAFE == 0:
                     deny_file = open("/etc/hosts.deny", "a")
                     fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                     deny_file.write(deny_str)
                     deny_file.close()
         return update_transfer
+
+    def get_port_by_offset(self, port, reverse=False):
+        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False or self.port_offset == 0:
+            return port
+        return port + self.port_offset
+
+    def get_real_port(self, port):
+        return self.get_port_by_offset(port, reverse=True)
 
     @staticmethod
     def uptime():
@@ -518,7 +528,7 @@ class DbTransfer(object):
         cur = conn.cursor()
 
         cur.execute(
-            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort` FROM ss_node where `id`='"
+            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort`,`name` FROM ss_node where `id`='"
             + str(self.api_config.NODE_ID)
             + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)"
         )
@@ -543,6 +553,14 @@ class DbTransfer(object):
         else:
             self.is_relay = False
 
+        self.port_offset = int(nodeinfo[6].split("#")[1])
+
+        logging.debug(
+            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_offset=%d",
+            nodeinfo[0], nodeinfo[1], nodeinfo[2],
+            nodeinfo[3], nodeinfo[4], nodeinfo[5],
+            nodeinfo[6], self.port_offset)
+
         if nodeinfo[0] == 0:
             node_group_sql = ""
         else:
@@ -563,6 +581,7 @@ class DbTransfer(object):
             d = {}
             for column in range(len(keys)):
                 d[keys[column]] = r[column]
+            d["port"] = self.get_port_by_offset(d["port"])
             rows.append(d)
         cur.close()
 
@@ -727,6 +746,9 @@ class DbTransfer(object):
                     pass
                 i += 1
 
+        if len(rows) == 0:
+            logging.info("No user found!")
+
         for row in rows:
             port = row["port"]
             user_id = row["id"]
@@ -756,7 +778,7 @@ class DbTransfer(object):
                     try:
                         cfg[name] = cfg[name].encode("utf-8")
                     except Exception as e:
-                        logging.warning('encode cfg key "%s" fail, val "%s"' % (name, cfg[name]))
+                        logging.warning('encode cfg key "%s" fail, val "%s"', name, cfg[name])
 
             if "node_speedlimit" in cfg:
                 if float(self.node_speedlimit) > 0.0 or float(cfg["node_speedlimit"]) > 0.0:
