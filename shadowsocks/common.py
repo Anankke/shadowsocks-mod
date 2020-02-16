@@ -299,7 +299,7 @@ class IPNetwork(object):
         list(map(self.add_network, addrs))
 
     def add_network(self, addr):
-        if addr is "":
+        if addr == "":
             return
 
         addr = addr.replace("::ffff:", "")
@@ -314,9 +314,9 @@ class IPNetwork(object):
             ip = (hi << 64) | lo
         else:
             raise Exception("Not a valid CIDR notation: %s" % addr)
-        if len(block) is 1:
+        if len(block) == 1:
             prefix_size = 0
-            while (ip & 1) == 0 and ip is not 0:
+            while (ip & 1) == 0 and ip != 0:
                 ip >>= 1
                 prefix_size += 1
             logging.warn(
