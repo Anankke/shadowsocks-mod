@@ -553,7 +553,10 @@ class DbTransfer(object):
         else:
             self.is_relay = False
 
-        self.port_offset = int(nodeinfo[6].split("#")[1])
+        try:
+            self.port_offset = int(nodeinfo[6].split("#")[1])
+        except IndexError:
+            self.port_offset = 0
 
         logging.debug(
             "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_offset=%d",
