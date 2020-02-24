@@ -3,13 +3,12 @@ Shadowsocks-mod
 
 UIM 配套的后端程序
 
-### 关于 python2
-dbq, python2 实在是太难支持了呜呜呜，请 python2 用户使用分支 `py2` 克隆代码。
+### 关于 Python2
+dbq, Python2 实在是太难支持了呜呜呜，请 Python2 用户使用分支 `py2` 克隆代码。
 
--------
+*猫猫注：0202年了，该换掉Python2了*
 
-### Install
-
+### Python2 Install
 Debian / Ubuntu:
     
     apt update && apt install python-pip libffi-dev libssl-dev git
@@ -25,7 +24,9 @@ CentOS:
     git clone -b py2 https://github.com/Anankke/shadowsocks-mod.git
     cd shadowsocks-mod
     pip install -r requirements.txt
-
+    
+### Python3 Onekey Install
+请参见 https://wiki.sspanel.host/#/onekey-install-for-node
 
 License
 -------
