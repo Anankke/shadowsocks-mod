@@ -1014,20 +1014,22 @@ class TCPRelayHandler(object):
                         raise Exception(
                             'Port %d is in forbidden list, reject' %
                             sa[1])
+
                 if self._server.multi_user_table[
                         self._current_user_id]['_disconnect_ipset']:
-                    if self._client_address[0] in self._server.multi_user_table[
+                    ip = self._real_addr or self._client_address[0]
+                    if ip in self._server.multi_user_table[
                             self._current_user_id]['_disconnect_ipset']:
                         if self._remote_address:
                             raise Exception(
                                 'IP %s is in disconnect list, when connect to %s:%d via port %d' %
-                                (self._client_address[0],
+                                (ip,
                                     self._remote_address[0],
                                     self._remote_address[1],
                                     self._server.multi_user_table[
                                     self._current_user_id]['port']))
                         raise Exception('IP %s is in disconnect list, reject' %
-                                        (self._client_address[0]))
+                                        (ip))
             else:
                 if self._server._forbidden_iplist:
                     if common.to_str(sa[0]) in self._server._forbidden_iplist:
@@ -1053,16 +1055,16 @@ class TCPRelayHandler(object):
                             'Port %d is in forbidden list, reject' %
                             sa[1])
                 if self._server._disconnect_ipset:
-                    if self._client_address[0] in self._server._disconnect_ipset:
+                    ip = self._real_addr or self._client_address[0]
+                    if ip in self._server._disconnect_ipset:
                         if self._remote_address:
                             raise Exception(
                                 'IP %s is in disconnect list, when connect to %s:%d via port %d' %
-                                (self._client_address[0],
+                                (ip,
                                     self._remote_address[0],
                                     self._remote_address[1],
                                     self._server._listen_port))
-                        raise Exception('IP %s is in disconnect list, reject' %
-                                        self._client_address[0])
+                        raise Exception('IP %s is in disconnect list, reject' % ip)
         remote_sock = socket.socket(af, socktype, proto)
         self._remote_sock = remote_sock
         self._remote_sock_fd = remote_sock.fileno()
