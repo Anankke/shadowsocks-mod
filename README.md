@@ -25,7 +25,7 @@ CentOS:
     cd shadowsocks-mod
     pip install -r requirements.txt
     
-### Python3 Onekey Install
+### Python3 TurnKey Install
 请参见 https://wiki.sspanel.host/#/onekey-install-for-node
 
 License
