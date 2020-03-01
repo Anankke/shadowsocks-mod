@@ -1231,7 +1231,7 @@ class TCPRelayHandler(object):
                 if addr_len == 12:
                     addr = data[16:20]
                     self._real_addr = ".".join([str(x) for x in addr])
-                return
+                data = data[16 + addr_len:]
 
             is_relay = self.is_match_relay_rule_mu()
             if not is_local and (
