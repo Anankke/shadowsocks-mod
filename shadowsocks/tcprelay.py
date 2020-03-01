@@ -122,6 +122,7 @@ class SpeedTester(object):
             return self.sum_len >= self.max_speed
         return False
 
+
 class TCPRelayHandler(object):
 
     def __init__(self, server, fd_to_handlers, loop, local_sock, config,
@@ -142,6 +143,7 @@ class TCPRelayHandler(object):
         self._relay_rules = server.relay_rules.copy()
         self._is_relay = False
         self._add_ref = 0
+        self._real_addr = ""
         if not self._create_encryptor(config):
             return
 
@@ -889,15 +891,16 @@ class TCPRelayHandler(object):
                                     self._client_address[0],
                                     self._client_address[1],
                                     self._server._listen_port))
-                if self._config['is_multi_user'] == 0 and common.getRealIp(self._client_address[0]) not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
-                    self._server.connected_iplist.append(common.getRealIp(self._client_address[0]))
 
-                if self._config[
-                        'is_multi_user'] != 0 and self._current_user_id != 0:
-                    if common.getRealIp(self._client_address[0]) not in self._server.mu_connected_iplist[
-                            self._current_user_id] and self._client_address[0] != 0:
-                        self._server.mu_connected_iplist[self._current_user_id].append(common.getRealIp(self._client_address[0]))
+                ip = self._real_addr or common.getRealIp(self._client_address[0])
+                if self._config['is_multi_user'] == 0 and ip not in self._server.connected_iplist and self._client_address[0] != 0 and self._server.is_cleaning_connected_iplist == False:
+                    self._server.connected_iplist.append(ip)
 
+                if self._config['is_multi_user'] != 0 and self._current_user_id != 0:
+                    if ip not in self._server.mu_connected_iplist[self._current_user_id] and self._client_address[0] != 0:
+                        self._server.mu_connected_iplist[self._current_user_id].append(ip)
+
+                # TODO: ???
                 if self._client_address[0] in self._server.wrong_iplist and self._client_address[
                         0] != 0 and self._server.is_cleaning_wrong_iplist == False:
                     del self._server.wrong_iplist[self._client_address[0]]
@@ -1220,6 +1223,13 @@ class TCPRelayHandler(object):
                     self._current_user_id].add(len(data))
 
             ogn_data = data
+
+            if self._stage == STAGE_INIT and data[0:12] == b'\x0D\x0A\x0D\x0A\x00\x0D\x0A\x51\x55\x49\x54\x0A':
+                addr_len = int.from_bytes(data[14:16], byteorder='big')
+                if addr_len == 12:
+                    addr = data[16:20]
+                    self._real_addr = ".".join([str(x) for x in addr])
+                return
 
             is_relay = self.is_match_relay_rule_mu()
             if not is_local and (
