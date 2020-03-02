@@ -225,7 +225,10 @@ class WebTransfer(object):
     def pull_db_all_user(self):
         global webapi
 
-        nodeinfo = webapi.getApi("nodes/%d/info" % (get_config().NODE_ID))
+        nodeinfo = webapi.getApi(
+            "nodes/%d/info" % (get_config().NODE_ID),
+            {"node_id": get_config().NODE_ID},
+        )
 
         if not nodeinfo:
             rows = []
@@ -241,7 +244,10 @@ class WebTransfer(object):
         else:
             self.is_relay = False
 
-        data = webapi.getApi("users", {"node_id": get_config().NODE_ID})
+        data = webapi.getApi(
+            "users",
+            {"node_id": get_config().NODE_ID},
+        )
 
         if not data:
             rows = []
@@ -252,7 +258,10 @@ class WebTransfer(object):
         # 读取节点IP
         # SELECT * FROM `ss_node`  where `node_ip` != ''
         self.node_ip_list = []
-        data = webapi.getApi("nodes")
+        data = webapi.getApi(
+            "nodes",
+            {"node_id": get_config().NODE_ID},
+        )
         for node in data:
             temp_list = str(node["node_ip"]).split(",")
             self.node_ip_list.append(temp_list[0])
@@ -261,7 +270,10 @@ class WebTransfer(object):
 
         self.detect_text_list = {}
         self.detect_hex_list = {}
-        data = webapi.getApi("func/detect_rules")
+        data = webapi.getApi(
+            "func/detect_rules",
+            {"node_id": get_config().NODE_ID},
+        )
         for rule in data:
             d = {}
             d["id"] = int(rule["id"])
@@ -277,7 +289,8 @@ class WebTransfer(object):
             self.relay_rule_list = {}
 
             data = webapi.getApi(
-                "func/relay_rules", {"node_id": get_config().NODE_ID}
+                "func/relay_rules",
+                {"node_id": get_config().NODE_ID},
             )
             for rule in data:
                 d = {}
@@ -818,7 +831,10 @@ class WebTransfer(object):
             while True:
                 load_config()
                 try:
-                    ping = webapi.getApi("func/ping")
+                    ping = webapi.getApi(
+                        "func/ping",
+                        {"node_id": get_config().NODE_ID},
+                    )
                     if ping is None:
                         logging.error(
                             "something wrong with your http api, please check your config and website status and try again later."

@@ -39,7 +39,10 @@ class AutoBlock(object):
             # 读取节点IP
             # SELECT * FROM `ss_node`  where `node_ip` != ''
             node_ip_list = []
-            data = webapi.getApi("nodes")
+            data = webapi.getApi(
+                "nodes",
+                {"node_id": configloader.get_config().NODE_ID}
+            )
             for node in data:
                 temp_list = node["node_ip"].split(",")
                 node_ip_list.append(temp_list[0])
@@ -173,7 +176,10 @@ class AutoBlock(object):
             )
 
         if configloader.get_config().API_INTERFACE == "modwebapi":
-            rows = webapi.getApi("func/block_ip")
+            rows = webapi.getApi(
+                "func/block_ip",
+                {"node_id": configloader.get_config().NODE_ID},
+            )
         else:
             cur = conn.cursor()
             cur.execute(
@@ -248,7 +254,10 @@ class AutoBlock(object):
             deny_file.close()
 
         if configloader.get_config().API_INTERFACE == "modwebapi":
-            rows = webapi.getApi("func/unblock_ip")
+            rows = webapi.getApi(
+                "func/unblock_ip",
+                {"node_id": configloader.get_config().NODE_ID},
+            )
         else:
             cur = conn.cursor()
             cur.execute(

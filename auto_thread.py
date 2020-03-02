@@ -72,7 +72,8 @@ class AutoExec(object):
 
         if configloader.get_config().API_INTERFACE == "modwebapi":
             rows = webapi.getApi(
-                "func/autoexec", {"node_id": configloader.get_config().NODE_ID}
+                "func/autoexec",
+                {"node_id": configloader.get_config().NODE_ID},
             )
         else:
             import cymysql
