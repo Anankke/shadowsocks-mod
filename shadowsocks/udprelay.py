@@ -440,9 +440,9 @@ class UDPRelay(object):
         elif self._bindv6 and af == socket.AF_INET6:
             bind_addr = self._bindv6
 
-        bind_addr = bind_addr.replace("::ffff:", "")
-        if bind_addr in self._ignore_bind_list:
-            bind_addr = None
+        # bind_addr = bind_addr.replace("::ffff:", "")
+        # if bind_addr in self._ignore_bind_list:
+        #     bind_addr = None
 
         if is_relay:
             bind_addr = None
