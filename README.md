@@ -26,7 +26,7 @@ CentOS:
     pip install -r requirements.txt
     
 ### Python3 TurnKey Install
-请参见 https://wiki.sspanel.host/#/onekey-install-for-node
+请参见 https://wiki.sspanel.host/#/turnkey-install-for-node
 
 License
 -------
