@@ -96,7 +96,20 @@ class DbTransfer(object):
         self.mysql_timeout = 120
         self.print_mysql_query = self.api_config.PRINT_MYSQL_QUERY
 
-        self.port_offset = 0
+        self.port_map = {
+            'mu_port' : {
+                'general' : 0,
+                'detail'  : {}
+            },
+            'not_mu_port' : {
+                'general' : 0,
+                'detail'  : {}
+            },
+            'all' : {
+                'general' : 0,
+                'detail'  : {}
+            }
+        }
 
     def get_mysql_conn_base(self):
         if self.api_config.MYSQL_SSL_ENABLE == 1:
@@ -426,13 +439,33 @@ class DbTransfer(object):
                     deny_file.close()
         return update_transfer
 
-    def get_port_by_offset(self, port, reverse=False):
-        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False or self.port_offset == 0:
+    """
+    currently, we use 'mu_port' only
+    """
+    def get_port_by_map(self, port, reverse=False):
+        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False:
             return port
-        return port + self.port_offset
+        if reverse:
+            """
+            this port is des port
+            """
+            for origin_port in self.port_map['mu_port']['detail']:
+                if self.port_map['mu_port']['detail'][origin_port] == port:
+                    return origin_port
+            if self.port_map['mu_port']['general'] != 0:
+                return port - self.port_map['mu_port']['general']
+            return port
+        # find mapped port
+        if port in self.port_map['mu_port']['detail']:
+            return self.port_map['mu_port']['detail'][port]
+        # find general port offset
+        if self.port_map['mu_port']['general'] != 0:
+            return port + self.port_map['mu_port']['general']
+        # don't do anything
+        return port
 
     def get_real_port(self, port):
-        return self.get_port_by_offset(port, reverse=True)
+        return self.get_port_by_map(port, reverse=True)
 
     @staticmethod
     def uptime():
@@ -473,7 +506,6 @@ class DbTransfer(object):
         self.update_all_user(dt_transfer)
 
     def pull_db_all_user(self):
-        import cymysql
 
         # 数据库所有用户信息
         try:
@@ -500,48 +532,18 @@ class DbTransfer(object):
                 "is_multi_user",
             ]
 
-        if self.api_config.MYSQL_SSL_ENABLE == 1:
-            conn = cymysql.connect(
-                host=self.api_config.MYSQL_HOST,
-                port=self.api_config.MYSQL_PORT,
-                user=self.api_config.MYSQL_USER,
-                passwd=self.api_config.MYSQL_PASS,
-                db=self.api_config.MYSQL_DB,
-                charset="utf8",
-                ssl={
-                    "ca": self.api_config.MYSQL_SSL_CA,
-                    "cert": self.api_config.MYSQL_SSL_CERT,
-                    "key": self.api_config.MYSQL_SSL_KEY,
-                },
-            )
-        else:
-            conn = cymysql.connect(
-                host=self.api_config.MYSQL_HOST,
-                port=self.api_config.MYSQL_PORT,
-                user=self.api_config.MYSQL_USER,
-                passwd=self.api_config.MYSQL_PASS,
-                db=self.api_config.MYSQL_DB,
-                charset="utf8",
-            )
-        conn.autocommit(True)
-
-        cur = conn.cursor()
-
-        cur.execute(
+        query_sql = (
             "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort`,`name` FROM ss_node where `id`='"
             + str(self.api_config.NODE_ID)
             + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)"
         )
-        nodeinfo = cur.fetchone()
-
+        nodeinfo = self.get_mysql_cur(query_sql, fetch_type=FETCH_ONE)
         if nodeinfo is None:
             rows = []
             cur.close()
             conn.commit()
             conn.close()
             return rows
-
-        cur.close()
 
         self.node_speedlimit = float(nodeinfo[2])
         self.traffic_rate = float(nodeinfo[3])
@@ -554,23 +556,70 @@ class DbTransfer(object):
             self.is_relay = False
 
         try:
-            self.port_offset = int(nodeinfo[6].split("#")[1])
-        except IndexError:
-            self.port_offset = 0
+            self.port_map = {
+                'mu_port' : {
+                    'general' : 0,
+                    'detail'  : {}
+                },
+                'not_mu_port' : {
+                    'general' : 0,
+                    'detail'  : {}
+                },
+                'all' : {
+                    'general' : 0,
+                    'detail'  : {}
+                }
+            }
+            """
+            https://github.com/Anankke/SSPanel-Uim/blob/dev/src/Utils/Tools.php#L615
+
+            1. map, split by +
+            "8.8.8.8;port=80#1080+443#8443"  ->  ['8.8.8.8', 'port=80#1080+443#8443']
+
+            2. +80 for all ports
+            "8.8.8.8;port=80"  ->  ['8.8.8.8', 'port=80']
+            """
+
+            port_part = nodeinfo[6].split(";")[1]
+            if port_part[:5] == "port=":
+                rules_part = port_part[5:]
+                # '80#1080' or '80#1080+443#8443' or '80'
+                if '#' in rules_part:
+                    # '80#1080' or '80#1080+443#8443'
+                    for rule_part in rules_part.split('+'):
+                        rule = rule_part.split("#")
+                        self.port_map['mu_port']['detail'][int(rule[0])] = int(rule[1])
+                else:
+                    # '80'
+                    self.port_map['mu_port']['general'] = int(rules_part)
+        except Exception:
+            self.port_map = {
+                'mu_port' : {
+                    'general' : 0,
+                    'detail'  : {}
+                },
+                'not_mu_port' : {
+                    'general' : 0,
+                    'detail'  : {}
+                },
+                'all' : {
+                    'general' : 0,
+                    'detail'  : {}
+                }
+            }
 
         logging.debug(
-            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_offset=%d",
+            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_map=%s",
             nodeinfo[0], nodeinfo[1], nodeinfo[2],
             nodeinfo[3], nodeinfo[4], nodeinfo[5],
-            nodeinfo[6], self.port_offset)
+            nodeinfo[6], self.port_map['mu_port'])
 
         if nodeinfo[0] == 0:
             node_group_sql = ""
         else:
             node_group_sql = "AND `node_group`=" + str(nodeinfo[0])
 
-        cur = conn.cursor()
-        cur.execute(
+        query_sql = (
             "SELECT "
             + ",".join(keys)
             + " FROM user WHERE ((`class`>="
@@ -579,34 +628,31 @@ class DbTransfer(object):
             + node_group_sql
             + ") OR `is_admin`=1) AND`enable`=1 AND `expire_in`>now() AND `transfer_enable`>`u`+`d`"
         )
+        ret = self.get_mysql_cur(query_sql, fetch_type=FETCH_ALL)
         rows = []
-        for r in cur.fetchall():
+        for r in ret:
             d = {}
             for column in range(len(keys)):
                 d[keys[column]] = r[column]
-            d["port"] = self.get_port_by_offset(d["port"])
+            d["port"] = self.get_port_by_map(d["port"])
             rows.append(d)
-        cur.close()
 
         # 读取节点IP
         # SELECT * FROM `ss_node`  where `node_ip` != ''
         self.node_ip_list = []
-        cur = conn.cursor()
-        cur.execute("SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''")
-        for r in cur.fetchall():
+        query_sql = "SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''"
+        ret = self.get_mysql_cur(query_sql, fetch_type=FETCH_ALL)
+        for r in ret:
             temp_list = str(r[0]).split(",")
             self.node_ip_list.append(temp_list[0])
-        cur.close()
 
         # 读取审计规则,数据包匹配部分
         keys_detect = ["id", "regex"]
-
-        cur = conn.cursor()
-        cur.execute("SELECT " + ",".join(keys_detect) + " FROM detect_list where `type` = 1")
-
         exist_id_list = []
 
-        for r in cur.fetchall():
+        query_sql = "SELECT " + ",".join(keys_detect) + " FROM detect_list where `type` = 1"
+        ret = self.get_mysql_cur(query_sql, fetch_type=FETCH_ALL)
+        for r in ret:
             id = int(r[0])
             exist_id_list.append(id)
             if id not in self.detect_text_list:
@@ -629,14 +675,11 @@ class DbTransfer(object):
         for id in deleted_id_list:
             del self.detect_text_list[id]
 
-        cur.close()
-
-        cur = conn.cursor()
-        cur.execute("SELECT " + ",".join(keys_detect) + " FROM detect_list where `type` = 2")
 
         exist_id_list = []
-
-        for r in cur.fetchall():
+        query_sql = "SELECT " + ",".join(keys_detect) + " FROM detect_list where `type` = 2"
+        ret = self.get_mysql_cur(query_sql, fetch_type=FETCH_ALL)
+        for r in ret:
             id = int(r[0])
             exist_id_list.append(id)
             if r[0] not in self.detect_hex_list:
@@ -659,7 +702,6 @@ class DbTransfer(object):
         for id in deleted_id_list:
             del self.detect_hex_list[id]
 
-        cur.close()
 
         # 读取中转规则，如果是中转节点的话
 
@@ -668,15 +710,14 @@ class DbTransfer(object):
 
             keys_detect = ["id", "user_id", "dist_ip", "port", "priority"]
 
-            cur = conn.cursor()
-            cur.execute(
+            query_sql = (
                 "SELECT "
                 + ",".join(keys_detect)
                 + " FROM relay where `source_node_id` = 0 or `source_node_id` = "
                 + str(self.api_config.NODE_ID)
             )
-
-            for r in cur.fetchall():
+            ret = self.get_mysql_cur(query_sql, fetch_type=FETCH_ALL)
+            for r in ret:
                 d = {
                     "id": int(r[0]),
                     "user_id": int(r[1]),
@@ -686,9 +727,6 @@ class DbTransfer(object):
                 }
                 self.relay_rule_list[d["id"]] = d
 
-            cur.close()
-
-        conn.close()
         return rows
 
     @staticmethod
