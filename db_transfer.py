@@ -609,7 +609,7 @@ class DbTransfer(object):
             }
 
         logging.debug(
-            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_map=%d",
+            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_map=%s",
             nodeinfo[0], nodeinfo[1], nodeinfo[2],
             nodeinfo[3], nodeinfo[4], nodeinfo[5],
             nodeinfo[6], self.port_map['mu_port'])
