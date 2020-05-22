@@ -54,8 +54,8 @@ PRINT_MYSQL_QUERY = False
 MYSQL_PUSH_DURATION = 60
 
 """
-get port offset by node->name
+get port offset by node->server
 HK 1 #9900
 then offset is 9900
 """
-GET_PORT_OFFSET_BY_NODE_NAME = True
+GET_PORT_OFFSET_BY_NODE_SERVER = True

@@ -8,7 +8,7 @@ g_config = None
 DEFAULT_CONFIG = {
     "MYSQL_PUSH_DURATION" : 60,
     "PRINT_MYSQL_QUERY" : False,
-    "GET_PORT_OFFSET_BY_NODE_NAME" : False
+    "GET_PORT_OFFSET_BY_NODE_SERVER" : False
 }
 
 

@@ -443,7 +443,7 @@ class DbTransfer(object):
     currently, we use 'mu_port' only
     """
     def get_port_by_map(self, port, reverse=False):
-        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False:
+        if self.api_config.GET_PORT_OFFSET_BY_NODE_SERVER is False:
             return port
         if reverse:
             """
