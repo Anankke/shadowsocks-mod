@@ -533,7 +533,7 @@ class DbTransfer(object):
             ]
 
         query_sql = (
-            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort`,`name` FROM ss_node where `id`='"
+            "SELECT `node_group`,`node_class`,`node_speedlimit`,`traffic_rate`,`mu_only`,`sort`,`server` FROM ss_node where `id`='"
             + str(self.api_config.NODE_ID)
             + "' AND (`node_bandwidth`<`node_bandwidth_limit` OR `node_bandwidth_limit`=0)"
         )
@@ -571,6 +571,8 @@ class DbTransfer(object):
                 }
             }
             """
+            server 字段
+            https://github.com/Anankke/SSPanel-Uim/blob/dev/resources/views/material/admin/node/edit.tpl#L27
             https://github.com/Anankke/SSPanel-Uim/blob/dev/src/Utils/Tools.php#L615
 
             1. map, split by +
@@ -609,7 +611,7 @@ class DbTransfer(object):
             }
 
         logging.debug(
-            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d name=%s port_map=%s",
+            "node_info >> group=%d class=%d speedlimit=%f traffic_rate=%f mu_only=%d sort=%d server=%s port_map=%s",
             nodeinfo[0], nodeinfo[1], nodeinfo[2],
             nodeinfo[3], nodeinfo[4], nodeinfo[5],
             nodeinfo[6], self.port_map['mu_port'])
