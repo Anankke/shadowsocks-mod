@@ -16,7 +16,6 @@ ENV NODE_ID=0                    \
     MYSQL_PASS=ss                \
     MYSQL_DB=shadowsocks         \
 
-COPY . /root/shadowsocks-mod
 WORKDIR /root/shadowsocks-mod
 
 RUN apk add --no-cache                          \
