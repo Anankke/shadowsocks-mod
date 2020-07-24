@@ -50,5 +50,5 @@ RUN apk add --no-cache                          \
 
 CMD envsubst < apiconfig.py > userapiconfig.py && \
     envsubst < config.json > user-config.json  && \
-    if [ $NS1 != 8.8.4.4 -a $NS2 = 1.0.0.1 ];then echo -e "$NS1 53">/root/shadowsocks/dns.conf ; else echo -e "$NS1 53\n$NS2 53">/root/shadowsocks/dns.conf ; fi && \
+    if [ $NS1 != 8.8.4.4 -a $NS2 = 1.0.0.1 ];then echo -e "$NS1 53">/root/shadowsocks-mod/dns.conf ; else echo -e "$NS1 53\n$NS2 53">/root/shadowsocks-mod/dns.conf ; fi && \
     python server.py
