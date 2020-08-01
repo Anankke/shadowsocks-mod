@@ -147,7 +147,7 @@ def match_ipv6_address(text):
 
 
 def match_regex(regex, text):
-    if re.search(regex, text):
+    if re.search(regex, text[:256]):
         return True
     return False
 
