@@ -1,4 +1,4 @@
-cymysql==0.9.13
+cymysql==0.9.14
 requests==2.24.0
 pyOpenSSL==19.1.0
 ndg-httpsclient==0.5.1
