@@ -58,7 +58,7 @@ TIMEOUT_PRECISION = 2
 
 class KqueueLoop(object):
 
-    MAX_EVENTS = 1024
+    MAX_EVENTS = 10240
 
     def __init__(self):
         self._kqueue = select.kqueue()
