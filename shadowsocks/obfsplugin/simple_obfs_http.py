@@ -31,19 +31,23 @@ from shadowsocks import common
 from shadowsocks.obfsplugin import plain
 from shadowsocks.common import to_bytes, to_str, ord, chr
 
+
 def create_simple_obfs_http_obfs(method):
     return simple_obfs_http(method)
 
+
 obfs_map = {
-        'simple_obfs_http': (create_simple_obfs_http_obfs,),
-        'simple_obfs_http_compatible': (create_simple_obfs_http_obfs,),
+    'simple_obfs_http': (create_simple_obfs_http_obfs,),
+    'simple_obfs_http_compatible': (create_simple_obfs_http_obfs,),
 }
+
 
 def match_begin(str1, str2):
     if len(str1) >= len(str2):
         if str1[:len(str2)] == str2:
             return True
     return False
+
 
 class simple_obfs_http(plain.plain):
     def __init__(self, method):
@@ -54,14 +58,16 @@ class simple_obfs_http(plain.plain):
         self.port = 0
         self.recv_buffer = b''
 
-        self.curl_version = b"7." + common.to_bytes(str(random.randint(0, 51))) + b"." + common.to_bytes(str(random.randint(0, 2)))
-        self.nginx_version = b"1." + common.to_bytes(str(random.randint(0, 11))) + b"." + common.to_bytes(str(random.randint(0, 12)))
+        self.curl_version = b"7." + common.to_bytes(str(random.randint(0, 51))) + b"." + common.to_bytes(
+            str(random.randint(0, 2)))
+        self.nginx_version = b"1." + common.to_bytes(str(random.randint(0, 11))) + b"." + common.to_bytes(
+            str(random.randint(0, 12)))
 
     def encode_head(self, buf):
         hexstr = binascii.hexlify(buf)
         chs = []
         for i in range(0, len(hexstr), 2):
-            chs.append(b"%" + hexstr[i:i+2])
+            chs.append(b"%" + hexstr[i:i + 2])
         return b''.join(chs)
 
     def client_encode(self, buf):
@@ -104,16 +110,23 @@ class simple_obfs_http(plain.plain):
         if self.has_sent_header:
             return buf
 
-        header = b'HTTP/1.1 101 Switching Protocols\r\n'
-        header += b'Server: nginx/' + self.nginx_version + b'\r\n'
-        header += b'Date: ' + to_bytes(datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT'))
-        header += b'\r\n'
-        header += b'Upgrade: websocket\r\n'
-        header += b'Connection: Upgrade\r\n'
-        header += b'Sec-WebSocket-Accept: ' + common.to_bytes(common.random_base64_str(64)) + b'\r\n'
-        header += b'\r\n'
+        data = b''.join([b'HTTP/1.1 101 Switching Protocols\r\n',
+                         b'Server: nginx/',
+                         self.nginx_version,
+                         b'\r\n',
+                         b'Date: ',
+                         to_bytes(datetime.datetime.now().strftime('%a, %d %b %Y %H:%M:%S GMT')),
+                         b'\r\n',
+                         b'Upgrade: websocket\r\n',
+                         b'Connection: Upgrade\r\n',
+                         b'Sec-WebSocket-Accept: ',
+                         common.to_bytes(common.random_base64_str(64)),
+                         b'\r\n',
+                         b'\r\n',
+                         buf])
+
         self.has_sent_header = True
-        return header + buf
+        return data
 
     def get_host_from_http_header(self, buf):
         ret_buf = b''
@@ -127,7 +140,7 @@ class simple_obfs_http(plain.plain):
         self.has_sent_header = True
         self.has_recv_header = True
         if self.method == 'simple_obfs_http':
-            return (b'E'*2048, False, False)
+            return (b'E' * 2048, False, False)
         return (buf, True, False)
 
     def server_decode(self, buf):
@@ -142,7 +155,7 @@ class simple_obfs_http(plain.plain):
                     self.recv_buffer = None
                     logging.warn('simple_obfs_http: over size')
                     return self.not_match_return(buf)
-            else: #not http header, run on original protocol
+            else:  # not http header, run on original protocol
                 self.recv_buffer = None
                 logging.debug('simple_obfs_http: not match begin')
                 return self.not_match_return(buf)
