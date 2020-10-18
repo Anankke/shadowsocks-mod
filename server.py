@@ -21,11 +21,7 @@ import os
 if __name__ == "__main__":
     import inspect
 
-    os.chdir(
-        os.path.dirname(
-            os.path.realpath(inspect.getfile(inspect.currentframe()))
-        )
-    )
+    os.chdir(os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe()))))
 
 import db_transfer
 import web_transfer
@@ -50,9 +46,7 @@ class MainThread(Process):
 
 
 def main():
-    logging.basicConfig(
-        level=logging.INFO, format="%(levelname)-s: %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(levelname)-s: %(message)s")
 
     shell.check_python()
 
@@ -64,9 +58,6 @@ def main():
     if get_config().SPEEDTEST != 0:
         threadSpeedtest = MainThread(speedtest_thread.Speedtest)
         threadSpeedtest.start()
-    if get_config().AUTOEXEC != 0:
-        threadAutoexec = MainThread(auto_thread.AutoExec)
-        threadAutoexec.start()
     if get_config().CLOUDSAFE != 0 and get_config().ANTISSATTACK != 0:
         threadAutoblock = MainThread(auto_block.AutoBlock)
         threadAutoblock.start()
@@ -76,15 +67,11 @@ def main():
             threadMain.join(10.0)
     except (KeyboardInterrupt, IOError, OSError):
         import traceback
-
         traceback.print_exc()
         threadMain.stop()
         if get_config().SPEEDTEST != 0:
             if threadSpeedtest.is_alive():
                 threadSpeedtest.stop()
-        if get_config().AUTOEXEC != 0:
-            if threadAutoexec.is_alive():
-                threadAutoexec.stop()
         if get_config().CLOUDSAFE != 0 and get_config().ANTISSATTACK != 0:
             if threadAutoblock.is_alive():
                 threadAutoblock.stop()
