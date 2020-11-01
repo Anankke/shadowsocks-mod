@@ -21,7 +21,7 @@ class WebApi(object):
         response = self.session_pool.get(
             "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
             params=params,
-            timeout=10,
+            timeout=60,
         )
         if response.status_code != 200:
             logging.error("Server error with status code: %i" %
@@ -56,7 +56,7 @@ class WebApi(object):
             "%s/mod_mu/%s" % (get_config().WEBAPI_URL, uri),
             params=params,
             json=json,
-            timeout=10,
+            timeout=60,
         )
         if response.status_code != 200:
             logging.error("Server error with status code: %i" %
