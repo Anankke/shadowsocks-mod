@@ -287,8 +287,8 @@ class DbTransfer(object):
             if dt_transfer[offset_port][0] == 0 and dt_transfer[offset_port][1] == 0:
                 continue
 
-            query_sub_when += " WHEN %s THEN u+%s" % (port, dt_transfer[offset_port][0] * self.traffic_rate)
-            query_sub_when2 += " WHEN %s THEN d+%s" % (port, dt_transfer[offset_port][1] * self.traffic_rate)
+            query_sub_when += " WHEN %s THEN u+%s" % (str(self.port_uid_table[port]), dt_transfer[offset_port][0] * self.traffic_rate)
+            query_sub_when2 += " WHEN %s THEN d+%s" % (str(self.port_uid_table[port]), dt_transfer[offset_port][1] * self.traffic_rate)
             update_transfer[offset_port] = dt_transfer[offset_port]
 
             alive_user_count = alive_user_count + 1
@@ -298,20 +298,20 @@ class DbTransfer(object):
             bandwidth_thistime = bandwidth_thistime + (dt_transfer[offset_port][0] + dt_transfer[offset_port][1])
 
             if query_sub_in is not None:
-                query_sub_in += ",%s" % port
+                query_sub_in += ",%s" % str(self.port_uid_table[port])
             else:
-                query_sub_in = "%s" % port
+                query_sub_in = "%s" % str(self.port_uid_table[port])
         self.mass_insert_traffic()
 
         if query_sub_when != "":
             query_sql = (
                 query_head
-                + " SET u = CASE port"
+                + " SET u = CASE id"
                 + query_sub_when
-                + " END, d = CASE port"
+                + " END, d = CASE id"
                 + query_sub_when2
                 + " END, t = unix_timestamp() "
-                + " WHERE port IN (%s)" % query_sub_in
+                + " WHERE id IN (%s)" % query_sub_in
             )
 
             self.get_mysql_cur(query_sql, fetch_type=FETCH_NONE)
@@ -427,7 +427,7 @@ class DbTransfer(object):
         return update_transfer
 
     def get_port_by_offset(self, port, reverse=False):
-        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False or self.port_offset == 0:
+        if self.api_config.GET_PORT_OFFSET_BY_NODE_NAME is False or self.port_offset == 0 or reverse is True:
             return port
         return port + self.port_offset
 
