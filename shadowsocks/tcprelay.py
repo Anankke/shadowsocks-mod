@@ -1857,7 +1857,7 @@ class TCPRelay(object):
             except socket.error:
                 logging.error('warning: fast open is not available')
                 self._config['fast_open'] = False
-        server_socket.listen()
+        server_socket.listen(socket.SOMAXCONN)
         self._server_socket = server_socket
         self._server_socket_fd = server_socket.fileno()
         self._stat_counter = stat_counter
