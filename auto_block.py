@@ -126,7 +126,7 @@ class AutoBlock(object):
                         deny_file = open("/etc/hosts.deny", "w+")
                         fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
                         for line in deny_lines:
-                            deny_file.write(line)
+                            deny_file.write(line+"\n")
                         deny_file.close()
 
                         has_match_node = True
@@ -316,7 +316,6 @@ class AutoBlock(object):
                     db_instance.auto_block_thread()
                 except Exception as e:
                     import traceback
-
                     trace = traceback.format_exc()
                     logging.error(trace)
                     # logging.warn('db thread except:%s' % e)
