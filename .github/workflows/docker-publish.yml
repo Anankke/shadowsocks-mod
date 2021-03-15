@@ -3,7 +3,7 @@ name: Docker
 on:
   push:
     branches:
-      - master
+      - manyuser
 
 env:
   IMAGE_NAME: shadowsocks-mod
