@@ -293,7 +293,6 @@ def get_config(is_local):
     config['local_port'] = config.get('local_port', 1080)
     config['forbidden_ip'] = config.get('forbidden_ip', '')
     config['forbidden_port'] = config.get('forbidden_port', '')
-    config['disconnect_ip'] = config.get('disconnect_ip', '')
 
     if is_local:
         if config.get('server', None) is None:

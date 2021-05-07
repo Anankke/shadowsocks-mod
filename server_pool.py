@@ -208,20 +208,6 @@ class ServerPool(object):
 
         return True
 
-    def del_server(self, port):
-        port = int(port)
-        logging.info("del server at %d" % port)
-        try:
-            udpsock = socket(AF_INET, SOCK_DGRAM)
-            udpsock.sendto(
-                "%s:%s:0:0" % (get_config().MANAGE_PASS, port),
-                (get_config().MANAGE_BIND_IP, get_config().MANAGE_PORT),
-            )
-            udpsock.close()
-        except Exception as e:
-            logging.warn(e)
-        return True
-
     def cb_del_server(self, port):
         port = int(port)
 

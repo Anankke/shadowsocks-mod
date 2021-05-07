@@ -27,11 +27,7 @@ if __name__ == "__main__":
         )
     )
 
-import db_transfer
 import web_transfer
-import speedtest_thread
-import auto_thread
-import auto_block
 from multiprocessing import Process
 from shadowsocks import shell
 from configloader import get_config
@@ -58,18 +54,7 @@ def main():
 
     if get_config().API_INTERFACE == "modwebapi":
         threadMain = MainThread(web_transfer.WebTransfer)
-    else:
-        threadMain = MainThread(db_transfer.DbTransfer)
     threadMain.start()
-    if get_config().SPEEDTEST != 0:
-        threadSpeedtest = MainThread(speedtest_thread.Speedtest)
-        threadSpeedtest.start()
-    if get_config().AUTOEXEC != 0:
-        threadAutoexec = MainThread(auto_thread.AutoExec)
-        threadAutoexec.start()
-    if get_config().CLOUDSAFE != 0 and get_config().ANTISSATTACK != 0:
-        threadAutoblock = MainThread(auto_block.AutoBlock)
-        threadAutoblock.start()
 
     try:
         while threadMain.is_alive():
@@ -79,16 +64,6 @@ def main():
 
         traceback.print_exc()
         threadMain.stop()
-        if get_config().SPEEDTEST != 0:
-            if threadSpeedtest.is_alive():
-                threadSpeedtest.stop()
-        if get_config().AUTOEXEC != 0:
-            if threadAutoexec.is_alive():
-                threadAutoexec.stop()
-        if get_config().CLOUDSAFE != 0 and get_config().ANTISSATTACK != 0:
-            if threadAutoblock.is_alive():
-                threadAutoblock.stop()
-
 
 if __name__ == "__main__":
     main()
