@@ -1,12 +1,10 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-
+import fcntl
 import logging
 import os
 import platform
 import socket
-
-import fcntl
 
 import configloader
 from shadowsocks import common

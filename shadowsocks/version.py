@@ -16,4 +16,4 @@
 # under the License.
 
 def version():
-    return '3.4.0 mod by esdeathlove'
+    return '2021.5 for SSPanel-UIM by M1Screw'

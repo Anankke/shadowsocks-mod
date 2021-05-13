@@ -27,11 +27,11 @@ if __name__ == "__main__":
         )
     )
 
-import web_transfer
 from multiprocessing import Process
-from shadowsocks import shell
-from configloader import get_config
 
+import web_transfer
+from configloader import get_config
+from shadowsocks import shell
 
 class MainThread(Process):
     def __init__(self, obj):

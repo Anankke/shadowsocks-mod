@@ -30,7 +30,6 @@ from socket import *
 from configloader import get_config
 from shadowsocks import shell, eventloop, tcprelay, udprelay, asyncdns, common
 
-
 class MainThread(threading.Thread):
     def __init__(self, params):
         threading.Thread.__init__(self)
@@ -38,7 +37,6 @@ class MainThread(threading.Thread):
 
     def run(self):
         ServerPool._loop(*self.params)
-
 
 class ServerPool(object):
     instance = None

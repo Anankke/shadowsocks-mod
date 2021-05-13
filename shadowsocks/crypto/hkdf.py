@@ -13,8 +13,8 @@
 
 from __future__ import division
 
-import hmac
 import hashlib
+import hmac
 import sys
 
 if sys.version_info[0] == 3:

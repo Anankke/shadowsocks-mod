@@ -15,22 +15,26 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
-import time
-import socket
-import errno
-import struct
-import logging
 import binascii
-import traceback
-import random
+import errno
+import logging
 import platform
+import random
+import socket
+import struct
 import threading
+import time
+import traceback
 
-from shadowsocks import encrypt, obfs, eventloop, shell, common
-from shadowsocks.common import pre_parse_header, parse_header, IPNetwork, PortRange
+from shadowsocks import common, encrypt, eventloop, obfs, shell
+from shadowsocks.common import (
+    IPNetwork,
+    PortRange,
+    parse_header,
+    pre_parse_header,
+)
 
 # we clear at most TIMEOUTS_CLEAN_SIZE timeouts each time
 TIMEOUTS_CLEAN_SIZE = 512

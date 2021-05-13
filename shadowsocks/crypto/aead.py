@@ -11,18 +11,14 @@
 # AEAD cipher for shadowsocks
 #
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
-
-from ctypes import c_int, create_string_buffer, byref, c_void_p
+from __future__ import absolute_import, division, print_function, with_statement
 
 import hashlib
+from ctypes import byref, c_int, c_void_p, create_string_buffer
 from struct import pack, unpack
 
-from shadowsocks.crypto import util
-from shadowsocks.crypto import hkdf
-from shadowsocks.common import ord, chr
-
+from shadowsocks.common import chr, ord
+from shadowsocks.crypto import hkdf, util
 
 EVP_CTRL_GCM_SET_IVLEN = 0x9
 EVP_CTRL_GCM_GET_TAG = 0x10

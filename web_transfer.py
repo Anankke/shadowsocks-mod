@@ -1,22 +1,20 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+import fcntl
 import logging
 import os
 import platform
 import socket
 import traceback
 
-import fcntl
-
 import importloader
-from configloader import load_config, get_config
+from configloader import get_config, load_config
 from server_pool import ServerPool
 from shadowsocks import common, shell
 
 switchrule = None
 db_instance = None
-
 
 class WebTransfer(object):
     def __init__(self):

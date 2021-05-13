@@ -1,7 +1,6 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
-
 def load(name):
     try:
         obj = __import__(name)
@@ -18,7 +17,6 @@ def load(name):
         return obj
     except:
         pass
-
 
 def loads(namelist):
     for name in namelist:

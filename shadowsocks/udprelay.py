@@ -59,20 +59,25 @@
 # `client`  means UDP clients that connects to other servers
 # `server`  means the UDP server that handles user requests
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
-import time
-import socket
-import logging
-import struct
-import errno
-import random
 import binascii
+import errno
+import logging
+import random
+import socket
+import struct
+import time
 import traceback
 
-from shadowsocks import encrypt, obfs, eventloop, lru_cache, common, shell
-from shadowsocks.common import pre_parse_header, parse_header, pack_addr, IPNetwork, PortRange
+from shadowsocks import common, encrypt, eventloop, lru_cache, obfs, shell
+from shadowsocks.common import (
+    IPNetwork,
+    PortRange,
+    pack_addr,
+    parse_header,
+    pre_parse_header,
+)
 
 # for each handler, we have 2 stream directions:
 #    upstream:    from client to server direction
