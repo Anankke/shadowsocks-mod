@@ -235,11 +235,6 @@ class WebTransfer(object):
             del md5_users[row["id"]]["u"]
             del md5_users[row["id"]]["d"]
 
-            if md5_users[row["id"]]["forbidden_ip"] is None:
-                md5_users[row["id"]]["forbidden_ip"] = ""
-
-            if md5_users[row["id"]]["forbidden_port"] is None:
-                md5_users[row["id"]]["forbidden_port"] = ""
             md5_users[row["id"]]["md5"] = common.get_md5(
                 str(row["id"])
                 + row["passwd"]
