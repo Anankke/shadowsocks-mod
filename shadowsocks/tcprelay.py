@@ -1947,6 +1947,12 @@ class TCPRelay(object):
         del self.detect_log_list[:]
         self.is_cleaning_detect_log = False
 
+    def mu_detect_log_list_clean(self):
+        self.is_cleaning_mu_detect_log_list = True
+        for id in self.mu_detect_log_list:
+            del self.mu_detect_log_list[id][:]
+        self.is_cleaning_mu_detect_log_list = False
+
     def reset_single_multi_user_traffic(self, user_id):
         self.mu_reset_time[user_id] = time.time()
         if user_id in self.mu_server_transfer_ul:
