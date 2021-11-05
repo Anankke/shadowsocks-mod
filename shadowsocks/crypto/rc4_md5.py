@@ -14,14 +14,13 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
 import hashlib
+
 from shadowsocks.crypto import openssl
 
 __all__ = ['ciphers']
-
 
 def create_cipher(alg, key, iv, op, crypto_path=None,
                   key_as_bytes=0, d=None, salt=None,

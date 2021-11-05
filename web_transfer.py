@@ -1,22 +1,20 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
 
+import fcntl
 import logging
 import os
 import platform
 import socket
 import traceback
 
-import fcntl
-
 import importloader
-from configloader import load_config, get_config
+from configloader import get_config, load_config
 from server_pool import ServerPool
 from shadowsocks import common, shell
 
 switchrule = None
 db_instance = None
-
 
 class WebTransfer(object):
     def __init__(self):
@@ -34,9 +32,7 @@ class WebTransfer(object):
         self.detect_hex_list = {}
 
         self.mu_only = False
-        self.is_relay = False
 
-        self.relay_rule_list = {}
         self.node_ip_list = []
         self.mu_port_list = []
 
@@ -82,58 +78,6 @@ class WebTransfer(object):
             "users/detectlog", {"node_id": get_config().NODE_ID}, {"data": data},
         )
 
-        deny_str = ""
-        data = []
-        if platform.system() == "Linux" and get_config().ANTISSATTACK == 1:
-            wrong_iplist = ServerPool.get_instance().get_servers_wrong()
-            server_ip = socket.gethostbyname(get_config().MYSQL_HOST)
-            for id in wrong_iplist.keys():
-                for ip in wrong_iplist[id]:
-                    realip = ""
-                    is_ipv6 = False
-                    if common.is_ip(ip):
-                        if common.is_ip(ip) == socket.AF_INET:
-                            realip = ip
-                        else:
-                            if common.match_ipv4_address(ip) is not None:
-                                realip = common.match_ipv4_address(ip)
-                            else:
-                                is_ipv6 = True
-                                realip = ip
-                    else:
-                        continue
-
-                    if str(realip).find(str(server_ip)) != -1:
-                        continue
-
-                    has_match_node = False
-                    for node_ip in self.node_ip_list:
-                        if str(realip).find(node_ip) != -1:
-                            has_match_node = True
-                            continue
-
-                    if has_match_node:
-                        continue
-
-                    if get_config().CLOUDSAFE == 1:
-                        data.append({"ip": realip})
-                    else:
-                        if not is_ipv6:
-                            os.system("route add -host %s gw 127.0.0.1" % str(realip))
-                            deny_str = deny_str + "\nALL: " + str(realip)
-                        else:
-                            os.system("ip -6 route add ::1/128 via %s/128" % str(realip))
-                            deny_str = deny_str + "\nALL: [" + str(realip) + "]/128"
-
-                        logging.info("Local Block ip:" + str(realip))
-                if get_config().CLOUDSAFE == 0:
-                    deny_file = open("/etc/hosts.deny", "a")
-                    fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)
-                    deny_file.write(deny_str)
-                    deny_file.close()
-            webapi.postApi(
-                "func/block_ip", {"node_id": get_config().NODE_ID}, {"data": data},
-            )
         return update_transfer
 
     def uptime(self):
@@ -204,11 +148,6 @@ class WebTransfer(object):
 
         self.mu_only = nodeinfo["mu_only"]
 
-        if nodeinfo["sort"] == 10:
-            self.is_relay = True
-        else:
-            self.is_relay = False
-
         data = webapi.getApi("users", {"node_id": get_config().NODE_ID})
 
         if not data:
@@ -238,21 +177,6 @@ class WebTransfer(object):
                 self.detect_text_list[d["id"]] = d.copy()
             else:
                 self.detect_hex_list[d["id"]] = d.copy()
-
-        # 读取中转规则，如果是中转节点的话
-
-        if self.is_relay:
-            self.relay_rule_list = {}
-
-            data = webapi.getApi("func/relay_rules", {"node_id": get_config().NODE_ID})
-            for rule in data:
-                d = {}
-                d["id"] = int(rule["id"])
-                d["user_id"] = int(rule["user_id"])
-                d["dist_ip"] = str(rule["dist_ip"])
-                d["port"] = int(rule["port"])
-                d["priority"] = int(rule["priority"])
-                self.relay_rule_list[d["id"]] = d.copy()
 
         return rows
 
@@ -287,14 +211,7 @@ class WebTransfer(object):
             md5_users[row["id"]] = row.copy()
             del md5_users[row["id"]]["u"]
             del md5_users[row["id"]]["d"]
-            if md5_users[row["id"]]["disconnect_ip"] is None:
-                md5_users[row["id"]]["disconnect_ip"] = ""
 
-            if md5_users[row["id"]]["forbidden_ip"] is None:
-                md5_users[row["id"]]["forbidden_ip"] = ""
-
-            if md5_users[row["id"]]["forbidden_port"] is None:
-                md5_users[row["id"]]["forbidden_port"] = ""
             md5_users[row["id"]]["md5"] = common.get_md5(
                 str(row["id"]) + row["passwd"] + row["method"] + row["obfs"] + row["protocol"]
             )
@@ -338,7 +255,6 @@ class WebTransfer(object):
                 "forbidden_ip",
                 "forbidden_port",
                 "node_speedlimit",
-                "disconnect_ip",
                 "is_multi_user",
             ]
 
@@ -359,9 +275,6 @@ class WebTransfer(object):
                     cfg["node_speedlimit"] = max(float(self.node_speedlimit), float(cfg["node_speedlimit"]),)
             else:
                 cfg["node_speedlimit"] = max(float(self.node_speedlimit), float(0.00))
-
-            if "disconnect_ip" not in cfg:
-                cfg["disconnect_ip"] = ""
 
             if "forbidden_ip" not in cfg:
                 cfg["forbidden_ip"] = ""
@@ -390,54 +303,6 @@ class WebTransfer(object):
             cfg["detect_hex_list"] = self.detect_hex_list.copy()
             cfg["detect_text_list"] = self.detect_text_list.copy()
 
-            if self.is_relay and row["is_multi_user"] != 2:
-                temp_relay_rules = {}
-                for id in self.relay_rule_list:
-                    if (
-                        (self.relay_rule_list[id]["user_id"] == user_id or self.relay_rule_list[id]["user_id"] == 0)
-                        or row["is_multi_user"] != 0
-                    ) and (self.relay_rule_list[id]["port"] == 0 or self.relay_rule_list[id]["port"] == port):
-                        has_higher_priority = False
-                        for priority_id in self.relay_rule_list:
-                            if (
-                                (
-                                    (
-                                        self.relay_rule_list[priority_id]["priority"]
-                                        > self.relay_rule_list[id]["priority"]
-                                        and self.relay_rule_list[id]["id"] != self.relay_rule_list[priority_id]["id"]
-                                    )
-                                    or (
-                                        self.relay_rule_list[priority_id]["priority"]
-                                        == self.relay_rule_list[id]["priority"]
-                                        and self.relay_rule_list[id]["id"] > self.relay_rule_list[priority_id]["id"]
-                                    )
-                                )
-                                and (
-                                    self.relay_rule_list[priority_id]["user_id"] == user_id
-                                    or self.relay_rule_list[priority_id]["user_id"] == 0
-                                )
-                                and (
-                                    self.relay_rule_list[priority_id]["port"] == port
-                                    or self.relay_rule_list[priority_id]["port"] == 0
-                                )
-                            ):
-                                has_higher_priority = True
-                                continue
-
-                        if has_higher_priority:
-                            continue
-
-                        if self.relay_rule_list[id]["dist_ip"] == "0.0.0.0" and row["is_multi_user"] == 0:
-                            continue
-
-                        temp_relay_rules[id] = self.relay_rule_list[id]
-
-                cfg["relay_rules"] = temp_relay_rules.copy()
-            else:
-                temp_relay_rules = {}
-
-                cfg["relay_rules"] = temp_relay_rules.copy()
-
             if ServerPool.get_instance().server_is_run(port) > 0:
                 cfgchange = False
 
@@ -463,70 +328,6 @@ class WebTransfer(object):
                         ServerPool.get_instance().udp_servers_pool[port].modify_multi_user_table(md5_users)
                     if port in ServerPool.get_instance().udp_ipv6_servers_pool:
                         ServerPool.get_instance().udp_ipv6_servers_pool[port].modify_multi_user_table(md5_users)
-
-                if self.is_relay and row["is_multi_user"] != 2:
-                    temp_relay_rules = {}
-                    for id in self.relay_rule_list:
-                        if (
-                            (self.relay_rule_list[id]["user_id"] == user_id or self.relay_rule_list[id]["user_id"] == 0)
-                            or row["is_multi_user"] != 0
-                        ) and (self.relay_rule_list[id]["port"] == 0 or self.relay_rule_list[id]["port"] == port):
-                            has_higher_priority = False
-                            for priority_id in self.relay_rule_list:
-                                if (
-                                    (
-                                        (
-                                            self.relay_rule_list[priority_id]["priority"]
-                                            > self.relay_rule_list[id]["priority"]
-                                            and self.relay_rule_list[id]["id"]
-                                            != self.relay_rule_list[priority_id]["id"]
-                                        )
-                                        or (
-                                            self.relay_rule_list[priority_id]["priority"]
-                                            == self.relay_rule_list[id]["priority"]
-                                            and self.relay_rule_list[id]["id"] > self.relay_rule_list[priority_id]["id"]
-                                        )
-                                    )
-                                    and (
-                                        self.relay_rule_list[priority_id]["user_id"] == user_id
-                                        or self.relay_rule_list[priority_id]["user_id"] == 0
-                                    )
-                                    and (
-                                        self.relay_rule_list[priority_id]["port"] == port
-                                        or self.relay_rule_list[priority_id]["port"] == 0
-                                    )
-                                ):
-                                    has_higher_priority = True
-                                    continue
-
-                            if has_higher_priority:
-                                continue
-
-                            if self.relay_rule_list[id]["dist_ip"] == "0.0.0.0" and row["is_multi_user"] == 0:
-                                continue
-
-                            temp_relay_rules[id] = self.relay_rule_list[id]
-
-                    if port in ServerPool.get_instance().tcp_servers_pool:
-                        ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                        ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_servers_pool:
-                        ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                        ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
-
-                else:
-                    temp_relay_rules = {}
-
-                    if port in ServerPool.get_instance().tcp_servers_pool:
-                        ServerPool.get_instance().tcp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().tcp_ipv6_servers_pool:
-                        ServerPool.get_instance().tcp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_servers_pool:
-                        ServerPool.get_instance().udp_servers_pool[port].push_relay_rules(temp_relay_rules)
-                    if port in ServerPool.get_instance().udp_ipv6_servers_pool:
-                        ServerPool.get_instance().udp_ipv6_servers_pool[port].push_relay_rules(temp_relay_rules)
 
                 if port in ServerPool.get_instance().tcp_servers_pool:
                     relay = ServerPool.get_instance().tcp_servers_pool[port]

@@ -15,22 +15,19 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
-import os
-import json
-import sys
 import getopt
+import json
 import logging
-from shadowsocks.common import to_bytes, to_str, IPNetwork, PortRange
-from shadowsocks import encrypt
+import os
+import sys
 
+from shadowsocks import encrypt
+from shadowsocks.common import IPNetwork, PortRange, to_bytes, to_str
 
 VERBOSE_LEVEL = 5
-
 verbose = 0
-
 
 def check_python():
     info = sys.version_info
@@ -44,14 +41,12 @@ def check_python():
         print('Python version not supported')
         sys.exit(1)
 
-
 def print_exception(e):
     global verbose
     logging.error(e)
     if verbose > 0:
         import traceback
         traceback.print_exc()
-
 
 def print_shadowsocks():
     version_str = ''
@@ -66,7 +61,6 @@ def print_shadowsocks():
             pass
     print('ShadowsocksR %s' % version_str)
 
-
 def log_shadowsocks_version():
     version_str = ''
     try:
@@ -79,7 +73,6 @@ def log_shadowsocks_version():
         except Exception:
             pass
     logging.info('ShadowsocksR %s' % version_str)
-
 
 def find_config():
     config_path = 'user-config.json'
@@ -118,7 +111,6 @@ def find_custom_detect():
     if os.path.exists(config_path):
         return config_path
     return None
-
 
 def check_config(config, is_local):
     if config.get('daemon', None) == 'stop':
@@ -164,7 +156,6 @@ def check_config(config, is_local):
 
     encrypt.try_cipher(config['password'], config['method'])
 
-
 def get_config(is_local):
     global verbose
 
@@ -203,7 +194,6 @@ def get_config(is_local):
             config['detect_block_html'] = ''
             with open(detect_path, 'rb') as f:
                 config['detect_block_html'] = bytes(f.read())
-
 
         v_count = 0
         for key, value in optlist:
@@ -293,7 +283,6 @@ def get_config(is_local):
     config['local_port'] = config.get('local_port', 1080)
     config['forbidden_ip'] = config.get('forbidden_ip', '')
     config['forbidden_port'] = config.get('forbidden_port', '')
-    config['disconnect_ip'] = config.get('disconnect_ip', '')
 
     if is_local:
         if config.get('server', None) is None:
@@ -334,13 +323,11 @@ def get_config(is_local):
 
     return config
 
-
 def print_help(is_local):
     if is_local:
         print_local_help()
     else:
         print_server_help()
-
 
 def print_local_help():
     print('''usage: sslocal [OPTION]...
@@ -372,7 +359,6 @@ General options:
 
 Online help: <https://github.com/shadowsocks/shadowsocks>
 ''')
-
 
 def print_server_help():
     print('''usage: ssserver [OPTION]...
@@ -406,7 +392,6 @@ General options:
 Online help: <https://github.com/shadowsocks/shadowsocks>
 ''')
 
-
 def _decode_list(data):
     rv = []
     for item in data:
@@ -419,7 +404,6 @@ def _decode_list(data):
         rv.append(item)
     return rv
 
-
 def _decode_dict(data):
     rv = {}
     for key, value in data.items():
@@ -431,7 +415,6 @@ def _decode_dict(data):
             value = _decode_dict(value)
         rv[key] = value
     return rv
-
 
 class JSFormat:
 
@@ -471,11 +454,9 @@ class JSFormat:
                 return "\n"
         return ""
 
-
 def remove_comment(json):
     fmt = JSFormat()
     return "".join([fmt.push(c) for c in json])
-
 
 def parse_json_in_str(data):
     # parse json and convert everything from unicode to str

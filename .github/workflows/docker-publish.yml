@@ -1,0 +1,27 @@
+name: Docker
+
+on:
+  push:
+    branches:
+      - manyuser
+
+jobs:
+  push:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Build image
+        run: docker build . --file Dockerfile --tag sspaneluim/shadowsocks
+
+      - name: Login to docker hub
+        uses: actions-hub/docker/login@master
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USER }}
+          DOCKER_PASSWORD: ${{ secrets.DOCKER_PASS }}
+
+      - name: Push to docker hub :latest
+        uses: actions-hub/docker@master
+        with:
+          args: push sspaneluim/shadowsocks

@@ -23,10 +23,10 @@ if __name__ == "__main__":
 
     os.chdir(os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe()))))
 
-import auto_thread
 from multiprocessing import Process
-from shadowsocks import shell
+import web_transfer
 from configloader import get_config
+from shadowsocks import shell
 
 
 class MainThread(Process):
@@ -47,39 +47,16 @@ def main():
     shell.check_python()
 
     if get_config().API_INTERFACE == "modwebapi":
-        import web_transfer
-
         threadMain = MainThread(web_transfer.WebTransfer)
-    else:
-        import db_transfer
+        threadMain.start()
+        try:
+            while threadMain.is_alive():
+                threadMain.join(10.0)
+        except (KeyboardInterrupt, IOError, OSError):
+            import traceback
 
-        threadMain = MainThread(db_transfer.DbTransfer)
-    threadMain.start()
-    if get_config().SPEEDTEST:
-        import speedtest_thread
-
-        threadSpeedtest = MainThread(speedtest_thread.Speedtest)
-        threadSpeedtest.start()
-    if get_config().CLOUDSAFE and get_config().ANTISSATTACK:
-        import auto_block
-
-        threadAutoblock = MainThread(auto_block.AutoBlock)
-        threadAutoblock.start()
-
-    try:
-        while threadMain.is_alive():
-            threadMain.join(10.0)
-    except (KeyboardInterrupt, IOError, OSError):
-        import traceback
-
-        traceback.print_exc()
-        threadMain.stop()
-        if get_config().SPEEDTEST:
-            if threadSpeedtest.is_alive():
-                threadSpeedtest.stop()
-        if get_config().CLOUDSAFE and get_config().ANTISSATTACK:
-            if threadAutoblock.is_alive():
-                threadAutoblock.stop()
+            traceback.print_exc()
+            threadMain.stop()
 
 
 if __name__ == "__main__":

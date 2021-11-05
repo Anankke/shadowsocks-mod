@@ -15,22 +15,21 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
+import logging
 import os
+import re
 import socket
 import struct
-import re
-import logging
 
 if __name__ == '__main__':
-    import sys
     import inspect
+    import sys
     file_path = os.path.dirname(os.path.realpath(inspect.getfile(inspect.currentframe())))
     sys.path.insert(0, os.path.join(file_path, '../'))
 
-from shadowsocks import common, lru_cache, eventloop, shell
+from shadowsocks import common, eventloop, lru_cache, shell
 
 
 CACHE_SWEEP_INTERVAL = 30

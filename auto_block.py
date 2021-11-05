@@ -1,12 +1,10 @@
 #!/usr/bin/python
 # -*- coding: UTF-8 -*-
-
+import fcntl
 import logging
 import os
 import platform
 import socket
-
-import fcntl
 
 import configloader
 from shadowsocks import common
@@ -37,51 +35,11 @@ class AutoBlock(object):
 
         if configloader.get_config().API_INTERFACE == "modwebapi":
             # 读取节点IP
-            # SELECT * FROM `ss_node`  where `node_ip` != ''
             node_ip_list = []
             data = webapi.getApi("nodes")
             for node in data:
                 temp_list = node["node_ip"].split(",")
                 node_ip_list.append(temp_list[0])
-        else:
-            import cymysql
-
-            if configloader.get_config().MYSQL_SSL_ENABLE == 1:
-                conn = cymysql.connect(
-                    host=configloader.get_config().MYSQL_HOST,
-                    port=configloader.get_config().MYSQL_PORT,
-                    user=configloader.get_config().MYSQL_USER,
-                    passwd=configloader.get_config().MYSQL_PASS,
-                    db=configloader.get_config().MYSQL_DB,
-                    charset="utf8",
-                    ssl={
-                        "ca": configloader.get_config().MYSQL_SSL_CA,
-                        "cert": configloader.get_config().MYSQL_SSL_CERT,
-                        "key": configloader.get_config().MYSQL_SSL_KEY,
-                    },
-                )
-            else:
-                conn = cymysql.connect(
-                    host=configloader.get_config().MYSQL_HOST,
-                    port=configloader.get_config().MYSQL_PORT,
-                    user=configloader.get_config().MYSQL_USER,
-                    passwd=configloader.get_config().MYSQL_PASS,
-                    db=configloader.get_config().MYSQL_DB,
-                    charset="utf8",
-                )
-            conn.autocommit(True)
-
-            # 读取节点IP
-            # SELECT * FROM `ss_node`  where `node_ip` != ''
-            node_ip_list = []
-            cur = conn.cursor()
-            cur.execute(
-                "SELECT `node_ip` FROM `ss_node`  where `node_ip` != ''"
-            )
-            for r in cur.fetchall():
-                temp_list = str(r[0]).split(",")
-                node_ip_list.append(temp_list[0])
-            cur.close()
 
         deny_file = open("/etc/hosts.deny")
         fcntl.flock(deny_file.fileno(), fcntl.LOCK_EX)

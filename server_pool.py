@@ -30,7 +30,6 @@ from socket import *
 from configloader import get_config
 from shadowsocks import shell, eventloop, tcprelay, udprelay, asyncdns, common
 
-
 class MainThread(threading.Thread):
     def __init__(self, params):
         threading.Thread.__init__(self)
@@ -38,7 +37,6 @@ class MainThread(threading.Thread):
 
     def run(self):
         ServerPool._loop(*self.params)
-
 
 class ServerPool(object):
     instance = None
@@ -206,20 +204,6 @@ class ServerPool(object):
                     if not ipv6_ok:
                         logging.warning("IPV4 %s " % (e,))
 
-        return True
-
-    def del_server(self, port):
-        port = int(port)
-        logging.info("del server at %d" % port)
-        try:
-            udpsock = socket(AF_INET, SOCK_DGRAM)
-            udpsock.sendto(
-                "%s:%s:0:0" % (get_config().MANAGE_PASS, port),
-                (get_config().MANAGE_BIND_IP, get_config().MANAGE_PORT),
-            )
-            udpsock.close()
-        except Exception as e:
-            logging.warn(e)
         return True
 
     def cb_del_server(self, port):

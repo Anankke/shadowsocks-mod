@@ -2,9 +2,9 @@
 # -*- coding: utf-8 -*-
 
 import logging
+
 import requests
 from configloader import get_config
-
 
 class WebApi(object):
     def __init__(self):

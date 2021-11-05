@@ -14,14 +14,19 @@
 # License for the specific language governing permissions and limitations
 # under the License.
 
-from __future__ import absolute_import, division, print_function, \
-    with_statement
+from __future__ import absolute_import, division, print_function, with_statement
 
-from ctypes import c_char_p, c_int, c_uint, c_ulonglong, byref, \
-    create_string_buffer, c_void_p
+from ctypes import (
+    byref,
+    c_char_p,
+    c_int,
+    c_uint,
+    c_ulonglong,
+    c_void_p,
+    create_string_buffer,
+)
 
-from shadowsocks.crypto import util
-from shadowsocks.crypto import aead
+from shadowsocks.crypto import aead, util
 from shadowsocks.crypto.aead import AeadCryptoBase
 
 __all__ = ['ciphers']
