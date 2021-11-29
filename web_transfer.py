@@ -232,8 +232,6 @@ class WebTransfer(object):
                 continue
 
             md5_users[row["id"]] = row.copy()
-            del md5_users[row["id"]]["u"]
-            del md5_users[row["id"]]["d"]
 
             md5_users[row["id"]]["md5"] = common.get_md5(
                 str(row["id"])
