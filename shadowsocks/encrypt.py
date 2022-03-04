@@ -21,7 +21,7 @@ import logging
 import os
 import sys
 
-from shadowsocks import common
+from shadowsocks import common, lru_cache
 from shadowsocks.crypto import openssl, rc4_md5, sodium, table
 
 CIPHER_ENC_ENCRYPTION = 1
@@ -41,8 +41,7 @@ method_supported.update(table.ciphers)
 def random_string(length):
     return os.urandom(length)
 
-cached_keys = {}
-
+cached_keys = lru_cache.LRUCache(timeout=180)
 
 def try_cipher(key, method=None, crypto_path=None):
     Encryptor(key, method, crypto_path)
@@ -69,6 +68,7 @@ def EVP_BytesToKey(password, key_len, iv_len):
     key = ms[:key_len]
     iv = ms[key_len:key_len + iv_len]
     cached_keys[cached_key] = (key, iv)
+    cached_keys.sweep()
     return key, iv
 
 
@@ -155,6 +155,11 @@ class Encryptor(object):
             if len(buf) == 0:
                 return buf
         return self.decipher.decrypt(buf)
+
+    def dispose(self):
+        if self.decipher is not None:
+            self.decipher.clean()
+            self.decipher = None
 
 
 def gen_key_iv(password, method):
