@@ -1,0 +1,5 @@
+[sspanel-uim]
+name=SSPanel-UIM RPM Repository
+baseurl=https://mirror.sspanel.org/repo/rhel/$releasever/$basearch
+enabled=1
+gpgcheck=0

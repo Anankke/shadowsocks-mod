@@ -1,0 +1,15 @@
+[Unit]
+Description=shadowsocks-mod Service for SSPanel-UIM
+After=rc-local.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+WorkingDirectory=/opt/shadowsocks-server
+ExecStart=/usr/bin/python3 /opt/shadowsocks-server/server.py >> /var/log/shadowsocks-server.log
+ExecStop=/usr/bin/bash /opt/shadowsocks-server/stop.sh
+Restart=always
+LimitNOFILE=512000
+[Install]
+WantedBy=multi-user.target

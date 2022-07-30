@@ -13,7 +13,6 @@ user-detect.html
 *.egg
 *.egg-info
 dist
-build
 eggs
 parts
 bin
