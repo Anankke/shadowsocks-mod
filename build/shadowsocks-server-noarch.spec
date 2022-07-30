@@ -17,7 +17,7 @@ A Shadowsocks implementation from SSPanel-UIM.
 rm -rf %{buildroot}
 mkdir -p %{buildroot}/opt/shadowsocks-server
 mkdir -p %{buildroot}%{_unitdir}
-install -m 755 %{_builddir}%{name}-%{version}/* %{buildroot}/opt/shadowsocks-server
+install -m 755 %{_builddir}/%{name}-%{version}/* %{buildroot}/opt/shadowsocks-server
 install -m 644 %{_builddir}/shadowsocks-server.service %{buildroot}%{_unitdir}
 
 %clean
