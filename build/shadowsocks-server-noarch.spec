@@ -8,6 +8,7 @@ URL:            https://github.com/Anankke/shadowsocks-mod
 Packager:       SSPanel-UIM Team <package@sspanel.org>
 BuildArch:      noarch
 BuildRequires:  systemd
+Requires:       python3, python3-pip, libsodium
 
 %description
 A Shadowsocks implementation from SSPanel-UIM.
