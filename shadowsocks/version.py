@@ -16,4 +16,4 @@
 # under the License.
 
 def version():
-    return '2021.5 for SSPanel-UIM by M1Screw'
+    return '3.5.1'
