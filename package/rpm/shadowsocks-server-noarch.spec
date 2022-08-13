@@ -22,6 +22,7 @@ install -m 644 %{_builddir}/shadowsocks-server.service %{buildroot}%{_unitdir}
 
 %post
 /usr/bin/python3 -m pip install -r /opt/shadowsocks-server/requirements.txt
+/usr/bin/cp /opt/shadowsocks-server/apiconfig.py /opt/shadowsocks-server/userapiconfig.py
 
 %clean
 rm -rf %{buildroot}
